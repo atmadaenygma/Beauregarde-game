@@ -1,0 +1,29 @@
+- generic [active] [ref=e1]:
+  - heading "Directory listing for /project/" [level=1] [ref=e2]
+  - separator [ref=e3]
+  - list [ref=e4]:
+    - listitem [ref=e5]:
+      - link "Beauregarde Quest 1.html" [ref=e6] [cursor=pointer]:
+        - /url: Beauregarde%20Quest%201.html
+    - listitem [ref=e7]:
+      - link "Beauregarde Quest Editor.html" [ref=e8] [cursor=pointer]:
+        - /url: Beauregarde%20Quest%20Editor.html
+    - listitem [ref=e9]:
+      - link "Beauregarde Threads.html" [ref=e10] [cursor=pointer]:
+        - /url: Beauregarde%20Threads.html
+    - listitem [ref=e11]:
+      - link "Beauregarde.html" [ref=e12] [cursor=pointer]:
+        - /url: Beauregarde.html
+    - listitem [ref=e13]:
+      - link "game.md" [ref=e14] [cursor=pointer]:
+        - /url: game.md
+    - listitem [ref=e15]:
+      - link "md_Files/" [ref=e16] [cursor=pointer]:
+        - /url: md_Files/
+    - listitem [ref=e17]:
+      - link "server.log" [ref=e18] [cursor=pointer]:
+        - /url: server.log
+    - listitem [ref=e19]:
+      - link "uploads/" [ref=e20] [cursor=pointer]:
+        - /url: uploads/
+  - separator [ref=e21]

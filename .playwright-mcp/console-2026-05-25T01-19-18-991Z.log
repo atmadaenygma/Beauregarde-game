@@ -1,0 +1,5 @@
+[      59ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js:29904
+[      90ms] [WARNING] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/ @ https://unpkg.com/@babel/standalone@7.29.0/babel.min.js:2
+[  142111ms] [ERROR] Error: <path> attribute d: Expected number, "…6 11 36 20 19 31Z". @ https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js:784
+[  142111ms] [ERROR] Error: <path> attribute d: Expected number, "…1 12 31 18 19 26Z". @ https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js:784
+[  142154ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/favicon.ico:0

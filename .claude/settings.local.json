@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Test-Path \"L:\\\\Beauregarde_game\\\\underneath\\\\graphics\\\\maps\\\\the_veil\\\\move_block\\\\residential_zone\\\\apartment_building\\\\apartment\\\\bathroom\\\\octavias_bathroom_.mp4\")",
+      "mcp__playwright__browser_press_key"
+    ]
+  }
+}

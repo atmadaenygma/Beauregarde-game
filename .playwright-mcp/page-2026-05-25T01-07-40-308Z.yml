@@ -1,0 +1,68 @@
+- generic [active] [ref=e1]:
+  - heading "Directory listing for /" [level=1] [ref=e2]
+  - separator [ref=e3]
+  - list [ref=e4]:
+    - listitem [ref=e5]:
+      - link "book-card.jsx" [ref=e6] [cursor=pointer]:
+        - /url: book-card.jsx
+    - listitem [ref=e7]:
+      - link "book-library-manager.jsx" [ref=e8] [cursor=pointer]:
+        - /url: book-library-manager.jsx
+    - listitem [ref=e9]:
+      - link "book-reader.jsx" [ref=e10] [cursor=pointer]:
+        - /url: book-reader.jsx
+    - listitem [ref=e11]:
+      - link "dashboard-book-reader.jsx" [ref=e12] [cursor=pointer]:
+        - /url: dashboard-book-reader.jsx
+    - listitem [ref=e13]:
+      - link "Dashboard_template.html" [ref=e14] [cursor=pointer]:
+        - /url: Dashboard_template.html
+    - listitem [ref=e15]:
+      - link "lms-annotations.jsx" [ref=e16] [cursor=pointer]:
+        - /url: lms-annotations.jsx
+    - listitem [ref=e17]:
+      - link "lms-builders.jsx" [ref=e18] [cursor=pointer]:
+        - /url: lms-builders.jsx
+    - listitem [ref=e19]:
+      - link "lms-lesson-creator.jsx" [ref=e20] [cursor=pointer]:
+        - /url: lms-lesson-creator.jsx
+    - listitem [ref=e21]:
+      - link "lms-live-class.jsx" [ref=e22] [cursor=pointer]:
+        - /url: lms-live-class.jsx
+    - listitem [ref=e23]:
+      - link "lms-media.jsx" [ref=e24] [cursor=pointer]:
+        - /url: lms-media.jsx
+    - listitem [ref=e25]:
+      - link "lms-resources.jsx" [ref=e26] [cursor=pointer]:
+        - /url: lms-resources.jsx
+    - listitem [ref=e27]:
+      - link "lms-sidebar.jsx" [ref=e28] [cursor=pointer]:
+        - /url: lms-sidebar.jsx
+    - listitem [ref=e29]:
+      - link "lms-student-detail.jsx" [ref=e30] [cursor=pointer]:
+        - /url: lms-student-detail.jsx
+    - listitem [ref=e31]:
+      - link "lms-student-workspace.jsx" [ref=e32] [cursor=pointer]:
+        - /url: lms-student-workspace.jsx
+    - listitem [ref=e33]:
+      - link "lms-teacher-workspace.jsx" [ref=e34] [cursor=pointer]:
+        - /url: lms-teacher-workspace.jsx
+    - listitem [ref=e35]:
+      - link "lms-utils.jsx" [ref=e36] [cursor=pointer]:
+        - /url: lms-utils.jsx
+    - listitem [ref=e37]:
+      - link "server.log" [ref=e38] [cursor=pointer]:
+        - /url: server.log
+    - listitem [ref=e39]:
+      - link "subscription-gate.jsx" [ref=e40] [cursor=pointer]:
+        - /url: subscription-gate.jsx
+    - listitem [ref=e41]:
+      - link "tweaks-panel.jsx" [ref=e42] [cursor=pointer]:
+        - /url: tweaks-panel.jsx
+    - listitem [ref=e43]:
+      - link "uploads/" [ref=e44] [cursor=pointer]:
+        - /url: uploads/
+    - listitem [ref=e45]:
+      - link "web-speech-controller.jsx" [ref=e46] [cursor=pointer]:
+        - /url: web-speech-controller.jsx
+  - separator [ref=e47]

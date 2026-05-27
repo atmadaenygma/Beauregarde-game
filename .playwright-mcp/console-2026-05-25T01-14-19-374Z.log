@@ -1,0 +1,9 @@
+[      14ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js:29904
+[      58ms] [WARNING] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/ @ https://unpkg.com/@babel/standalone@7.29.0/babel.min.js:2
+[     866ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/audio/sfx/ambient/building/shower.mp3:0
+[  138532ms] [ERROR] Error: <path> attribute d: Expected number, "…6 11 36 20 19 31Z". @ https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js:784
+[  138532ms] [ERROR] Error: <path> attribute d: Expected number, "…1 12 31 18 19 26Z". @ https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js:784
+[  138540ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/graphics/maps/the_veil/move_block/residential_zone/apartment_building/apartment/bathroom/octavias_bathroom_.mp4:0
+[  138540ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/graphics/characters/octavia/movement/walk_left/walk_left.webm:0
+[  138543ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/audio/sfx/ambient/building/shower.mp3:0
+[  138543ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/audio/sfx/ambient/building/dripping%20water.mp3:0

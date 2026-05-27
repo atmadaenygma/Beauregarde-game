@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - heading "Directory listing for /" [level=1] [ref=e2]
+  - separator [ref=e3]
+  - list [ref=e4]:
+    - listitem [ref=e5]:
+      - link ".claude/" [ref=e6] [cursor=pointer]:
+        - /url: .claude/
+    - listitem [ref=e7]:
+      - link ".playwright-mcp/" [ref=e8] [cursor=pointer]:
+        - /url: .playwright-mcp/
+    - listitem [ref=e9]:
+      - link "audio/" [ref=e10] [cursor=pointer]:
+        - /url: audio/
+    - listitem [ref=e11]:
+      - link "graphics/" [ref=e12] [cursor=pointer]:
+        - /url: graphics/
+    - listitem [ref=e13]:
+      - link "inquiries/" [ref=e14] [cursor=pointer]:
+        - /url: inquiries/
+    - listitem [ref=e15]:
+      - link "project/" [ref=e16] [cursor=pointer]:
+        - /url: project/
+    - listitem [ref=e17]:
+      - link "README.md" [ref=e18] [cursor=pointer]:
+        - /url: README.md
+  - separator [ref=e19]

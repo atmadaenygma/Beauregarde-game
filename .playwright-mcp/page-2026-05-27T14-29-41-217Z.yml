@@ -1,0 +1,13 @@
+- generic [ref=e4]:
+  - generic [ref=e7]:
+    - generic [ref=e18]: // FEAR
+    - generic [ref=e8]: Cold. You are cold. The water has been running for a while. You are standing in it.
+    - generic [ref=e19]:
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: "1"
+        - generic [ref=e22]: Standing.
+      - generic [ref=e23] [cursor=pointer]:
+        - generic [ref=e24]: "2"
+        - generic [ref=e25]: (Still clothed. Fully clothed.)
+      - generic [ref=e26]: "[ 1/2/3 ] SELECT · [ E ] CONFIRM · [ ENTER ] SKIP"
+  - generic [ref=e9]: QUEST I — WAKING UP

@@ -1256,7 +1256,7 @@ const BATH_OBJ=[
   {id:'soak',   wx:218,  xMin:80,  xMax:357,  prompt:'SOAK OCTOPUS'},
   {id:'toilet', wx:510,  xMin:437, xMax:583,  prompt:'[ E ] LOOK'},
   {id:'sink',   wx:-160, prompt:'[ E ] LOOK'},
-  {id:'mirror', wx:820,  prompt:'[ E ] LOOK', xMin:650,xMax:1000},
+  {id:'mirror', wx:736,  prompt:'[ E ] LOOK', xMin:685,xMax:787},
   {id:'cabinet',wx:950,  prompt:'[ E ] OPEN'},
   {id:'door',   wx:1130, prompt:'[ E ] LEAVE',xMin:980,xMax:1200},
 ];
@@ -3090,9 +3090,10 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
         }
         const isRun=isRunningRef.current;
         const isMove=isMovingRef.current;
-        // Cybernetic legs — significantly boosted over a baseline human jump
-        jumpPeakRef.current=isRun?300:isMove?220:180;
-        jumpDurRef.current =isRun?900:isMove?700:550;
+        const isCrouch=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
+        // Hierarchy: standing (lowest) < walking < crouched jump < running (highest/furthest)
+        jumpPeakRef.current=isRun?300:isCrouch?250:isMove?200:100;
+        jumpDurRef.current =isRun?900:isCrouch?720:isMove?620:380;
         jumpingRef.current=true;
         jumpStartRef.current=Date.now();
       }

@@ -3537,33 +3537,39 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
           if(musicAudioRef.current){musicAudioRef.current.pause();}
           setMusicPlaying(false);setPhoneSubApp(null);setSelectedIdx(0);return;
         }
-        if(e.code==='ArrowUp'){setMusicTrackIdx(i=>Math.max(0,i-1));return;}
-        if(e.code==='ArrowDown'){setMusicTrackIdx(i=>Math.min(Math.max(0,MUSIC_LIB[musicFolder].length-1),i+1));return;}
-        if(e.code==='ArrowLeft'){
-          const nf=musicFolder==='instrumentals'?'vocals':'instrumentals';
-          setMusicFolder(nf);setMusicTrackIdx(0);setMusicTime(0);
-          if(musicAudioRef.current&&musicPlaying){musicAudioRef.current.pause();setMusicPlaying(false);}
-          return;
-        }
-        if(e.code==='ArrowRight'){
-          const nf=musicFolder==='vocals'?'instrumentals':'vocals';
-          setMusicFolder(nf);setMusicTrackIdx(0);setMusicTime(0);
-          if(musicAudioRef.current&&musicPlaying){musicAudioRef.current.pause();setMusicPlaying(false);}
-          return;
-        }
-        if(e.code==='KeyE'){
-          const tracks=MUSIC_LIB[musicFolder];
-          if(!tracks||tracks.length===0)return;
-          if(!musicAudioRef.current)musicAudioRef.current=new Audio();
-          const a=musicAudioRef.current;
-          if(musicPlaying){a.pause();setMusicPlaying(false);}
-          else{
-            const t=tracks[musicTrackIdx];
-            if(t){const abs=new URL(t.src,window.location.href).href;if(a.src!==abs){a.src=t.src;a.load();}}
-            a.play().then(()=>setMusicPlaying(true)).catch(()=>{});
+        // Controller uses cursor (left stick + E) — same as the rest of the HUD.
+        // Only keyboard gets D-pad style track navigation.
+        if(s.inputSrc!=='controller'){
+          if(e.code==='ArrowUp'){setMusicTrackIdx(i=>Math.max(0,i-1));return;}
+          if(e.code==='ArrowDown'){setMusicTrackIdx(i=>Math.min(Math.max(0,MUSIC_LIB[musicFolder].length-1),i+1));return;}
+          if(e.code==='ArrowLeft'){
+            const nf=musicFolder==='instrumentals'?'vocals':'instrumentals';
+            setMusicFolder(nf);setMusicTrackIdx(0);setMusicTime(0);
+            if(musicAudioRef.current&&musicPlaying){musicAudioRef.current.pause();setMusicPlaying(false);}
+            return;
+          }
+          if(e.code==='ArrowRight'){
+            const nf=musicFolder==='vocals'?'instrumentals':'vocals';
+            setMusicFolder(nf);setMusicTrackIdx(0);setMusicTime(0);
+            if(musicAudioRef.current&&musicPlaying){musicAudioRef.current.pause();setMusicPlaying(false);}
+            return;
+          }
+          if(e.code==='KeyE'){
+            const tracks=MUSIC_LIB[musicFolder];
+            if(!tracks||tracks.length===0)return;
+            if(!musicAudioRef.current)musicAudioRef.current=new Audio();
+            const a=musicAudioRef.current;
+            if(musicPlaying){a.pause();setMusicPlaying(false);}
+            else{
+              const t=tracks[musicTrackIdx];
+              if(t){const abs=new URL(t.src,window.location.href).href;if(a.src!==abs){a.src=t.src;a.load();}}
+              a.play().then(()=>setMusicPlaying(true)).catch(()=>{});
+            }
+            return;
           }
           return;
         }
+        // Controller: only handle Backspace (already done above) — cursor+E handles the rest
         return;
       }
       // Video library sub-app navigation
@@ -4323,7 +4329,18 @@ function LoadingScreen({onStart}){
     if(!ready)return;
     const h=e=>{if(e.type==='click'||e.type==='keydown')onStart();};
     window.addEventListener('keydown',h);window.addEventListener('click',h);
-    return()=>{window.removeEventListener('keydown',h);window.removeEventListener('click',h);};
+    // Gamepad: any button press starts the game
+    let raf;
+    const pollPad=()=>{
+      const pads=navigator.getGamepads?navigator.getGamepads():[];
+      if([...pads].some(gp=>gp&&gp.buttons.some(b=>b.pressed))){onStart();return;}
+      raf=requestAnimationFrame(pollPad);
+    };
+    raf=requestAnimationFrame(pollPad);
+    return()=>{
+      window.removeEventListener('keydown',h);window.removeEventListener('click',h);
+      cancelAnimationFrame(raf);
+    };
   },[ready,onStart]);
   return(
     <div style={{position:'absolute',inset:0,background:'#000',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',fontFamily:"'Blue Screen',monospace",userSelect:'none'}}>

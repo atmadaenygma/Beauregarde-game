@@ -3061,7 +3061,8 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
       lastStaminaRecoveryTime.current=Date.now();
     }
 
-    return {canRun:canRun&&!barkMsg, currentSpeed:canRun&&!barkMsg?spd*2.1:spd};
+    const baseSpd=canRun&&!barkMsg?spd*2.1:spd;
+    return {canRun:canRun&&!barkMsg, currentSpeed:crouching?baseSpd*0.4:baseSpd};
   },[]); // stable — reads everything from refs
 
   useEffect(()=>{

@@ -2825,7 +2825,7 @@ const SAVE_SLOTS=[
   {slot:3,name:'SLOT 3',scene:'hallway', time:'0:50h',status:'occupied'},
   {slot:4,name:'SLOT 4',scene:'store',   time:'—',    status:'empty'},
 ];
-function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,onBuyVideo,reputation,onChangeColor,characterCategories,onCategorizeCharacter,currentOutfit,onEquipItem,videoLibUnlocked=new Set(),onUnlockVideo}){
+function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,onBuyVideo,reputation,onChangeColor,characterCategories,onCategorizeCharacter,currentOutfit,onEquipItem,videoLibUnlocked=new Set(),onUnlockVideo,musicFolder,setMusicFolder,musicTrackIdx,setMusicTrackIdx,musicPlaying,setMusicPlaying,musicTime,setMusicTime,musicDuration,setMusicDuration,musicAudioRef}){
   const [activeTabIdx,setActiveTabIdx]=useState(0);
   const [selectedIdx,setSelectedIdx]=useState(0);
   const [activeInvSubTabIdx,setActiveInvSubTabIdx]=useState(0);
@@ -2848,14 +2848,9 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
   const [hoveredSysMode,setHoveredSysMode]=useState(null);
   const [activeColorPreset,setActiveColorPreset]=useState(()=>localStorage.getItem('hudColor')||'default');
   const listScrollRef=useRef(null);
-  // Music player
-  const [musicFolder,setMusicFolder]=useState('instrumentals');
-  const [musicTrackIdx,setMusicTrackIdx]=useState(0);
-  const [musicPlaying,setMusicPlaying]=useState(false);
-  const [musicTime,setMusicTime]=useState(0);
-  const [musicDuration,setMusicDuration]=useState(0);
+  // Music player — state comes from QuestApp props (persists when HUD closes)
+  // eqBars and eqIntervalRef are visual-only, fine to reset on HUD open
   const [eqBars,setEqBars]=useState(Array.from({length:18},()=>0.12));
-  const musicAudioRef=useRef(null);
   const eqIntervalRef=useRef(null);
 
   // Auto-scroll selected item into view (skip in controller mode — cursor handles positioning)
@@ -2971,11 +2966,8 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
     return()=>{a.removeEventListener('timeupdate',onTime);a.removeEventListener('loadedmetadata',onMeta);a.removeEventListener('ended',onEnd);};
   },[phoneSubApp,musicFolder,musicTrackIdx,musicPlaying]);
 
-  // Cleanup audio on unmount
-  useEffect(()=>()=>{
-    if(musicAudioRef.current){musicAudioRef.current.pause();musicAudioRef.current=null;}
-    clearInterval(eqIntervalRef.current);
-  },[]);
+  // Cleanup EQ animation on unmount — audio lives at QuestApp level, do not touch it here
+  useEffect(()=>()=>{clearInterval(eqIntervalRef.current);},[]);
 
   if(!show)return null;
 
@@ -3078,7 +3070,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
               const isSel=i===activeVideoIdx;
               return(
                 <div key={v.id} ref={isSel?selectedItemRef:null} data-hudidx={i}
-                  onClick={()=>{setActiveVideoIdx(i);if(unlocked){setPlayingVideoId(v.id);setViewingImage(null);}}}
+                  onClick={()=>{setActiveVideoIdx(i);if(unlocked){if(musicAudioRef.current&&musicPlaying){musicAudioRef.current.pause();setMusicPlaying(false);}setPlayingVideoId(v.id);setViewingImage(null);}}}
                   style={{display:'flex',alignItems:'center',gap:Math.round(4*F),padding:`${Math.round(3*F)}px ${PADX}px`,
                     borderLeft:`2px solid ${isSel?C.gold:'transparent'}`,
                     background:isSel?C.selBg+'88':'transparent',cursor:'pointer',marginBottom:Math.round(1*F)}}>
@@ -3585,7 +3577,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         if(e.code==='KeyE'&&!s.playingVideoId){
           stop();
           const v=VIDEO_LIBRARY[s.activeVideoIdx];
-          if(v&&(s.videoLibUnlocked.has(v.id)||VIDEO_TEST_BYPASS)){setPlayingVideoId(v.id);setViewingImage(null);}
+          if(v&&(s.videoLibUnlocked.has(v.id)||VIDEO_TEST_BYPASS)){if(musicAudioRef.current&&musicPlaying){musicAudioRef.current.pause();setMusicPlaying(false);}setPlayingVideoId(v.id);setViewingImage(null);}
           return;
         }
       }
@@ -4410,6 +4402,13 @@ function QuestApp(){
   const [bathroomSpawnPos,setBathroomSpawnPos]=useState(350);
   const [bathroomSpawnFacing,setBathroomSpawnFacing]=useState('right');
   const hoodieOn=inventory.includes('hoodie');
+  // Music player state lives at app level so audio persists when HUD closes
+  const [musicFolder,setMusicFolder]=useState('instrumentals');
+  const [musicTrackIdx,setMusicTrackIdx]=useState(0);
+  const [musicPlaying,setMusicPlaying]=useState(false);
+  const [musicTime,setMusicTime]=useState(0);
+  const [musicDuration,setMusicDuration]=useState(0);
+  const musicAudioRef=useRef(null);
   useGamepad();
   useEffect(()=>{
     const chk=()=>setPadConnected(!![...navigator.getGamepads()].some(Boolean));
@@ -4550,7 +4549,13 @@ function QuestApp(){
         characterCategories={characterCategories} onCategorizeCharacter={handleCategorizeCharacter}
         currentOutfit={currentOutfit} onEquipItem={handleEquipItem}
         videoLibUnlocked={videoLibUnlocked}
-        onUnlockVideo={(id)=>setVideoLibUnlocked(s=>{const ns=new Set(s);ns.add(id);localStorage.setItem('beau_videos_v1',JSON.stringify([...ns]));return ns;})}/>}
+        onUnlockVideo={(id)=>setVideoLibUnlocked(s=>{const ns=new Set(s);ns.add(id);localStorage.setItem('beau_videos_v1',JSON.stringify([...ns]));return ns;})}
+        musicFolder={musicFolder} setMusicFolder={setMusicFolder}
+        musicTrackIdx={musicTrackIdx} setMusicTrackIdx={setMusicTrackIdx}
+        musicPlaying={musicPlaying} setMusicPlaying={setMusicPlaying}
+        musicTime={musicTime} setMusicTime={setMusicTime}
+        musicDuration={musicDuration} setMusicDuration={setMusicDuration}
+        musicAudioRef={musicAudioRef}/>}
       {showPause&&<PauseMenu onResume={()=>setShowPause(false)} onRestart={()=>{setShowPause(false);go(scene);}} onQuit={()=>{setShowPause(false);go('opening');}}/>}
       <div style={{position:'absolute',top:14,left:16,zIndex:600,color:`${C.dim}44`,fontSize:8,letterSpacing:3,fontFamily:"'Blue Screen',monospace",opacity:fading?0:1,transition:'opacity 1s'}}>
         QUEST I — WAKING UP

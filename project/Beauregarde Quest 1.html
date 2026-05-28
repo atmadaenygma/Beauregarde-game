@@ -408,6 +408,7 @@ const CHAR_ANIMATIONS={
     rightBased:true,
     idle_left:'../graphics/characters/cyberOctavia/cyber_octavia_left_idle.webm',
     crouch_idle_right:'../graphics/characters/cyberOctavia/cyber_octavia_crouch_idle_right.webm',
+    crouch_walk_right:'../graphics/characters/cyberOctavia/cyber_octavia_crouch_walk_right.webm',
     walk:'../graphics/characters/cyberOctavia/cyber_octavia_walk_right.webm',
     run:'../graphics/characters/cyberOctavia/cyber_octavia_run_right.webm',
   },
@@ -422,8 +423,9 @@ const getCharAnimation=(outfit,facing,action)=>{
   const def=CHAR_ANIMATIONS[outfit];
   if(!def) return {src:null,flip:false};
   if(def.rightBased){
-    if(action==='idle')   return {src:def.idle_left||null, flip:facing==='right'};
-    if(action==='crouch') return {src:def.crouch_idle_right||def.idle_left||null, flip:facing==='left'};
+    if(action==='idle')       return {src:def.idle_left||null, flip:facing==='right'};
+    if(action==='crouch')     return {src:def.crouch_idle_right||def.idle_left||null, flip:facing==='left'};
+    if(action==='crouch_walk')return {src:def.crouch_walk_right||def.crouch_idle_right||def.walk||null, flip:facing==='left'};
     const src=(action==='run'&&def.run)?def.run:def.walk;
     return {src:src||null, flip:facing==='left'};
   }
@@ -790,7 +792,7 @@ function ChromaKeyVideo({src,flip,height,playing,playbackRate,filterStr}){
 
 function Char({facing,walking,running=false,crouching=false,vertOffset=0,charBottom=116,charX,charHeight=371,currentOutfit='cyber_octavia'}){
   const vidRef=useRef(null);
-  const action=crouching?'crouch':running?'run':walking?'walk':'idle';
+  const action=crouching?(walking||running?'crouch_walk':'crouch'):running?'run':walking?'walk':'idle';
   const {src:animSrc,flip:shouldFlip}=getCharAnimation(currentOutfit,facing,action);
   // True only for outfits with dedicated idle files (rags). Others share the walk file.
   const hasIdleAnim=!!CHAR_ANIMATIONS[currentOutfit]?.idle_left;
@@ -808,7 +810,8 @@ function Char({facing,walking,running=false,crouching=false,vertOffset=0,charBot
   useEffect(()=>{
     const v=vidRef.current;if(!v)return;
     v.muted=true;
-    if(crouching){v.playbackRate=1;v.play().catch(()=>{});}
+    if(crouching&&(walking||running)){v.playbackRate=0.65;v.play().catch(()=>{});}
+    else if(crouching){v.playbackRate=1;v.play().catch(()=>{});}
     else if(walking){v.playbackRate=0.65;v.play().catch(()=>{});}
     else if(running){v.playbackRate=1;v.play().catch(()=>{});}
     else if(hasIdleAnim){/* rags: idle_left/idle_right loop plays via animSrc change */}
@@ -1298,6 +1301,13 @@ const RUN_BARKS_HOODIE=[
   'The hood will fly right off.',
   'I can\'t run in this. It\'ll slip.',
   'Nope. Hoodie stays put.',
+];
+const STEALTH_BARKS_HOODIE=[
+  'I don\'t want to ruin my guise.',
+  'Can\'t risk drawing attention.',
+  'Not in this outfit.',
+  'Better keep it low-key.',
+  'I need to keep this cover.',
 ];
 
 function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inventory,heartNum,onUseItem,onEnterBathroom,onAddItems,onEquipItem,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
@@ -3009,13 +3019,19 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
 
     const isRunning=keys.current['ShiftRight']; // controller A button
     const outfitAllowsRun=outfit==='cyber_octavia';
+    const outfitAllowsStealth=outfit==='cyber_octavia';
     const canRun=isRunning&&stam>0&&outfitAllowsRun;
-    const crouching=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
+    const wantsCrouch=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
     let barkMsg=null;
 
     if(isRunning&&isMoving&&!outfitAllowsRun){
       if(outfit==='hoodie'){
         barkMsg=RUN_BARKS_HOODIE[Math.floor(Math.random()*RUN_BARKS_HOODIE.length)];
+      }
+    }
+    if(wantsCrouch&&!outfitAllowsStealth){
+      if(outfit==='hoodie'){
+        barkMsg=STEALTH_BARKS_HOODIE[Math.floor(Math.random()*STEALTH_BARKS_HOODIE.length)];
       }
     }
 
@@ -3025,8 +3041,9 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
       setTimeout(()=>setBark(null),3000);
     }
 
+    const crouching=wantsCrouch&&outfitAllowsStealth;
     setRunning(canRun&&!barkMsg&&isMoving);
-    setIsCrouching(crouching&&!isMoving); // only crouch when standing still
+    setIsCrouching(crouching);
     isRunningRef.current=canRun&&!barkMsg&&isMoving;
 
     if(canRun&&isMoving){
@@ -3044,6 +3061,16 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
       keys.current[e.code]=true;
       // Jump trigger — Space key or controller X (mapped to Space via BTN[2])
       if(e.code==='Space'&&!jumpingRef.current&&!pausedRef.current){
+        if(outfitRef.current!=='cyber_octavia'){
+          // Hoodie: bark instead of jumping
+          if(Date.now()-lastBarkTime.current>3000){
+            const msg=STEALTH_BARKS_HOODIE[Math.floor(Math.random()*STEALTH_BARKS_HOODIE.length)];
+            setBark(msg);
+            lastBarkTime.current=Date.now();
+            setTimeout(()=>setBark(null),3000);
+          }
+          return;
+        }
         const isRun=isRunningRef.current;
         const isMove=isMovingRef.current;
         jumpPeakRef.current=isRun?140:isMove?100:80;

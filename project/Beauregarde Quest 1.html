@@ -2080,7 +2080,7 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
   const [streetTexts,setStreetTexts]=useState([]);
   const raf=useRef(null);
   const strSPD=SPD*0.1024;
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen,0.25);
   // Camera: follows worldX but stops at image edges — never shows black
   const cam=clamp(worldX-VW/2,0,STR_CAM_MAX);
   const nearNpc=STR_NPCS.find(n=>Math.abs(n.wx-worldX)<85);
@@ -2942,7 +2942,7 @@ function useInputSource(){
 //
 // This ensures EVERY scene has consistent running, stamina, outfit restrictions, and controller support.
 
-function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused=false){
+function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused=false,jumpScale=1){
   const keys=useRef({});
   const [running,setRunning]=useState(false);
   const [isCrouching,setIsCrouching]=useState(false);
@@ -2959,6 +2959,8 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   const jumpDurRef=useRef(0);
   const isMovingRef=useRef(false); // updated by updateMovement each frame
   const isRunningRef=useRef(false); // updated by updateMovement each frame
+  const jumpScaleRef=useRef(jumpScale);
+  jumpScaleRef.current=jumpScale;
 
   // Refs keep the loop from going stale — always current without needing to
   // restart the RAF loop when outfit / stamina / speed change.
@@ -3091,9 +3093,10 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
         const isRun=isRunningRef.current;
         const isMove=isMovingRef.current;
         const isCrouch=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
+        const jScale=jumpScaleRef.current;
         // Hierarchy: standing (lowest) < walking < crouched jump < running (highest/furthest)
-        jumpPeakRef.current=isRun?300:isCrouch?250:isMove?200:100;
-        jumpDurRef.current =isRun?900:isCrouch?720:isMove?620:380;
+        jumpPeakRef.current=(isRun?300:isCrouch?250:isMove?200:100)*jScale;
+        jumpDurRef.current =(isRun?900:isCrouch?720:isMove?620:380)*Math.sqrt(jScale);
         jumpingRef.current=true;
         jumpStartRef.current=Date.now();
       }

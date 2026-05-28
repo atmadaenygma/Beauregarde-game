@@ -4218,6 +4218,54 @@ function PauseMenu({onResume,onRestart,onQuit}){
   );
 }
 
+function LoadingScreen({onStart}){
+  const [progress,setProgress]=useState(0);
+  const [status,setStatus]=useState('INITIALIZING');
+  const [ready,setReady]=useState(false);
+  const [blink,setBlink]=useState(true);
+  useEffect(()=>{
+    let p=0;
+    const phases=[
+      {target:28,msg:'INITIALIZING',delay:500},
+      {target:58,msg:'LOADING ASSETS',delay:700},
+      {target:82,msg:'BUILDING WORLD',delay:600},
+      {target:100,msg:'READY',delay:400},
+    ];
+    let idx=0;
+    const tick=()=>{
+      if(idx>=phases.length)return;
+      const ph=phases[idx];
+      if(p<ph.target){p=Math.min(ph.target,p+1.6);setProgress(Math.floor(p));setTimeout(tick,16);}
+      else{setStatus(ph.msg);idx++;if(idx<phases.length)setTimeout(tick,ph.delay);else setTimeout(()=>setReady(true),350);}
+    };
+    setTimeout(tick,400);
+  },[]);
+  useEffect(()=>{if(!ready)return;const id=setInterval(()=>setBlink(b=>!b),540);return()=>clearInterval(id);},[ready]);
+  useEffect(()=>{
+    if(!ready)return;
+    const h=e=>{if(e.type==='click'||e.type==='keydown')onStart();};
+    window.addEventListener('keydown',h);window.addEventListener('click',h);
+    return()=>{window.removeEventListener('keydown',h);window.removeEventListener('click',h);};
+  },[ready,onStart]);
+  return(
+    <div style={{position:'absolute',inset:0,background:'#000',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',fontFamily:"'Blue Screen',monospace",userSelect:'none'}}>
+      <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(0deg,rgba(0,0,0,0.18) 0px,rgba(0,0,0,0.18) 1px,transparent 1px,transparent 2px)',pointerEvents:'none',zIndex:2}}/>
+      <div style={{position:'relative',zIndex:3,display:'flex',flexDirection:'column',alignItems:'center'}}>
+        <div style={{width:440,height:1,background:'#ffffff18',marginBottom:36}}/>
+        <div style={{fontSize:64,letterSpacing:18,color:'#e8e0d0',lineHeight:1,textAlign:'center'}}>BEAUREGARDE</div>
+        <div style={{fontSize:13,letterSpacing:12,color:'#7a7060',marginTop:12,textAlign:'center'}}>Q U E S T &nbsp;&nbsp; I</div>
+        <div style={{width:440,height:1,background:'#ffffff18',marginTop:36,marginBottom:52}}/>
+        <div style={{width:340,height:2,background:'#181410',position:'relative',marginBottom:14}}>
+          <div style={{position:'absolute',left:0,top:0,height:'100%',width:`${progress}%`,background:'#c8b890',transition:'width 0.08s linear'}}/>
+        </div>
+        <div style={{fontSize:8,letterSpacing:5,color:'#4a4438',height:14,textAlign:'center'}}>{status}</div>
+        <div style={{marginTop:44,fontSize:11,letterSpacing:5,color:ready&&blink?'#c8b890':'transparent',height:18,textAlign:'center'}}>— PRESS ANY KEY TO START —</div>
+      </div>
+      <div style={{position:'absolute',bottom:18,right:24,fontSize:7,letterSpacing:2,color:'#2a261e',zIndex:3}}>BEAUREGARDE INTERACTIVE © 2026</div>
+    </div>
+  );
+}
+
 function QuestApp(){
   const [scene,setScene]=useState('opening');
   const [fading,setFading]=useState(true);
@@ -4416,7 +4464,12 @@ function QuestApp(){
     </div>
   );
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<QuestApp/>);
+function Root(){
+  const [started,setStarted]=useState(false);
+  if(!started)return <LoadingScreen onStart={()=>setStarted(true)}/>;
+  return <QuestApp/>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
 </script>
 <script>
 (function(){

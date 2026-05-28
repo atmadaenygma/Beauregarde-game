@@ -1,5 +1,4 @@
 {
   "version": 2,
-  "public": "project",
-  "buildCommand": "echo 'Static site, no build needed'"
+  "outputDirectory": "project"
 }

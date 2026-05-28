@@ -362,6 +362,7 @@ const CHAR_ANIMATIONS={
     walk:'../graphics/characters/octavia/hoodie/octavia_black_hoodie_walk_right.webm',
   },
   underwear:{
+    needsChromaKey:true,
     baseDir:'left',
     idle:'../graphics/characters/octavia/underwear/octavia_underwear_walk_left.webm',
     walk:'../graphics/characters/octavia/underwear/octavia_underwear_walk_left.webm',
@@ -738,7 +739,7 @@ function Char({facing,walking,running=false,charBottom=116,charX,charHeight=371,
     if(walking){v.playbackRate=0.65;v.play().catch(()=>{});}
     else if(running){v.playbackRate=1;v.play().catch(()=>{});}
     else if(hasIdleAnim){/* rags: idle_left/idle_right loop plays via animSrc change */}
-    else v.play().catch(()=>{}); // single-file outfits (underwear/hoodie): keep looping, never freeze on a bad frame
+    else{v.currentTime=0;v.addEventListener('seeked',()=>v.pause(),{once:true});} // single-file outfit idle: freeze at frame 0
   },[running,walking]);
   if(animSrc){
     const ckNeeded=CHAR_ANIMATIONS[currentOutfit]?.needsChromaKey;

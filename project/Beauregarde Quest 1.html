@@ -795,7 +795,7 @@ function ChromaKeyVideo({src,flip,height,playing,playbackRate,filterStr}){
 function Char({facing,walking,running=false,crouching=false,jumping=false,vertOffset=0,charBottom=116,charX,charHeight=371,currentOutfit='cyber_octavia'}){
   const vidRef=useRef(null);
   const action=jumping?'jump':crouching?(walking||running?'crouch_walk':'crouch'):running?'run':walking?'walk':'idle';
-  const effectiveHeight=crouching?Math.round(charHeight*0.65):charHeight;
+  const effectiveHeight=crouching?Math.round(charHeight*0.75):charHeight;
   const {src:animSrc,flip:shouldFlip}=getCharAnimation(currentOutfit,facing,action);
   // True only for outfits with dedicated idle files (rags). Others share the walk file.
   const hasIdleAnim=!!CHAR_ANIMATIONS[currentOutfit]?.idle_left;

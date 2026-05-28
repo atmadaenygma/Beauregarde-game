@@ -679,23 +679,28 @@ function Char({facing,walking,running=false,charBottom=116,charX,charHeight=371,
   const hasIdleAnim=!!CHAR_ANIMATIONS[currentOutfit]?.idle_left;
   useEffect(()=>{
     const v=vidRef.current;if(!v||!animSrc)return;
+    // Hide until alpha is decoded to prevent green flash on src change
+    v.style.opacity='0';
     v.load();v.muted=true;
-    v.playbackRate=walking?0.65:1; // walking is slower, everything else at normal speed (including run)
+    v.playbackRate=walking?0.65:1;
+    const onReady=()=>{v.style.opacity='1';};
+    v.addEventListener('loadeddata',onReady,{once:true});
     v.play().catch(()=>{});
+    return()=>v.removeEventListener('loadeddata',onReady);
   },[animSrc,running,walking]);
   useEffect(()=>{
     const v=vidRef.current;if(!v)return;
     v.muted=true;
     if(walking){v.playbackRate=0.65;v.play().catch(()=>{});}
-    else if(running){v.playbackRate=1;v.play().catch(()=>{});} // run anim at normal speed
-    else if(hasIdleAnim){/* rags: [animSrc] already loaded & plays the idle loop */}
-    else v.pause();
+    else if(running){v.playbackRate=1;v.play().catch(()=>{});}
+    else if(hasIdleAnim){/* rags: idle_left/idle_right loop plays via animSrc change */}
+    else v.play().catch(()=>{}); // single-file outfits (underwear/hoodie): keep looping, never freeze on a bad frame
   },[running,walking]);
   if(animSrc){
     return(
       <div style={{position:'absolute',bottom:charBottom,left:charX!==undefined?charX:'50%',zIndex:100,pointerEvents:'none',transform:'translateX(-50%)'}}>
         <video key={animSrc} ref={vidRef} src={animSrc} loop muted playsInline preload="auto"
-          style={{height:charHeight,display:'block',transformOrigin:'center center',transform:shouldFlip?'scaleX(-1)':'none',filter:'drop-shadow(0 6px 16px rgba(196,48,40,.55))'}}/>
+          style={{height:charHeight,display:'block',transformOrigin:'center center',transform:shouldFlip?'scaleX(-1)':'none',filter:'drop-shadow(0 6px 16px rgba(196,48,40,.55))',transition:'opacity 0.1s ease'}}/>
       </div>
     );
   }

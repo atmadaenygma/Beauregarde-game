@@ -855,12 +855,18 @@ function SceneLabel({label}){return(<div style={{position:'absolute',top:14,left
 function Controls({hints}){return(<div style={{position:'absolute',bottom:18,right:20,zIndex:300,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}}>{hints.map(([k,v])=>(<div key={k} style={{display:'flex',gap:8,alignItems:'center'}}><span style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>{v}</span><span style={{color:C.text,fontSize:8,fontFamily:"'Blue Screen',monospace",border:`1px solid ${C.border}`,padding:'1px 7px',background:C.panel}}>{k}</span></div>))}</div>);}
 function DebugOverlay({px,scene,onSceneChange}){
   const SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store'];
+  const linkStyle={color:'#00ff88',fontSize:8,letterSpacing:1,cursor:'pointer',textDecoration:'none',display:'block',lineHeight:2,opacity:.75};
   return(<div style={{position:'absolute',top:34,left:16,zIndex:700,fontFamily:"'Courier New','Courier',monospace",fontSize:8,lineHeight:2,color:'#00ff88',background:'rgba(0,0,0,0.75)',padding:'4px 12px',letterSpacing:1,borderLeft:'2px solid #00ff8855'}}>
     <div>SCENE: <select value={scene} onChange={(e)=>onSceneChange?.(e.target.value)} style={{background:C.panel,color:'#00ff88',border:'1px solid #00ff88',fontFamily:"'Courier New','Courier',monospace",fontSize:8,padding:'2px 4px',cursor:'pointer'}}>
       {SCENES.map(s=><option key={s} value={s}>{s}</option>)}
     </select></div>
     <div>WORLD X: {Math.round(px)}</div>
     <div>CHAR SCREEN: {VW/2} , {VH/2}</div>
+    <div style={{borderTop:'1px solid #00ff8833',marginTop:2,paddingTop:2}}>
+      <a href="Beauregarde Quest Editor.html" target="_blank" rel="noopener" style={linkStyle}>↗ QUEST EDITOR</a>
+      <a href="Beauregarde Threads.html"      target="_blank" rel="noopener" style={linkStyle}>↗ THREADS VIEWER</a>
+      <a href="dev.html"                      target="_blank" rel="noopener" style={linkStyle}>↗ DEV HUB</a>
+    </div>
   </div>);
 }
 
@@ -4748,6 +4754,8 @@ function QuestApp(){
     const kd=e=>{
       if(e.code==='Tab'){e.preventDefault();setDebug(d=>!d);return;}
       if(e.code==='Pause'){setShowPause(p=>!p);return;}
+      if(e.ctrlKey&&e.shiftKey&&e.code==='KeyE'){e.preventDefault();window.open('Beauregarde Quest Editor.html','_blank');return;}
+      if(e.ctrlKey&&e.shiftKey&&e.code==='KeyD'){e.preventDefault();window.open('dev.html','_blank');return;}
       if(e.code==='KeyI'){if(hasPhone||debug)setShowDevice(d=>d?d:true);return;}
       if(scene==='opening')return;
       if(e.code==='KeyE'){moState.advance();}

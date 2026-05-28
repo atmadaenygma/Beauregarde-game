@@ -3095,7 +3095,7 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
         const isCrouch=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
         const jScale=jumpScaleRef.current;
         // Hierarchy: standing (lowest) < walking < crouched jump < running (highest/furthest)
-        jumpPeakRef.current=(isRun?300:isCrouch?250:isMove?200:100)*jScale;
+        jumpPeakRef.current=(isRun?390:isCrouch?320:isMove?260:130)*jScale;
         jumpDurRef.current =(isRun?900:isCrouch?720:isMove?620:380)*Math.sqrt(jScale);
         jumpingRef.current=true;
         jumpStartRef.current=Date.now();

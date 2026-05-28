@@ -70,7 +70,9 @@ const KEYS={
   SKIP:   'Enter',     // skip/fast-forward (Opening)
   CANCEL: 'Escape',    // close popup / cancel
   INV:    'KeyI',      // inventory
-  RUN:    'ShiftLeft', // run (double speed + 10%)
+  RUN:    'ShiftRight', // controller A button only — keyboard Shift is now CROUCH
+  CROUCH: 'ShiftLeft',  // keyboard Shift = crouch; controller D-pad down via ArrowDown
+  JUMP:   'Space',      // keyboard Space = jump; controller X button
   UP:     'ArrowUp',
   DOWN:   'ArrowDown',
   LEFT:   'ArrowLeft',
@@ -91,6 +93,14 @@ const RESTAURANT_IMG  = '../graphics/maps/the_veil/move_block/restaurant.webm';
 const ALLEY_VIDEO_STORE_IMG = '../graphics/maps/the_veil/move_block/alley_video_store/alley_video_store.webm';
 const CHARLIE_IDLE_VID = '../graphics/characters/NPCs/charlie_winston_idle.webm';
 const EXTERIOR_IMG    = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/exterior/exterior.png';
+const FOURTH_FLOOR_HALLWAY_VID = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/fourth_floor_hallway.mp4';
+const ELEVATOR_HALLWAY_VID     = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/elevator_hallway_.mp4';
+const APT_STAIRWELL_VID        = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/apt_stairwell.mp4';
+const STORE_CLERK_VID      = '../graphics/characters/NPCs/convenient_female_clerk_idle.webm';
+const SECURITY_GUARD_VID   = '../graphics/characters/NPCs/security_guard_idle.webm';
+const PHARMACIST_VID       = '../graphics/characters/NPCs/pharmacist_idle.webm';
+const RESTAURANT_OWNER_VID = '../graphics/characters/NPCs/restaurant_owner_idle.webm';
+const CHEF_VID             = '../graphics/characters/NPCs/chef_idle.webm';
 const DEVICE_HUD_IMG  = '../graphics/assets/ui/device_hud/device_frame.png';
 const DEVICE_MASK_IMG = '../graphics/assets/ui/device_hud/smartphone_mask_black_white.png';
 // HUD size system — every HUD dimension is computed from HUD_SCALE so the
@@ -214,6 +224,15 @@ const CONV={
       {t:"(leave)",                       next:null,act:'freeItems'},
     ]},
   ],
+  store_cant_pay:[
+    {id:'s0',npc:"You don't have enough for that.",opts:[
+      {t:"I'm sorry. Here—",            next:'s_return'},
+      {t:"(keep walking)",              next:null,act:'stealFinal',muted:true},
+    ]},
+    {id:'s_return',npc:"No problem. Come back when you're ready.",opts:[
+      {t:"(put items back)",            next:null,act:'putback',muted:true},
+    ]},
+  ],
   street_passerby:[
     {id:'s0',npc:"Watch yourself out here tonight. Bureau's been moving through.",opts:[
       {t:"Thank you.",                    next:null},
@@ -226,26 +245,66 @@ const CONV={
       {t:"(nod)",                         next:null,muted:true},
     ]},
   ],
-  pharmacist_browse:[
-    {id:'s0',npc:"You need something? Pain relievers? Bandages?",opts:[
-      {t:"Just looking around.",          next:'s1'},
-      {t:"I'm okay, thanks.",             next:'s1'},
-    ]},
-    {id:'s1',npc:"You're safe here, honey. Pharmacy is always safe. If you need anything—medicine, supplies, information—you come back. No questions asked. Network takes care of its own.",opts:[
-      {t:"Thank you.",                    next:'s2'},
-      {t:"(nod)",                         next:'s2',muted:true},
-    ]},
-    {id:'s2',npc:"There's a doctor three blocks up. Runs a clinic out of her apartment. She knows about... modifications. If that octopus on your head needs medical attention, Dr. Chen can help. She's the one people go to.",opts:[
-      {t:"(take the card)",               next:'s3',act:'giveDrChenCard'},
-    ]},
-    {id:'s3',npc:"Don't lose that. Could save your life one day.",opts:[
-      {t:"I won't. Thank you.",           next:null},
-      {t:"(nod)",                         next:null,muted:true},
-    ]},
-  ],
   guard_talk:[
     {id:'s0',npc:"Keep it moving.",opts:[
       {t:"Right. Sorry.",                 next:null},
+    ]},
+  ],
+  guard_blocked:[
+    {id:'s0',npc:"You look suspicious. You can't enter.",opts:[
+      {t:"I just need something inside.",  next:'s1'},
+      {t:"(back away)",                   next:null,muted:true},
+    ]},
+    {id:'s1',npc:"The Bureau watches for anything unusual. Octopus mutations, neural integrations — all flagged on sight. If you walk in there like that, you're putting everyone here at risk.",opts:[
+      {t:"What should I do?",             next:'s2'},
+      {t:"(look down)",                   next:'s2',muted:true},
+    ]},
+    {id:'s2',npc:"Find a disguise. A hoodie, a coat, anything to cover the mutations. This is rule one in the Veil: cover what they're looking for. Come back when you're covered.",opts:[
+      {t:"I understand.",                 next:null},
+      {t:"(nod, back away)",              next:null,muted:true},
+    ]},
+  ],
+  pharmacist_browse:[
+    {id:'s0',npc:"What do you need today?",opts:[
+      {t:"Painkillers.",                  next:'s_pain',  act:'addPainkillers'},
+      {t:"Bandages.",                     next:'s_band',  act:'addBandages'},
+      {t:"Both.",                         next:'s_both',  act:'addBoth'},
+      {t:"Just information.",             next:'s_info'},
+    ]},
+    {id:'s_pain',npc:"Four dollars for the painkillers.",opts:[
+      {t:"(pay)",                         next:'s_done',  act:'pay'},
+      {t:"I don't have enough.",          next:'s_nomoney',muted:true},
+      {t:"Actually, never mind.",         next:'s_cancel',act:'clearBasket',muted:true},
+    ]},
+    {id:'s_band',npc:"Three dollars for the bandages.",opts:[
+      {t:"(pay)",                         next:'s_done',  act:'pay'},
+      {t:"I don't have enough.",          next:'s_nomoney',muted:true},
+      {t:"Actually, never mind.",         next:'s_cancel',act:'clearBasket',muted:true},
+    ]},
+    {id:'s_both',npc:"Seven dollars — painkillers and bandages.",opts:[
+      {t:"(pay)",                         next:'s_done',  act:'pay'},
+      {t:"Just the painkillers.",         next:'s_pain',  act:'addPainkillers'},
+      {t:"Just the bandages.",            next:'s_band',  act:'addBandages'},
+      {t:"I don't have enough.",          next:'s_nomoney',muted:true},
+    ]},
+    {id:'s_nomoney',npc:"Come back when you can. Pharmacy is always open.",opts:[
+      {t:"Thank you.",                    next:null,       act:'clearBasket'},
+      {t:"(leave)",                       next:null,       act:'clearBasket',muted:true},
+    ]},
+    {id:'s_cancel',npc:"Of course. Anything else?",opts:[
+      {t:"Nothing today.",                next:null},
+      {t:"(leave)",                       next:null,       muted:true},
+    ]},
+    {id:'s_done',npc:"Keep those close. Stay safe out there.",opts:[
+      {t:"(leave)",                       next:null,       act:'leave'},
+    ]},
+    {id:'s_info',npc:"You're safe here. No questions asked. There's a doctor three blocks up — Dr. Chen. Runs a clinic from her apartment. Knows about modifications.",opts:[
+      {t:"(take the card)",               next:'s_card',  act:'giveDrChenCard'},
+      {t:"Thank you.",                    next:null},
+    ]},
+    {id:'s_card',npc:"Don't lose that. Could save your life.",opts:[
+      {t:"I won't.",                      next:null},
+      {t:"(nod)",                         next:null,       muted:true},
     ]},
   ],
   diego_browse:[
@@ -343,44 +402,36 @@ const MONO={
 };
 // ── CHARACTER ANIMATIONS ────────────────────────────────────
 // Organized by outfit → direction+action
-// Outfits with dedicated per-direction files use idle_left/idle_right/walk_left/walk_right keys — no CSS flip.
-// Outfits with a single base file use baseDir + idle/walk keys — CSS flip handles direction.
+// rightBased outfits: walk/run files face right (flip for left); idle_left faces left (flip for right).
 const CHAR_ANIMATIONS={
-  rags:{
-    // Full directional set — each facing uses its own file, no CSS flip
-    idle_left: '../graphics/characters/octavia/rags/octavia__rags_left_idle.webm',
-    idle_right:'../graphics/characters/octavia/rags/octavia__rags_right_idle.webm',
-    walk_left: '../graphics/characters/octavia/rags/octavia__rags_left_walk.webm',
-    walk_right:'../graphics/characters/octavia/rags/octavia__rags_right_walk.webm',
-    run_left:  '../graphics/characters/octavia/rags/octavia_rags_left_run.webm',
-    run_right: '../graphics/characters/octavia/rags/octavia_rags_left_run.webm', // same as left, flipped
+  cyber_octavia:{
+    rightBased:true,
+    idle_left:'../graphics/characters/cyberOctavia/cyber_octavia_left_idle.webm',
+    crouch_idle_right:'../graphics/characters/cyberOctavia/cyber_octavia_crouch_idle_right.webm',
+    walk:'../graphics/characters/cyberOctavia/cyber_octavia_walk_right.webm',
+    run:'../graphics/characters/cyberOctavia/cyber_octavia_run_right.webm',
   },
   hoodie:{
-    // Only walk_right exists — CSS flip produces left-facing
-    baseDir:'right',
-    idle:'../graphics/characters/octavia/hoodie/octavia_black_hoodie_walk_right.webm',
-    walk:'../graphics/characters/octavia/hoodie/octavia_black_hoodie_walk_right.webm',
-  },
-  underwear:{
-    needsChromaKey:true,
-    baseDir:'left',
-    idle:'../graphics/characters/octavia/underwear/octavia_underwear_walk_left.webm',
-    walk:'../graphics/characters/octavia/underwear/octavia_underwear_walk_left.webm',
+    rightBased:true,
+    idle_left:'../graphics/characters/cyberOctavia/cyber_octavia_hooded_left_idle.webm',
+    walk:'../graphics/characters/cyberOctavia/cyber_octavia_hooded_walk_right.webm',
   },
 };
 // Returns {src, flip} — flip=true means apply scaleX(-1) to face the correct direction
 const getCharAnimation=(outfit,facing,action)=>{
   const def=CHAR_ANIMATIONS[outfit];
   if(!def) return {src:null,flip:false};
-  // Outfits with explicit per-direction keys (rags)
+  if(def.rightBased){
+    if(action==='idle')   return {src:def.idle_left||null, flip:facing==='right'};
+    if(action==='crouch') return {src:def.crouch_idle_right||def.idle_left||null, flip:facing==='left'};
+    const src=(action==='run'&&def.run)?def.run:def.walk;
+    return {src:src||null, flip:facing==='left'};
+  }
+  // Legacy path (unused but kept for safety)
   if(def.idle_left!==undefined){
-    if(action==='run'){
-      // For run, always use run_left and flip if facing right
-      return {src:def.run_left||null, flip:facing==='right'};
-    }
+    if(action==='run') return {src:def.run_left||null, flip:facing==='right'};
     return {src:def[`${action}_${facing}`]||null, flip:false};
   }
-  // Single-file outfits — XOR flip when facing doesn't match baseDir
   const src=(action==='walk'?def.walk:action==='run'?(def.run||def.walk):def.idle)||null;
   const flip=(facing==='right')!==(def.baseDir==='right');
   return {src,flip};
@@ -388,7 +439,7 @@ const getCharAnimation=(outfit,facing,action)=>{
 
 // ── DEVICE HUD DATA ──────────────────────────────────────────
 const PEOPLE_DB=[
-  {id:'octavia',     name:'OCTAVIA',        role:'You',               handle:'// yourself',         status:'SELF',    portrait:'../graphics/characters/NPCs/protagonist/octavia_rags_portrait.png', portrait_rags:'../graphics/characters/NPCs/protagonist/octavia_rags_portrait.png', portrait_hoodie:'../graphics/characters/NPCs/protagonist/octavia_hoodie_portrait.png', portrait_main:'../graphics/characters/NPCs/protagonist/octavia_main_portrait.png', portrait360:'../graphics/characters/octavia/360/octavia__rags_360.webm', info:'I don\'t remember hardly anything about myself, but I know I somehow got out of a dangerous place and I have to rescue somebody very important.',discovered:true, category:'allies'},
+  {id:'octavia',     name:'OCTAVIA',        role:'You',               handle:'// yourself',         status:'SELF',    portrait:'../graphics/portraits/cyber_octavia_portrait.png', portrait_hoodie:'../graphics/characters/NPCs/protagonist/octavia_hoodie_portrait.png', portrait_main:'../graphics/portraits/cyber_octavia_portrait.png', portrait360:'../graphics/characters/cyberOctavia/cyber_octavia_360.webm', info:'I don\'t remember hardly anything about myself, but I know I somehow got out of a dangerous place and I have to rescue somebody very important.',discovered:true, category:'allies'},
   {id:'raymond',     name:'RAYMOND',        role:'Store Clerk',       handle:'// network contact',  status:'CONTACT', portrait:'../graphics/portraits/npc/raymond_portrait.png',         info:'Runs the convenience store. Network operative. Gives food, information, warnings. Teaches: money = safety.',       discovered:true, category:null},
   {id:'diego',       name:'DIEGO',          role:'Street Vendor',     handle:'// 20 years in Veil', status:'CONTACT', portrait:'../graphics/portraits/npc/diego_portrait.png',            info:'Street vendor, restaurant owner. Warm. Holds the computer password. Gave hostel address. Said she is Survivor.', discovered:true, category:null},
   {id:'pharmacist',  name:'PHARMACIST',     role:'Network Medical',   handle:'// safe space',       status:'CONTACT', portrait:'../graphics/portraits/npc/pharmacist_portrait.png',      info:'Runs the 24-hour pharmacy. Network contact. Gave card for Dr. Chen. "Pharmacy is always safe."',                discovered:true, category:null},
@@ -737,9 +788,9 @@ function ChromaKeyVideo({src,flip,height,playing,playbackRate,filterStr}){
   );
 }
 
-function Char({facing,walking,running=false,charBottom=116,charX,charHeight=371,currentOutfit='underwear'}){
+function Char({facing,walking,running=false,crouching=false,vertOffset=0,charBottom=116,charX,charHeight=371,currentOutfit='cyber_octavia'}){
   const vidRef=useRef(null);
-  const action=running?'run':walking?'walk':'idle';
+  const action=crouching?'crouch':running?'run':walking?'walk':'idle';
   const {src:animSrc,flip:shouldFlip}=getCharAnimation(currentOutfit,facing,action);
   // True only for outfits with dedicated idle files (rags). Others share the walk file.
   const hasIdleAnim=!!CHAR_ANIMATIONS[currentOutfit]?.idle_left;
@@ -753,23 +804,24 @@ function Char({facing,walking,running=false,charBottom=116,charX,charHeight=371,
     v.addEventListener('loadeddata',onReady,{once:true});
     v.play().catch(()=>{});
     return()=>v.removeEventListener('loadeddata',onReady);
-  },[animSrc,running,walking]);
+  },[animSrc,running,walking,crouching]);
   useEffect(()=>{
     const v=vidRef.current;if(!v)return;
     v.muted=true;
-    if(walking){v.playbackRate=0.65;v.play().catch(()=>{});}
+    if(crouching){v.playbackRate=1;v.play().catch(()=>{});}
+    else if(walking){v.playbackRate=0.65;v.play().catch(()=>{});}
     else if(running){v.playbackRate=1;v.play().catch(()=>{});}
     else if(hasIdleAnim){/* rags: idle_left/idle_right loop plays via animSrc change */}
     else{v.currentTime=0;v.addEventListener('seeked',()=>v.pause(),{once:true});} // single-file outfit idle: freeze at frame 0
-  },[running,walking]);
+  },[running,walking,crouching]);
   if(animSrc){
     const ckNeeded=CHAR_ANIMATIONS[currentOutfit]?.needsChromaKey;
     const DROP='drop-shadow(0 6px 16px rgba(196,48,40,.55))';
     return(
-      <div style={{position:'absolute',bottom:charBottom,left:charX!==undefined?charX:'50%',zIndex:100,pointerEvents:'none',transform:'translateX(-50%)'}}>
+      <div style={{position:'absolute',bottom:charBottom+(vertOffset||0),left:charX!==undefined?charX:'50%',zIndex:100,pointerEvents:'none',transform:'translateX(-50%)'}}>
         {ckNeeded
           ?<ChromaKeyVideo src={animSrc} flip={shouldFlip} height={charHeight}
-              playing={walking||running} playbackRate={walking?0.65:1} filterStr={DROP}/>
+              playing={walking||running||crouching} playbackRate={walking?0.65:1} filterStr={DROP}/>
           :<video key={animSrc} ref={vidRef} src={animSrc} loop muted playsInline preload="auto"
               style={{height:charHeight,display:'block',transformOrigin:'center center',
                 transform:shouldFlip?'scaleX(-1)':'none',filter:DROP,transition:'opacity 0.1s ease'}}/>
@@ -780,11 +832,17 @@ function Char({facing,walking,running=false,charBottom=116,charX,charHeight=371,
   return null;
 }
 function Prompt({text}){return(<div style={{position:'absolute',bottom:'100%',left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,marginBottom:6,fontFamily:"'Blue Screen',monospace",zIndex:9999}}>{text}</div>);}
+function NpcVideo({src,height,width,rate=0.9}){
+  const ref=useRef(null);
+  useEffect(()=>{if(ref.current)ref.current.playbackRate=rate;},[rate]);
+  const sz=width?{width,height}:{height,width:'auto'};
+  return<video ref={ref} src={src} style={{...sz,objectFit:'contain',display:'block'}} autoPlay muted loop/>;
+}
 function Fade({on}){return<div style={{position:'absolute',inset:0,zIndex:600,background:C.bg,opacity:on?1:0,transition:'opacity .65s ease',pointerEvents:'none'}}/>;}
 function SceneLabel({label}){return(<div style={{position:'absolute',top:14,left:'50%',transform:'translateX(-50%)',color:C.dim,fontSize:7,letterSpacing:4,zIndex:300,fontFamily:"'Blue Screen',monospace"}}>{label}</div>);}
 function Controls({hints}){return(<div style={{position:'absolute',bottom:18,right:20,zIndex:300,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}}>{hints.map(([k,v])=>(<div key={k} style={{display:'flex',gap:8,alignItems:'center'}}><span style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>{v}</span><span style={{color:C.text,fontSize:8,fontFamily:"'Blue Screen',monospace",border:`1px solid ${C.border}`,padding:'1px 7px',background:C.panel}}>{k}</span></div>))}</div>);}
 function DebugOverlay({px,scene,onSceneChange}){
-  const SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store'];
+  const SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store'];
   return(<div style={{position:'absolute',top:34,left:16,zIndex:700,fontFamily:"'Courier New','Courier',monospace",fontSize:8,lineHeight:2,color:'#00ff88',background:'rgba(0,0,0,0.75)',padding:'4px 12px',letterSpacing:1,borderLeft:'2px solid #00ff8855'}}>
     <div>SCENE: <select value={scene} onChange={(e)=>onSceneChange?.(e.target.value)} style={{background:C.panel,color:'#00ff88',border:'1px solid #00ff88',fontFamily:"'Courier New','Courier',monospace",fontSize:8,padding:'2px 4px',cursor:'pointer'}}>
       {SCENES.map(s=><option key={s} value={s}>{s}</option>)}
@@ -872,7 +930,7 @@ function ChatBox({convKey,npcName,npcImg,total,onAct}){
     const result=opt.act?onAct(opt.act):null;
     if(result==='blocked')return;
     if(opt.next){setNodeId(opt.next);setSel(0);}
-    else if(!opt.act)onAct('end');
+    else onAct('end');
   },[node,onAct]);
 
   useEffect(()=>{setNodeId('s0');setSel(0);},[convKey]);
@@ -978,8 +1036,6 @@ function Bldg({d,px,facing}){
 // ── INVENTORY ─────────────────────────────────────────────────
 const ITEM_DEFS={
   // CLOTHES
-  underwear:  {name:'UNDERWEAR',     category:'clothes', desc:'What I was wearing when I woke up.',restore:0,equippable:true, icon:'../graphics/inventory/clothes/grey_underwear.png'},
-  rags:       {name:'RAGS',          category:'clothes', desc:'Tattered clothes. This is what I wear. This is what I am.',restore:0,equippable:true, icon:'../graphics/inventory/clothes/raggedy_clothes.png'},
   hoodie:     {name:'BLACK HOODIE',  category:'clothes', desc:"An old black hoodie with a huge hood. I may be able to hide my tentacles.",restore:0,equippable:true, icon:'../graphics/inventory/clothes/black_hoodie.png'},
   // FOOD & DRINKS
   sandwich:   {name:'SANDWICH',      category:'food',    desc:'Enough.',                           restore:8,  icon:'../graphics/inventory/food/sandwich.png'},
@@ -1237,12 +1293,6 @@ const LOBBY_POPUPS={
 };
 
 // Run-blocked bark arrays
-const RUN_BARKS_UNDERWEAR=[
-  'I am not going to run around in my underwear.',
-  'Absolutely not. Not in this.',
-  'No way. Too exposed.',
-  'I\'m not running like this.',
-];
 const RUN_BARKS_HOODIE=[
   'My hoodie will fall off.',
   'The hood will fly right off.',
@@ -1260,8 +1310,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
   const [bedOptionIdx,setBedOptionIdx]=useState(0); // 0=REST, 1=SLEEP
   const raf=useRef(null);
   const aptSPD=SPD*0.42;
-  const {keys,running,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const clothesTaken=inventory.includes('rags');
+  const {keys,running,isCrouching,vertOffset,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const near=APT_OBJ.find(o=>{
     if(!o.prompt)return false;
     if(o.id==='money'&&money>0)return false;
@@ -1275,12 +1324,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
       if(popup){
         if(popupAction==='rest')onRest();
         else if(popupAction==='takemoney')onPickupMoney();
-        else if(popupAction==='findclothes'){
-          onAddItems?.(['rags','hoodie']);
-          setBark('I can wear these when I go out.');
-          setTimeout(()=>setBark(null),4000);
-          setPopup(null);setPopupAction(null);return;
-        } else if(popupAction==='bedrest'){
+        else if(popupAction==='bedrest'){
           // Use selected bed option (0=REST 20%, 1=SLEEP 40%)
           const isDeepSleep=bedOptionIdx===1;
           const amount=isDeepSleep?40:20;
@@ -1295,11 +1339,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
       if(near?.id==='bathroom_entrance'){onEnterBathroom?.();return;}
       if(near?.id==='hallway_exit'){onLeave();return;}
       if(near?.id==='bed'){
-        if(!clothesTaken){
-          setPopup(APT_POPUPS.bed);setPopupAction('findclothes');
-        } else {
-          setPopup(APT_POPUPS.bedRest);setPopupAction('bedrest');
-        }
+        setPopup(APT_POPUPS.bedRest);setPopupAction('bedrest');
         return;
       }
       if(APT_POPUPS[near?.id]){
@@ -1335,8 +1375,8 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
   useEffect(()=>{
     const loop=()=>{
       if(!popup){
-        const left =keys.current['ArrowLeft'] ||keys.current['KeyA']||keys.current['ArrowUp'];
-        const right=keys.current['ArrowRight']||keys.current['KeyD']||keys.current['ArrowDown'];
+        const left =keys.current['ArrowLeft'] ||keys.current['KeyA'];
+        const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const isMoving=left||right;
         const {currentSpeed}=updateMovement(isMoving);
 
@@ -1361,7 +1401,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
         style={{position:'absolute',inset:0,width:'130%',height:'130%',left:`${-px*0.3}px`,top:'-5%',objectFit:'cover',objectPosition:'center',zIndex:0}}/>
       {APT_OBJ.map(o=>{
         const gone=o.id==='money'&&money>0;
-        const prompt=o.id==='bed'&&clothesTaken?'REST':o.prompt;
+        const prompt=o.prompt;
         return(<div key={o.id} style={{position:'absolute',bottom:116,left:o.wx,zIndex:VIEWPORT.promptZ}}>
           {near?.id===o.id&&!gone&&<Prompt text={promptPrefix+' '+prompt}/>}
         </div>);
@@ -1387,9 +1427,9 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
           <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
         )}
       </div>}
-      <Char facing={facing} walking={walking} running={running} charX={px} charHeight={297} charBottom={53} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charHeight={297} charBottom={53} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="OAKWOOD ARMS — 4C"/>
-      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','RUN'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="apartment" onSceneChange={debugGo}/>}
     </div>
   );
@@ -1484,7 +1524,6 @@ function BathroomScene({heart,mono,onLeave,onShowerDone,bathroomSpawnPos,bathroo
         if(near?.id==='door')onLeave();
         else if(near?.id==='mirror')setDialogueStep('mirror_main');
         else if(near?.id==='soak'){
-          onEquipItem?.('underwear');
           setPopup(BATH_POPUPS.soak);
         } else if(BATH_POPUPS[near?.id]){
           if(near.id==='toilet'&&phoneTaken){
@@ -1573,7 +1612,7 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
   },[]);
   const raf=useRef(null);
   const hallwaySPD=SPD*0.2;
-  const {keys,running,bark,updateMovement}=useSceneMovement(hallwaySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(hallwaySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const near=HALL_OBJ.find(o=>Math.abs(o.wx-px)<70&&o.prompt);
 
   useEffect(()=>{
@@ -1661,9 +1700,9 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
         <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
         <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
       </div>}
-      <Char facing={facing} walking={walking} running={running} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
-      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','RUN'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="hallway" onSceneChange={debugGo}/>}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 40%,#060402b0 100%)'}}/>
@@ -1723,7 +1762,7 @@ function ElevatorScene({onDone,onExit,currentOutfit}){
       <img src="../graphics/maps/the_veil/move_block/residential_zone/apartment_building/elevator/apt_elevator.png"
         style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}}
         alt="elevator"/>
-      <Char facing="right" walking={false} charX={VW/2} charBottom={116} charHeight={280} currentOutfit={currentOutfit}/>
+      <Char facing="right" walking={false} charX={VW/2} charBottom={42} charHeight={336} currentOutfit={currentOutfit}/>
       <div style={{position:'absolute',right:20,top:'50%',transform:'translateY(-50%)',background:C.panel,border:`1px solid ${C.border}`,padding:12,zIndex:300}}>
         <div style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:10}}>FLOOR</div>
         {floors.map((f,i)=>(
@@ -1760,14 +1799,14 @@ function StairwellScene({mode,onDone}){
 }
 
 // ── LOBBY SCENE ───────────────────────────────────────────────
-function LobbyScene({onExit,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
-  const [px,setPx]=useState(608);
+function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+  const [px,setPx]=useState(spawnX);
   const [facing,setFacing]=useState('right');
   const [walking,setWalking]=useState(false);
   const [popup,setPopup]=useState(null);
   const raf=useRef(null);
   const lobbySPD=2.8;
-  const {keys,running,bark,updateMovement}=useSceneMovement(lobbySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(lobbySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
 
   const elevRange={xMin:560,xMax:840};
   const nearElev=px>=elevRange.xMin&&px<=elevRange.xMax?{id:'elevator'}:null;
@@ -1811,7 +1850,7 @@ function LobbyScene({onExit,currentOutfit,debug,debugGo,stamina,onStaminaChange,
       <img src="../graphics/maps/the_veil/move_block/residential_zone/apartment_building/lobby/lobby.png"
         style={{position:'absolute',top:0,width:'170%',height:'100%',objectFit:'contain',zIndex:0,left:`${200-px*1.0}px`,objectPosition:'left'}}
         alt="lobby"/>
-      <Char facing={facing} walking={walking} running={running} charX={px} charBottom={92} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={92} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
       {(nearObj||nearElev)&&(nearObj?.prompt||nearElev?.id==='elevator')&&(
         <div style={{position:'absolute',bottom:130,left:'50%',transform:'translateX(-50%)',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,fontFamily:"'Blue Screen',monospace",zIndex:300}}>
           {nearObj?.prompt||'[ E ] ELEVATOR'}
@@ -1825,8 +1864,170 @@ function LobbyScene({onExit,currentOutfit,debug,debugGo,stamina,onStaminaChange,
         </div>
       )}
       {debug&&<DebugOverlay px={px} scene="lobby" onSceneChange={debugGo}/>}
-      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','RUN'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
+    </div>
+  );
+}
+
+// ── 4TH FLOOR HALLWAY SCENE ───────────────────────────────────
+function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+  const [px,setPx]=useState(spawnX);
+  const [facing,setFacing]=useState('left');
+  const [walking,setWalking]=useState(false);
+  const [doorMsg,setDoorMsg]=useState(null);
+  const raf=useRef(null);
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.5,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const atElevatorHall=px>=80&&px<=124;
+  const atApt=px>=991&&px<=1057;
+  const nearBusyDoor=px>=623&&px<=696;
+  const nearNoAnswerDoor=px>=226&&px<=328;
+
+  useEffect(()=>{
+    const kd=e=>{
+      keys.current[e.code]=true;
+      if(e.code==='KeyE'){
+        if(atElevatorHall){onExit();return;}
+        if(atApt){onReturn();return;}
+        if(nearBusyDoor){
+          setDoorMsg('KNOCK KNOCK...');
+          setTimeout(()=>setDoorMsg('// WE\'RE BUSY — GO AWAY'),900);
+          setTimeout(()=>setDoorMsg(null),3200);
+          return;
+        }
+        if(nearNoAnswerDoor){
+          setDoorMsg('KNOCK KNOCK...');
+          setTimeout(()=>setDoorMsg('// ...no answer'),900);
+          setTimeout(()=>setDoorMsg(null),3000);
+          return;
+        }
+      }
+    };
+    const ku=e=>{delete keys.current[e.code];};
+    window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
+    return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
+  },[atElevatorHall,atApt,nearBusyDoor,nearNoAnswerDoor,onExit,onReturn]);
+
+  useEffect(()=>{
+    const loop=()=>{
+      const left=keys.current['ArrowLeft']||keys.current['KeyA'];
+      const right=keys.current['ArrowRight']||keys.current['KeyD'];
+      const {currentSpeed}=updateMovement(left||right);
+      if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+      else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+      else setWalking(false);
+      raf.current=requestAnimationFrame(loop);
+    };
+    raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
+  },[]);
+
+  return(
+    <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#08090a'}}>
+      <video src={FOURTH_FLOOR_HALLWAY_VID} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}} autoPlay muted loop playsInline/>
+      {atElevatorHall&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR HALL"/></div>}
+      {atApt&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] APARTMENT"/></div>}
+      {nearBusyDoor&&!doorMsg&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
+      {nearNoAnswerDoor&&!doorMsg&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
+      {doorMsg&&<div style={{position:'absolute',bottom:200,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:8,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace",whiteSpace:'nowrap'}}>{doorMsg}</div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={102} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
+      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      {debug&&<DebugOverlay px={px} scene="fourth_floor_hallway" onSceneChange={debugGo}/>}
+    </div>
+  );
+}
+
+// ── ELEVATOR HALLWAY SCENE ────────────────────────────────────
+function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+  const [px,setPx]=useState(spawnX);
+  const [facing,setFacing]=useState(spawnX>600?'left':'right');
+  const [walking,setWalking]=useState(false);
+  const raf=useRef(null);
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.55,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const nearStairwell=px>=612&&px<=732;
+  const nearElevator=px>=138&&px<=302;
+  const atReturn=px>=951&&px<=1121;
+  useEffect(()=>{
+    const kd=e=>{
+      keys.current[e.code]=true;
+      if(e.code==='KeyE'){
+        if(nearStairwell)onStairwell();
+        else if(nearElevator)onElevator();
+        else if(atReturn)onReturn();
+      }
+    };
+    const ku=e=>{delete keys.current[e.code];};
+    window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
+    return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
+  },[nearStairwell,nearElevator,atReturn,onStairwell,onElevator,onReturn]);
+  useEffect(()=>{
+    const loop=()=>{
+      const left=keys.current['ArrowLeft']||keys.current['KeyA'];
+      const right=keys.current['ArrowRight']||keys.current['KeyD'];
+      const {currentSpeed}=updateMovement(left||right);
+      if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+      else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+      else setWalking(false);
+      raf.current=requestAnimationFrame(loop);
+    };
+    raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
+  },[]);
+  return(
+    <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#08090a'}}>
+      <video src={ELEVATOR_HALLWAY_VID} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}} autoPlay muted loop playsInline/>
+      {nearStairwell&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] STAIRWELL"/></div>}
+      {nearElevator&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR"/></div>}
+      {atReturn&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] 4TH FLOOR HALL"/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={354} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <SceneLabel label="ELEVATOR HALL — OAKWOOD ARMS"/>
+      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      {debug&&<DebugOverlay px={px} scene="elevator_hallway" onSceneChange={debugGo}/>}
+    </div>
+  );
+}
+
+// ── APT STAIRWELL SCENE ───────────────────────────────────────
+function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+  const [px,setPx]=useState(640);
+  const [facing,setFacing]=useState('right');
+  const [walking,setWalking]=useState(false);
+  const raf=useRef(null);
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.25,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const atReturn=px>=VIEWPORT.maxX-20;
+  const atDown=px<=VIEWPORT.minX+20;
+  useEffect(()=>{
+    const kd=e=>{
+      keys.current[e.code]=true;
+      if(e.code==='KeyE'){
+        if(atReturn)onReturn();
+        else if(atDown)onDown?.();
+      }
+    };
+    const ku=e=>{delete keys.current[e.code];};
+    window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
+    return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
+  },[atReturn,atDown,onReturn,onDown]);
+  useEffect(()=>{
+    const loop=()=>{
+      const left=keys.current['ArrowLeft']||keys.current['KeyA'];
+      const right=keys.current['ArrowRight']||keys.current['KeyD'];
+      const {currentSpeed}=updateMovement(left||right);
+      if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+      else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+      else setWalking(false);
+      raf.current=requestAnimationFrame(loop);
+    };
+    raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
+  },[]);
+  return(
+    <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#060708'}}>
+      <video src={APT_STAIRWELL_VID} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}} autoPlay muted loop playsInline/>
+      {atReturn&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR HALL"/></div>}
+      {atDown&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] GROUND FLOOR"/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <SceneLabel label="STAIRWELL — OAKWOOD ARMS"/>
+      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      {debug&&<DebugOverlay px={px} scene="apt_stairwell" onSceneChange={debugGo}/>}
     </div>
   );
 }
@@ -1845,20 +2046,22 @@ const STR_LOCS=[
   {id:'restaurant',  xMin:1497, xMax:1529, label:'RESTAURANT'},
 ];
 
-function StrScene({heart,mono,mode,onStore,onHome,onPharmacy,onRestaurant,onAlleyWay,inventory,onUseItem,heartNum,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant,onAlleyWay,inventory,onUseItem,heartNum,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
   // STR_IMG_W: rendered width of exterior.png at backgroundSize:'auto 120%'
   // Original image 3252×1280; rendered height=VH*1.2=864; width=3252*(864/1280)≈2195
   const STR_IMG_W=Math.floor(3252*(VH*1.2/1280));
   const STR_CAM_MAX=STR_IMG_W-VW;
-  const [worldX,setWorldX]=useState(mode==='return'?860:640);
-  const [facing,setFacing]=useState(mode==='return'?'left':'right');
+  const initX=spawnX!=null?spawnX:(mode==='return'?860:640);
+  const initFacing=spawnX!=null?(spawnX>=1200?'left':'right'):(mode==='return'?'left':'right');
+  const [worldX,setWorldX]=useState(initX);
+  const [facing,setFacing]=useState(initFacing);
   const [walking,setWalking]=useState(false);
   const [conv,setConv]=useState(null);
   const [painGlitch,setPainGlitch]=useState(null);
   const [streetTexts,setStreetTexts]=useState([]);
   const raf=useRef(null);
   const strSPD=SPD*0.1024;
-  const {keys,running,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   // Camera: follows worldX but stops at image edges — never shows black
   const cam=clamp(worldX-VW/2,0,STR_CAM_MAX);
   const nearNpc=STR_NPCS.find(n=>Math.abs(n.wx-worldX)<85);
@@ -1875,7 +2078,7 @@ function StrScene({heart,mono,mode,onStore,onHome,onPharmacy,onRestaurant,onAlle
       if(e.code==='KeyE'){
         if(conv){return;}
         if(nearLobby)onHome();
-        else if(nearStore&&mode!=='return')onStore();
+        else if(nearStore)onStore();
         else if(nearPharmacy)onPharmacy();
         else if(nearRestaurant)onRestaurant();
         else if(nearAlleyWay)onAlleyWay();
@@ -1886,7 +2089,7 @@ function StrScene({heart,mono,mode,onStore,onHome,onPharmacy,onRestaurant,onAlle
     const ku=e=>{delete keys.current[e.code];};
     window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
     return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
-  },[nearLoc,nearStore,nearPharmacy,nearRestaurant,nearAlleyWay,nearLobby,nearNpc,conv,onStore,onHome,onPharmacy,onRestaurant,onAlleyWay,mode]);
+  },[nearLoc,nearStore,nearPharmacy,nearRestaurant,nearAlleyWay,nearLobby,nearNpc,conv,onStore,onHome,onPharmacy,onRestaurant,onAlleyWay]);
 
   useEffect(()=>{
     const loop=()=>{
@@ -1950,9 +2153,9 @@ function StrScene({heart,mono,mode,onStore,onHome,onPharmacy,onRestaurant,onAlle
       <div style={{position:'absolute',inset:0,zIndex:0,backgroundImage:`url('${EXTERIOR_IMG}')`,backgroundSize:'auto 120%',backgroundPosition:`${-cam}px 105%`,backgroundRepeat:'no-repeat',backgroundColor:'#0a0907'}}/>
       {nearLoc&&!conv&&<div style={{position:'absolute',bottom:25,left:worldX-cam,zIndex:9999}}><Prompt text={`[ E ] ${nearLoc.label}`}/></div>}
       {nearNpc&&!conv&&<div style={{position:'absolute',bottom:25,left:worldX-cam,zIndex:9999}}><Prompt text="[ E ] TALK"/></div>}
-      <Char facing={facing} walking={walking} running={running} charX={worldX-cam} charHeight={74} charBottom={25} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={worldX-cam} charHeight={74} charBottom={25} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label={mode==='return'?'THE VEIL — RETURNING':'THE VEIL — MOVE BLOCK'}/>
-      <Controls hints={[['← →','MOVE'],['E','TALK/ENTER'],['SHIFT','RUN'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','TALK/ENTER'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={worldX} scene="street" onSceneChange={debugGo}/>}
       {conv&&<ChatBox convKey={conv.key} npcName={conv.name} npcImg={''} total={0}
         onAct={act=>{if(act==='end'||!act)setConv(null);}}/>}
@@ -1966,20 +2169,21 @@ function StrScene({heart,mono,mode,onStore,onHome,onPharmacy,onRestaurant,onAlle
 }
 
 // ── ITEM ARRAYS ───────────────────────────────────────────────
-const PHARMACY_ITEMS=[];  // medicine — to be added with quests
+const PHARMACY_ITEMS=[
+  {id:'painkillers',wx:550,label:'PAINKILLERS',col:'#a89050',price:4},
+  {id:'bandages',   wx:730,label:'BANDAGES',   col:'#9a8070',price:3},
+];
 const RESTAURANT_ITEMS=[]; // food — to be added with quests
 
 // ── STORE SCENE ───────────────────────────────────────────────
 const STORE_ITEMS=[
-  {id:'painkillers',wx:560,label:'PAINKILLERS',col:'#a89050',price:4},
-  {id:'bandages',   wx:700,label:'BANDAGES',   col:'#9a8070',price:3},
-  {id:'water',      wx:840,label:'WATER',       col:'#304860',price:2},
-  {id:'sandwich',   wx:980,label:'SANDWICH',     col:'#806030',price:2},
+  {id:'water',    wx:685, label:'WATER',    col:'#304860',price:2, look:'the water looks good'},
+  {id:'sandwich', wx:875, label:'SANDWICH', col:'#806030',price:2, look:'the sandwich looks good'},
 ];
 
-function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
   const [walking,setWalking]=useState(false);
-  const [px,setPx]=useState(200);
+  const [px,setPx]=useState(109);
   const [facing,setFacing]=useState('right');
   const [basket,setBasket]=useState([]);
   const [paid,setPaid]=useState(false);
@@ -1987,9 +2191,10 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOut
   const [stolen,setStolen]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearItem=STORE_ITEMS.find(i=>Math.abs(i.wx-px)<52&&!basket.includes(i.id));
-  const nearCounter=px>900&&px<1200&&!conv;
+  const nearLookItem=STORE_ITEMS.find(i=>Math.abs(i.wx-px)<90&&!basket.includes(i.id));
+  const nearCounter=Math.abs(px-1144)<100&&!conv;
   const atExit=px<200;
   const total=basket.reduce((s,id)=>s+(STORE_ITEMS.find(i=>i.id===id)?.price||0),0);
   const canPay=money>=total&&total>0;
@@ -1998,7 +2203,7 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOut
     if(act==='pay'){if(!canPay)return 'blocked';onSpendMoney(total);onAddItems?.(basket);setPaid(true);}
     else if(act==='freeItems'){onAddItems?.(basket);setBasket([]);setCredit(true);}
     else if(act==='stealAttempt')setConv('clerk_caught');
-    else if(act==='stealFinal'){setStolen(true);onAddItems?.(basket);setConv(null);setTimeout(onLeave,1000);}
+    else if(act==='stealFinal'){setStolen(true);onAddItems?.(basket);onTheft?.();setConv(null);setTimeout(onLeave,1000);}
     else if(act==='putback'){setBasket([]);setConv(null);}
     else if(act==='leave'){setConv(null);setTimeout(onLeave,400);}
     else if(act==='end')setConv(null);
@@ -2012,7 +2217,7 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOut
         if(atExit&&!basket.length)onLeave();
         else if(atExit&&basket.length>0&&!paid&&!stolen)setConv('raymond_caught');
         else if(nearItem)setBasket(b=>[...b,nearItem.id]);
-        else if(nearCounter&&basket.length>0)setConv(canPay?'raymond_pay':'raymond_broke');
+        else if(nearCounter&&basket.length>0)setConv(canPay?'raymond_pay':'store_cant_pay');
         else if(nearCounter&&basket.length===0)setConv('raymond_browse');
       }
     };
@@ -2042,37 +2247,26 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOut
       <video src={CORNER_STORE_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
       {[480,720,960].map((sx,i)=><div key={i} style={{position:'absolute',top:40,left:sx-90,width:180,height:220,pointerEvents:'none',background:'radial-gradient(ellipse 40% 55% at 50% 0%,#d4a02014 0%,transparent 70%)'}}/>)
       }
-      {/* Shelf items */}
+      {/* Item look text + take prompts */}
       {STORE_ITEMS.map(item=>{
         const inB=basket.includes(item.id);
-        return(<div key={item.id} style={{position:'absolute',bottom:116,left:item.wx-40,zIndex:VIEWPORT.promptZ}}>
-          <svg width={80} height={160} viewBox="0 0 80 160"><rect width={80} height={160} fill="#1a1510" stroke="#2a2018" strokeWidth={1}/><rect x={0} y={50} width={80} height={6} fill="#241c12"/><rect x={0} y={110} width={80} height={6} fill="#241c12"/>
-            {!inB&&<><rect x={18} y={16} width={44} height={32} rx={3} fill={item.col} opacity={.7}/><text x={40} y={38} textAnchor="middle" fill="#e8d2a0" fontSize={20} fontFamily="Blue Screen">{item.label}</text><text x={40} y={70} textAnchor="middle" fill={C.dim} fontSize={20} fontFamily="Blue Screen">${item.price}</text></>}
-            {inB&&<text x={40} y={86} textAnchor="middle" fill="#3a3020" fontSize={20} fontFamily="Blue Screen">TAKEN</text>}
-          </svg>
-          {!inB&&Math.abs(item.wx-px)<52&&<Prompt text={`[ E ] TAKE — $${item.price}`}/>}
+        if(inB)return null;
+        const near52=Math.abs(item.wx-px)<52;
+        const near90=Math.abs(item.wx-px)<90;
+        return(<div key={item.id} style={{position:'absolute',bottom:200,left:item.wx,transform:'translateX(-50%)',zIndex:VIEWPORT.promptZ,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+          {near90&&!near52&&<div style={{color:C.dim,fontSize:7,letterSpacing:2,fontFamily:"'Blue Screen',monospace",whiteSpace:'nowrap',textShadow:'0 0 6px #000'}}>{item.look}</div>}
+          {near52&&<div style={{position:'relative'}}><Prompt text={`[ E ] TAKE — $${item.price}`}/></div>}
         </div>);
       })}
-      {/* Counter + clerk */}
-      {(()=>{return(<div style={{position:'absolute',bottom:116,left:1040,zIndex:VIEWPORT.promptZ}}>
-        <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// ATTENDANT</div>
-        <svg width={200} height={105} viewBox="0 0 200 105">
-          <rect x={0} y={40} width={200} height={65} rx={2} fill="#241c12" stroke="#3a2c18" strokeWidth={1}/>
-          <rect x={0} y={40} width={200} height={16} fill="#2e2418"/>
-          <ellipse cx={150} cy={22} rx={16} ry={18} fill="#5a4030"/>
-          <rect x={134} y={36} width={32} height={30} rx={3} fill="#3a2c20"/>
-          <rect x={138} y={40} width={24} height={26} rx={2} fill="#2a2018" opacity={.6}/>
-          <rect x={88} y={42} width={60} height={7} rx={2} fill="#3a2c20"/>
-        </svg>
+      {/* Clerk NPC */}
+      <div style={{position:'absolute',bottom:65,left:1144,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
+        <NpcVideo src={STORE_CLERK_VID} height={482}/>
         {nearCounter&&!conv&&basket.length===0&&<Prompt text="[ E ] TALK"/>}
         {nearCounter&&!conv&&basket.length>0&&<Prompt text={canPay?`[ E ] PAY — $${total}`:'[ E ] TALK (need cash)'}/>}
-      </div>);})()}
-      {/* Exit door */}
-      {(()=>{return(<div style={{position:'absolute',bottom:116,left:100,zIndex:VIEWPORT.promptZ}}>
-        <svg width={90} height={200}><rect x={5} width={80} height={200} rx={2} fill="#1c1510" stroke="#3a2c18" strokeWidth={1}/><circle cx={74} cy={100} r={6} fill="#8a6020"/></svg>
-        {atExit&&!basket.length&&<Prompt text="[ E ] EXIT"/>}
-        {atExit&&basket.length>0&&!paid&&!stolen&&<Prompt text="[ E ] LEAVE (unpaid)"/>}
-      </div>);})()}
+      </div>
+      {/* Exit prompt */}
+      {atExit&&!basket.length&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
+      {atExit&&basket.length>0&&!paid&&!stolen&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.red,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] LEAVE (unpaid)</div>}
       {/* Floor */}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
@@ -2086,9 +2280,9 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOut
       {stolen&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.red,fontSize:8,letterSpacing:4,fontFamily:"'Blue Screen',monospace",textShadow:`0 0 12px ${C.red}`}}>// THEFT</div>}
       {paid&&!credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// PAID — ${money-total} REMAINING</div>}
       {credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.gold,fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// CREDIT — COME BACK WHEN YOU CAN</div>}
-      <Char facing={facing} walking={walking} running={running} charX={px} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={65} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="CORNER STORE"/>
-      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','RUN'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="store" onSceneChange={debugGo}/>}
       {conv&&<ChatBox convKey={conv} npcName="RAYMOND" npcImg={CLERK_IMG} total={total} onAct={handleAct}/>}
     </div>
@@ -2097,25 +2291,32 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOut
 
 // ── PHARMACY SCENE ────────────────────────────────────────────
 function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+  const GUARD_X=299;
   const [walking,setWalking]=useState(false);
-  const [px,setPx]=useState(200);
+  const [px,setPx]=useState(124);
   const [facing,setFacing]=useState('right');
   const [basket,setBasket]=useState([]);
   const [paid,setPaid]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const nearItem=PHARMACY_ITEMS.find(i=>Math.abs(i.wx-px)<52&&!basket.includes(i.id));
-  const nearCounter=px>900&&px<1200&&!conv;
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const guardBlocking=currentOutfit!=='hoodie';
+  const nearGuard=Math.abs(px-GUARD_X)<80&&!conv;
+  const nearPharmacist=Math.abs(px-1057)<100&&!conv;
   const atExit=px<200;
   const total=basket.reduce((s,id)=>s+(PHARMACY_ITEMS.find(i=>i.id===id)?.price||0),0);
   const canPay=money>=total&&total>0;
 
   const handleAct=useCallback((act)=>{
     if(act==='pay'){if(!canPay)return 'blocked';onSpendMoney(total);onAddItems?.(basket);setPaid(true);}
+    else if(act==='addPainkillers'){setBasket(['painkillers']);}
+    else if(act==='addBandages'){setBasket(['bandages']);}
+    else if(act==='addBoth'){setBasket(['painkillers','bandages']);}
+    else if(act==='clearBasket'){setBasket([]);}
+    else if(act==='giveDrChenCard'){onAddItems?.(['dr_chen_card']);}
     else if(act==='leave'){setConv(null);setTimeout(onLeave,400);}
     else if(act==='end')setConv(null);
-  },[total,money,onSpendMoney,onLeave,onAddItems,basket]);
+  },[total,canPay,onSpendMoney,onLeave,onAddItems,basket]);
 
   useEffect(()=>{
     const kd=e=>{
@@ -2123,13 +2324,15 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
       if(e.code==='Escape'){if(!conv)return;setConv(null);return;}
       if(e.code==='KeyE'&&!conv){
         if(atExit)onLeave();
-        else if(nearCounter&&basket.length>0)setConv(canPay?'raymond_pay':'raymond_broke');
+        else if(nearGuard&&guardBlocking)setConv('guard_blocked');
+        else if(nearGuard&&!guardBlocking)setConv('guard_talk');
+        else if(nearPharmacist)setConv('pharmacist_browse');
       }
     };
     const ku=e=>{delete keys.current[e.code];};
     window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
     return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
-  },[nearCounter,canPay,paid,atExit,basket,onLeave,conv]);
+  },[nearGuard,nearPharmacist,guardBlocking,atExit,onLeave,conv]);
 
   useEffect(()=>{
     const loop=()=>{
@@ -2137,42 +2340,38 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
         const left=keys.current['ArrowLeft']||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const {currentSpeed}=updateMovement(left||right);
+        const maxRight=guardBlocking?GUARD_X-60:VIEWPORT.maxX;
         if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+        else if(right){setPx(x=>Math.min(maxRight,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       }else setWalking(false);
       raf.current=requestAnimationFrame(loop);
     };
     raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
-  },[conv]); // do NOT include updateMovement — it causes dependency cycles with stamina updates
+  },[conv,guardBlocking]); // do NOT include updateMovement — it causes dependency cycles with stamina updates
 
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0908'}}>
       <video src={PHARMACY_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
-      <div style={{position:'absolute',bottom:116,left:1050,zIndex:10}}>
-        <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// PHARMACIST</div>
-        <svg width={120} height={100} viewBox="0 0 120 100">
-          <ellipse cx={60} cy={18} rx={14} ry={16} fill="#6a5f4f"/>
-          <rect x={42} y={32} width={36} height={35} rx={2} fill="#4a4038"/>
-          <rect x={46} y={36} width={28} height={28} rx={1} fill="#3a3028" opacity={.6}/>
-        </svg>
-        {nearCounter&&!conv&&<div style={{position:'absolute',bottom:105,left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 8px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] TALK</div>}
+      {/* Pharmacist NPC */}
+      <div style={{position:'absolute',bottom:23,left:1057,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
+        <NpcVideo src={PHARMACIST_VID} height={530}/>
+        {nearPharmacist&&!conv&&<Prompt text="[ E ] TALK"/>}
       </div>
-      <div style={{position:'absolute',bottom:116,left:280,zIndex:10}}>
-        <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// GUARD</div>
-        <svg width={80} height={100} viewBox="0 0 80 100">
-          <ellipse cx={40} cy={16} rx={10} ry={12} fill="#5a5550"/>
-          <rect x={28} y={28} width={24} height={32} rx={2} fill="#3a3a38"/>
-          <rect x={32} y={32} width={16} height={24} rx={1} fill="#2a2a28" opacity={.6}/>
-        </svg>
+      {/* Security guard NPC */}
+      <div style={{position:'absolute',bottom:23,left:GUARD_X,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
+        <NpcVideo src={SECURITY_GUARD_VID} height={554}/>
+        {nearGuard&&!conv&&<Prompt text="[ E ] TALK"/>}
       </div>
+      {guardBlocking&&px>=220&&px<=380&&!conv&&<div style={{position:'absolute',bottom:300,left:'50%',transform:'translateX(-50%)',zIndex:150,color:C.red,fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace",textShadow:`0 0 8px ${C.red}`}}>// ACCESS DENIED — COVER MUTATIONS</div>}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} charX={px} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      {paid&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// THANK YOU — STAY SAFE</div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={23} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="PHARMACY — THE VEIL"/>
-      <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','RUN'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="pharmacy" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName="PHARMACIST" npcImg={''} total={0} onAct={handleAct}/>}
+      {conv&&<ChatBox convKey={conv} npcName={conv.startsWith('guard')?'GUARD':'PHARMACIST'} npcImg={''} total={total} onAct={handleAct}/>}
       {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
     </div>
   );
@@ -2181,21 +2380,23 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
 // ── RESTAURANT SCENE ──────────────────────────────────────────
 function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
   const [walking,setWalking]=useState(false);
-  const [px,setPx]=useState(200);
-  const [facing,setFacing]=useState('right');
+  const [px,setPx]=useState(1200);
+  const [facing,setFacing]=useState('left');
   const [basket,setBasket]=useState([]);
   const [paid,setPaid]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const nearItem=RESTAURANT_ITEMS.find(i=>Math.abs(i.wx-px)<52&&!basket.includes(i.id));
-  const nearCounter=px>900&&px<1200&&!conv;
-  const atExit=px<200;
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const nearOwner=Math.abs(px-821)<100&&!conv;
+  const nearChef=Math.abs(px-384)<80&&!conv;
+  const atExit=px>=1054;
   const total=basket.reduce((s,id)=>s+(RESTAURANT_ITEMS.find(i=>i.id===id)?.price||0),0);
   const canPay=money>=total&&total>0;
 
   const handleAct=useCallback((act)=>{
     if(act==='pay'){if(!canPay)return 'blocked';onSpendMoney(total);onAddItems?.(basket);setPaid(true);}
+    else if(act==='giveHostelAddress'){onAddItems?.(['hostel_address']);}
+    else if(act==='giveComputerPassword'){onAddItems?.(['computer_pwd']);}
     else if(act==='leave'){setConv(null);setTimeout(onLeave,400);}
     else if(act==='end')setConv(null);
   },[total,money,onSpendMoney,onLeave,onAddItems,basket]);
@@ -2205,12 +2406,13 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
       if(e.code==='Escape'){if(!conv)return;setConv(null);return;}
       if(e.code==='KeyE'&&!conv){
         if(atExit)onLeave();
-        else if(nearCounter)setConv('diego_browse');
+        else if(nearOwner)setConv('diego_browse');
+        else if(nearChef)setConv('chef_browse');
       }
     };
     window.addEventListener('keydown',kd);
     return()=>window.removeEventListener('keydown',kd);
-  },[nearCounter,atExit,onLeave,conv]);
+  },[nearOwner,nearChef,atExit,onLeave,conv]);
 
   useEffect(()=>{
     const loop=()=>{
@@ -2230,31 +2432,24 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0a08'}}>
       <video src={RESTAURANT_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
-      <div style={{position:'absolute',bottom:116,left:900,zIndex:10}}>
-        <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// DIEGO</div>
-        <svg width={100} height={110} viewBox="0 0 100 110">
-          <ellipse cx={50} cy={20} rx={15} ry={18} fill="#6a5a48"/>
-          <rect x={32} y={36} width={36} height={40} rx={2} fill="#4a3a28"/>
-          <rect x={36} y={40} width={28} height={32} rx={1} fill="#3a2a18" opacity={.6}/>
-        </svg>
-        {nearCounter&&!conv&&<div style={{position:'absolute',bottom:115,left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 8px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] TALK</div>}
+      {/* Restaurant owner NPC */}
+      <div style={{position:'absolute',bottom:109,left:821,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
+        <NpcVideo src={RESTAURANT_OWNER_VID} height={337}/>
+        {nearOwner&&!conv&&<Prompt text="[ E ] TALK"/>}
       </div>
-      <div style={{position:'absolute',bottom:116,left:650,zIndex:10}}>
-        <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// CHEF</div>
-        <svg width={80} height={100} viewBox="0 0 80 100">
-          <ellipse cx={40} cy={16} rx={10} ry={12} fill="#5a5248"/>
-          <rect x={28} y={28} width={24} height={32} rx={2} fill="#3a3028"/>
-          <rect x={32} y={32} width={16} height={24} rx={1} fill="#2a2018" opacity={.6}/>
-        </svg>
+      {/* Chef NPC */}
+      <div style={{position:'absolute',bottom:109,left:384,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
+        <NpcVideo src={CHEF_VID} height={354}/>
+        {nearChef&&!conv&&<Prompt text="[ E ] TALK"/>}
       </div>
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} charX={px} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={95} charHeight={317} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="RESTAURANT — THE VEIL"/>
-      <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','RUN'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="restaurant" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName="DIEGO" npcImg={''} total={0} onAct={handleAct}/>}
-      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
+      {conv&&<ChatBox convKey={conv} npcName={conv==='chef_browse'?'CHEF':'OWNER'} npcImg={''} total={0} onAct={handleAct}/>}
+      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,right:20,zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
     </div>
   );
 }
@@ -2266,7 +2461,7 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
   const [facing,setFacing]=useState('right');
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearCounter=px>900&&px<1200&&!conv;
   const atExit=px<200;
 
@@ -2300,16 +2495,16 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0908'}}>
       <video src={ALLEY_VIDEO_STORE_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
-      <div style={{position:'absolute',bottom:116,left:850,zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
+      <div style={{position:'absolute',bottom:29,left:850,zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
         <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// CHARLIE</div>
-        <video src={CHARLIE_IDLE_VID} style={{width:408,height:408,objectFit:'contain',display:'block'}} autoPlay muted loop/>
+        <NpcVideo src={CHARLIE_IDLE_VID} height={408} width={408}/>
         {nearCounter&&!conv&&<div style={{position:'absolute',bottom:-35,left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 8px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] TALK</div>}
       </div>
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} charX={px} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} vertOffset={vertOffset} charX={px} charBottom={29} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="ALLEY WAY — THE VEIL"/>
-      <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','RUN'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="alley_video_store" onSceneChange={debugGo}/>}
       {conv&&<ChatBox convKey={conv} npcName="CHARLIE" npcImg={CHARLIE_PORTRAIT} total={0} onAct={(act)=>{
         if(act==='giveMoveVideo'){window.dispatchEvent(new CustomEvent('beau_unlockVideo',{detail:{id:'v1'}}));setConv(null);return;}
@@ -2649,23 +2844,23 @@ function useGamepad() {
     const DEAD=0.25;
     // Standard gamepad layout (Xbox / PS / generic) — mirrors KEYS constant
     const BTN={
-      0:KEYS.RUN,      // A / Cross  — run (double speed + 10%)
+      0:KEYS.RUN,      // A / Cross  — run (ShiftRight)
       1:KEYS.CONFIRM,  // B / Circle — interact, confirm dialogue
-      2:KEYS.SKIP,     // X / Square — skip / fast-forward
+      2:KEYS.JUMP,     // X / Square — jump
       4:KEYS.TAB_PREV, // LB / L1     — HUD: previous tab
       5:KEYS.TAB_NEXT, // RB / R1     — HUD: next tab
-      8:'Shift',       // Back/Select — toggle device HUD
+      8:'KeyI',        // Back/Select — toggle device HUD (KeyI, not Shift)
       9:'Pause',       // Start/Menu  — pause menu
       12:KEYS.UP,      // D-pad up
-      13:KEYS.DOWN,    // D-pad down
+      13:KEYS.DOWN,    // D-pad down — also acts as crouch in scenes (ArrowDown)
       14:KEYS.LEFT,    // D-pad left
       15:KEYS.RIGHT,   // D-pad right
     };
     const ALL=Object.values(KEYS);
-    ALL.push('Shift','Escape','Pause'); // Add non-KEYS buttons
+    ALL.push('KeyI','Escape','Pause'); // Add non-KEYS buttons
     const held={};
     let raf;
-    const keyMap={Shift:'ShiftLeft',ShiftLeft:'ShiftLeft',Escape:'Escape',KeyI:'KeyI',Enter:'Enter',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',KeyE:'KeyE',KeyQ:'KeyQ',KeyW:'KeyW'};
+    const keyMap={ShiftLeft:'ShiftLeft',ShiftRight:'ShiftRight',Escape:'Escape',KeyI:'KeyI',Enter:'Enter',Space:'Space',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',KeyE:'KeyE',KeyQ:'KeyQ',KeyW:'KeyW'};
     const kd=code=>document.documentElement.dispatchEvent(new KeyboardEvent('keydown',{key:code,code:keyMap[code]||code,bubbles:true,cancelable:true}));
     const ku=code=>document.documentElement.dispatchEvent(new KeyboardEvent('keyup',  {key:code,code:keyMap[code]||code,bubbles:true,cancelable:true}));
     const poll=()=>{
@@ -2719,7 +2914,7 @@ function useInputSource(){
 // All new scenes MUST implement running mechanics and stamina this way:
 //
 // 1. Function signature: Add `stamina` and `onStaminaChange` props
-// 2. Call hook: `const {keys,running,bark,updateMovement}=useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit);`
+// 2. Call hook: `const {keys,running,isCrouching,vertOffset,bark,updateMovement}=useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit);`
 // 3. Movement loop: Before movement checks, call `const {currentSpeed}=updateMovement(isMoving);`
 // 4. Use speed: Replace hardcoded SPD with `currentSpeed` (applies 2.1x multiplier when running)
 // 5. Character: Pass `running={running}` to <Char> component
@@ -2731,9 +2926,19 @@ function useInputSource(){
 function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused=false){
   const keys=useRef({});
   const [running,setRunning]=useState(false);
+  const [isCrouching,setIsCrouching]=useState(false);
+  const [vertOffset,setVertOffset]=useState(0);
   const [bark,setBark]=useState(null);
   const lastBarkTime=useRef(0);
   const lastStaminaRecoveryTime=useRef(0);
+
+  // Jump state — refs so the RAF loop sees latest values without restarts
+  const jumpingRef=useRef(false);
+  const jumpStartRef=useRef(0);
+  const jumpPeakRef=useRef(0);
+  const jumpDurRef=useRef(0);
+  const isMovingRef=useRef(false); // updated by updateMovement each frame
+  const isRunningRef=useRef(false); // updated by updateMovement each frame
 
   // Refs keep the loop from going stale — always current without needing to
   // restart the RAF loop when outfit / stamina / speed change.
@@ -2748,22 +2953,52 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   baseSpeedRef.current=baseSpeed;
   pausedRef.current=paused;
 
-  // When HUD opens or closes, clear Shift+arrow keys so stale holds don't carry over
+  // When HUD opens or closes, clear held keys so stale holds don't carry over
   useEffect(()=>{
     if(paused){
       delete keys.current['ShiftLeft'];
+      delete keys.current['ShiftRight'];
       delete keys.current['ArrowLeft'];
       delete keys.current['ArrowRight'];
       delete keys.current['ArrowUp'];
       delete keys.current['ArrowDown'];
+      delete keys.current['Space'];
       setRunning(false);
+      setIsCrouching(false);
+      jumpingRef.current=false;
     }
   },[paused]);
 
+  // Jump + idle bob RAF loop
+  useEffect(()=>{
+    let rafId;
+    const loop=()=>{
+      const now=Date.now();
+      if(jumpingRef.current){
+        const elapsed=now-jumpStartRef.current;
+        const progress=Math.min(1,elapsed/jumpDurRef.current);
+        const offset=Math.round(jumpPeakRef.current*Math.sin(Math.PI*progress));
+        setVertOffset(offset);
+        if(progress>=1){jumpingRef.current=false;setVertOffset(0);}
+      } else if(!isMovingRef.current&&!pausedRef.current){
+        // Gentle idle bob — ±3px sine wave
+        setVertOffset(Math.round(Math.sin(now/600)*3));
+      } else {
+        setVertOffset(0);
+      }
+      rafId=requestAnimationFrame(loop);
+    };
+    rafId=requestAnimationFrame(loop);
+    return()=>cancelAnimationFrame(rafId);
+  },[]);
+
   // Stable callback — no deps needed because everything is read from refs
   const updateMovement=useCallback((isMoving)=>{
+    isMovingRef.current=isMoving;
     if(pausedRef.current){
       setRunning(false);
+      setIsCrouching(false);
+      isRunningRef.current=false;
       return {canRun:false, currentSpeed:baseSpeedRef.current};
     }
 
@@ -2772,15 +3007,14 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
     const outfit=outfitRef.current;
     const changeStamina=onStaminaChangeRef.current;
 
-    const isRunning=keys.current['ShiftLeft'];
-    const outfitAllowsRun=outfit==='rags'; // only rags allows running
+    const isRunning=keys.current['ShiftRight']; // controller A button
+    const outfitAllowsRun=outfit==='cyber_octavia';
     const canRun=isRunning&&stam>0&&outfitAllowsRun;
+    const crouching=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
     let barkMsg=null;
 
     if(isRunning&&isMoving&&!outfitAllowsRun){
-      if(outfit==='underwear'){
-        barkMsg=RUN_BARKS_UNDERWEAR[Math.floor(Math.random()*RUN_BARKS_UNDERWEAR.length)];
-      } else if(outfit==='hoodie'){
+      if(outfit==='hoodie'){
         barkMsg=RUN_BARKS_HOODIE[Math.floor(Math.random()*RUN_BARKS_HOODIE.length)];
       }
     }
@@ -2792,6 +3026,8 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
     }
 
     setRunning(canRun&&!barkMsg&&isMoving);
+    setIsCrouching(crouching&&!isMoving); // only crouch when standing still
+    isRunningRef.current=canRun&&!barkMsg&&isMoving;
 
     if(canRun&&isMoving){
       changeStamina?.(s=>Math.max(0,s-0.15)); // ~11 seconds of running at 60fps
@@ -2804,7 +3040,18 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   },[]); // stable — reads everything from refs
 
   useEffect(()=>{
-    const kd=e=>{keys.current[e.code]=true;};
+    const kd=e=>{
+      keys.current[e.code]=true;
+      // Jump trigger — Space key or controller X (mapped to Space via BTN[2])
+      if(e.code==='Space'&&!jumpingRef.current&&!pausedRef.current){
+        const isRun=isRunningRef.current;
+        const isMove=isMovingRef.current;
+        jumpPeakRef.current=isRun?140:isMove?100:80;
+        jumpDurRef.current =isRun?650:isMove?500:400;
+        jumpingRef.current=true;
+        jumpStartRef.current=Date.now();
+      }
+    };
     const ku=e=>{delete keys.current[e.code];};
     window.addEventListener('keydown',kd);
     window.addEventListener('keyup',ku);
@@ -2814,7 +3061,7 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
     };
   },[]);
 
-  return {keys,running,bark,setBark,updateMovement};
+  return {keys,running,isCrouching,vertOffset,bark,setBark,updateMovement};
 }
 
 // ── DEVICE HUD ───────────────────────────────────────────────
@@ -4057,7 +4304,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
               <div style={{flexShrink:0,display:'flex',gap:Math.round(3*HUD_FONT_SCALE),marginTop:Math.round(2*HUD_FONT_SCALE)}}>
                 {selected.equippable?(
                   // Equippable item: show EQUIP button (or REMOVE if already equipped)
-                  <div onClick={()=>{if(onEquipItem)onEquipItem(currentOutfit===selected.id?'underwear':selected.id);handleClose();}} data-hudaction={0}
+                  <div onClick={()=>{if(onEquipItem)onEquipItem(currentOutfit===selected.id?'cyber_octavia':selected.id);handleClose();}} data-hudaction={0}
                     style={{flex:1,padding:`${Math.round(2*HUD_FONT_SCALE)}px 0`,
                       border:`1px solid ${C.gold}`,
                       background:C.selBg,
@@ -4357,10 +4604,15 @@ function QuestApp(){
   const [scene,setScene]=useState('opening');
   const [fading,setFading]=useState(true);
   const [money,setMoney]=useState(0);
-  const [inventory,setInventory]=useState(['underwear']);
+  const [inventory,setInventory]=useState(['hoodie']);
   const [heartNum,setHeartNum]=useState(35);
   const [stamina,setStamina]=useState(100); // 0-100, depletes while running, recovers while idle
   const [hasPhone,setHasPhone]=useState(false);
+  const [streetSpawnX,setStreetSpawnX]=useState(null);
+  const [lobbySpawnX,setLobbySpawnX]=useState(191);
+  const [moveRep,setMoveRep]=useState(100);
+  const [fourthFloorSpawnX,setFourthFloorSpawnX]=useState(1035);
+  const [elevatorHallSpawnX,setElevatorHallSpawnX]=useState(1100);
   const [showDevice,setShowDevice]=useState(false);
   const [isClosingDevice,setIsClosingDevice]=useState(false);
   const [videoLibUnlocked,setVideoLibUnlocked]=useState(()=>{
@@ -4373,7 +4625,7 @@ function QuestApp(){
     PEOPLE_DB.forEach(p=>{if(p.category)init[p.id]=p.category;});
     return init;
   });
-  const [currentOutfit,setCurrentOutfit]=useState('underwear'); // 'rags', 'hoodie', 'underwear' — starts in underwear at shower
+  const [currentOutfit,setCurrentOutfit]=useState('cyber_octavia');
   const [playerFacing,setPlayerFacing]=useState('right'); // 'left' or 'right'
   const [isPlayerMoving,setIsPlayerMoving]=useState(false);
   const handleChangeColor=useCallback((presetId)=>{
@@ -4387,9 +4639,8 @@ function QuestApp(){
     setCharacterCategories(prev=>({...prev,[characterId]:category}));
   },[]);
   const handleEquipItem=useCallback((itemId)=>{
-    if(itemId==='rags') setCurrentOutfit('rags');
-    else if(itemId==='hoodie') setCurrentOutfit('hoodie');
-    else setCurrentOutfit('underwear');
+    if(itemId==='hoodie') setCurrentOutfit('hoodie');
+    else setCurrentOutfit('cyber_octavia');
   },[]);
   const [showPause,setShowPause]=useState(false);
   const closeDevice=useCallback(()=>{
@@ -4448,7 +4699,7 @@ function QuestApp(){
     const kd=e=>{
       if(e.code==='Tab'){e.preventDefault();setDebug(d=>!d);return;}
       if(e.code==='Pause'){setShowPause(p=>!p);return;}
-      if(e.key==='Shift'||e.code==='KeyI'){if(hasPhone||debug)setShowDevice(d=>d?d:true);return;}
+      if(e.code==='KeyI'){if(hasPhone||debug)setShowDevice(d=>d?d:true);return;}
       if(scene==='opening')return;
       if(e.code==='KeyE'){moState.advance();}
     };
@@ -4464,7 +4715,7 @@ function QuestApp(){
     const hudKeys=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyE','Backspace','Enter']);
     const block=e=>{
       if(isClosingDevice){e.stopImmediatePropagation();e.preventDefault();return;}
-      if(e.code==='Escape'||e.code==='KeyI'||e.code==='ShiftLeft'||e.code==='ShiftRight'||e.key==='Shift'){
+      if(e.code==='Escape'||e.code==='KeyI'){
         e.stopImmediatePropagation();e.preventDefault();
         if(e.type==='keydown')closeDevice();
         return;
@@ -4496,7 +4747,7 @@ function QuestApp(){
         <AptScene heart={heart} mono={moState.text} money={money}
           onPickupMoney={()=>setMoney(12)}
           inventory={inventory} heartNum={heartNum} onUseItem={useItem}
-          onLeave={()=>go(scene==='waking'?'apartment':'hallway_in')}
+          onLeave={()=>{if(scene!=='waking'){setFourthFloorSpawnX(1035);}go(scene==='waking'?'apartment':'fourth_floor_hallway');}}
           onEnterBathroom={()=>{setBathroomSpawnPos(1028);setBathroomSpawnFacing('left');go('bathroom');}}
           onRest={()=>scene==='safe'?go('nightmare'):null}
           onRestBed={(amount)=>setHeartNum(h=>Math.min(100,h+amount))}
@@ -4506,41 +4757,56 @@ function QuestApp(){
         <HallwayScene heart={heart} mono={moState.text}
           mode={scene==='hallway_in'?'in':'out'}
           onRoom={()=>go(scene==='hallway_in'?'safe':'apartment')}
-          onExit={()=>go(scene==='hallway_in'?'safe':'street')}
+          onExit={()=>{if(scene==='hallway'){setStreetSpawnX(null);}go(scene==='hallway_in'?'safe':'street');}}
           inventory={inventory} heartNum={heartNum} onUseItem={useItem}
           currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {(scene==='street'||scene==='returning')&&
-        <StrScene heart={heart} mono={moState.text} mode={scene==='returning'?'return':'go'}
+        <StrScene heart={heart} mono={moState.text} mode={scene==='returning'?'return':'go'} spawnX={streetSpawnX}
           inventory={inventory} heartNum={heartNum} onUseItem={useItem}
-          onStore={()=>go('store')} onHome={()=>go('hallway_in')}
+          onStore={()=>go('store')} onHome={()=>{setLobbySpawnX(191);go('lobby');}}
           onPharmacy={()=>go('pharmacy')} onRestaurant={()=>go('restaurant')} onAlleyWay={()=>go('alley_video_store')}
           currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='store'&&
         <StoreScene heart={heart} mono={moState.text} money={money}
           onSpendMoney={amt=>setMoney(m=>m-amt)}
-          onAddItems={addItems} onLeave={()=>go('returning')}
+          onAddItems={addItems} onLeave={()=>{setStreetSpawnX(406);go('returning');}}
+          onTheft={()=>setMoveRep(r=>Math.max(0,r-15))}
           currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} debug={debug} debugGo={go}/>}
       {scene==='pharmacy'&&
         <PharmacyScene heart={heart} mono={moState.text} money={money}
           onSpendMoney={amt=>setMoney(m=>m-amt)}
-          onAddItems={addItems} onLeave={()=>go('returning')}
+          onAddItems={addItems} onLeave={()=>{setStreetSpawnX(515);go('returning');}}
           currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='restaurant'&&
         <RestaurantScene heart={heart} mono={moState.text} money={money}
           onSpendMoney={amt=>setMoney(m=>m-amt)}
-          onAddItems={addItems} onLeave={()=>go('returning')}
+          onAddItems={addItems} onLeave={()=>{setStreetSpawnX(1524);go('returning');}}
           currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='alley_video_store'&&
         <AlleyWayScene heart={heart} mono={moState.text}
-          onLeave={()=>go('returning')}
+          onLeave={()=>{setStreetSpawnX(902);go('returning');}}
           currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='nightmare'&&<Nightmare onDone={()=>go('waking')}/>}
-      {scene==='elevator'&&<ElevatorScene onDone={()=>go('lobby')} onExit={()=>go('lobby')} currentOutfit={currentOutfit}/>}
+      {scene==='elevator'&&<ElevatorScene onDone={()=>{setLobbySpawnX(591);go('lobby');}} onExit={()=>{setLobbySpawnX(591);go('lobby');}} currentOutfit={currentOutfit}/>}
       {scene==='stairwell'&&<StairwellScene mode="down" onDone={()=>go('lobby')}/>}
-      {scene==='lobby'&&<LobbyScene onExit={()=>go('street')} currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
+      {scene==='fourth_floor_hallway'&&<FourthFloorHallwayScene
+        onExit={()=>{setElevatorHallSpawnX(1100);go('elevator_hallway');}} onReturn={()=>go('apartment')}
+        spawnX={fourthFloorSpawnX}
+        currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
+        hudOpen={showDevice} debug={debug} debugGo={go}/>}
+      {scene==='elevator_hallway'&&<ElevatorHallwayScene
+        onStairwell={()=>go('apt_stairwell')} onElevator={()=>go('elevator')} onReturn={()=>{setFourthFloorSpawnX(100);go('fourth_floor_hallway');}}
+        spawnX={elevatorHallSpawnX}
+        currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
+        hudOpen={showDevice} debug={debug} debugGo={go}/>}
+      {scene==='apt_stairwell'&&<AptStairwellScene
+        onReturn={()=>{setElevatorHallSpawnX(663);go('elevator_hallway');}} onDown={()=>{setLobbySpawnX(191);go('lobby');}}
+        currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
+        hudOpen={showDevice} debug={debug} debugGo={go}/>}
+      {scene==='lobby'&&<LobbyScene spawnX={lobbySpawnX} onExit={()=>{setStreetSpawnX(1245);go('street');}} currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
       <Fade on={fading}/>
       {money>0&&scene!=='nightmare'&&scene!=='opening'&&scene!=='bathroom'&&<MoneyHUD amount={money}/>}
-      {(scene==='apartment'||scene==='hallway'||scene==='hallway_in'||scene==='street'||scene==='returning'||scene==='store'||scene==='pharmacy'||scene==='restaurant'||scene==='alley_video_store'||scene==='lobby')&&<StaminaBar stamina={stamina}/>}
+      {(scene==='apartment'||scene==='hallway'||scene==='hallway_in'||scene==='street'||scene==='returning'||scene==='store'||scene==='pharmacy'||scene==='restaurant'||scene==='alley_video_store'||scene==='lobby'||scene==='fourth_floor_hallway'||scene==='elevator_hallway'||scene==='apt_stairwell')&&<StaminaBar stamina={stamina}/>}
       {showDevice&&<div style={{position:'absolute',inset:0,zIndex:499,backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',background:'rgba(0,0,0,0.55)',pointerEvents:'auto'}}/>}
       {showDevice&&<DeviceHUD show={showDevice} isClosing={isClosingDevice} onClose={closeDevice}
         inventory={inventory} heartNum={heartNum} onUseItem={useItem} money={money}

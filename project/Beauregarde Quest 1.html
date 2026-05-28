@@ -675,43 +675,64 @@ function ChromaKeyVideo({src,flip,height,playing,playbackRate,filterStr}){
   const vRef=useRef(null);
   const cRef=useRef(null);
   const rafRef=useRef(null);
+  const drawRef=useRef(null);
+
   useEffect(()=>{
     const v=vRef.current;const c=cRef.current;
     if(!v||!c)return;
-    const ctx=c.getContext('2d',{willReadFrequently:true});
     let active=true;
+    let ctx=null;
+
+    const draw=()=>{
+      if(!v||!c||!v.videoWidth||v.readyState<2)return;
+      const h=typeof height==='number'?height:parseInt(height)||371;
+      const w=Math.round(v.videoWidth*h/v.videoHeight);
+      // Resize canvas intrinsic buffer to scaled display size (fixes overlapping frames)
+      if(c.width!==w||c.height!==h){
+        c.width=w;c.height=h;
+        c.style.width=w+'px';c.style.height=h+'px';
+        ctx=null;
+      }
+      if(!ctx)ctx=c.getContext('2d',{willReadFrequently:true});
+      ctx.clearRect(0,0,w,h);
+      ctx.drawImage(v,0,0,w,h);
+      const id=ctx.getImageData(0,0,w,h);
+      const d=id.data;
+      for(let i=0;i<d.length;i+=4){
+        if(d[i+1]>80&&d[i+1]>d[i]+30&&d[i+1]>d[i+2]+30)d[i+3]=0;
+      }
+      ctx.putImageData(id,0,0);
+    };
+    drawRef.current=draw;
+
     const loop=()=>{
       if(!active)return;
-      if(!v.paused&&!v.ended&&v.readyState>=2){
-        if(c.width!==v.videoWidth&&v.videoWidth>0){c.width=v.videoWidth;c.height=v.videoHeight;}
-        if(c.width>0){
-          ctx.drawImage(v,0,0,c.width,c.height);
-          const id=ctx.getImageData(0,0,c.width,c.height);
-          const d=id.data;
-          for(let i=0;i<d.length;i+=4){
-            const g=d[i+1];
-            // Key out pixels where green dominates over red and blue
-            if(g>80&&g>d[i]+30&&g>d[i+2]+30)d[i+3]=0;
-          }
-          ctx.putImageData(id,0,0);
-        }
-      }
+      if(!v.paused&&!v.ended)draw();
       rafRef.current=requestAnimationFrame(loop);
     };
-    v.muted=true;v.loop=true;v.src=src;v.load();v.play().catch(()=>{});
+
+    v.muted=true;v.loop=true;v.src=src;v.load();
+    v.play().catch(()=>{});
     rafRef.current=requestAnimationFrame(loop);
-    return()=>{active=false;cancelAnimationFrame(rafRef.current);};
-  },[src]);
+    return()=>{active=false;cancelAnimationFrame(rafRef.current);drawRef.current=null;};
+  },[src,height]);
+
   useEffect(()=>{const v=vRef.current;if(v)v.playbackRate=playbackRate||1;},[playbackRate]);
+
   useEffect(()=>{
     const v=vRef.current;if(!v)return;
     if(playing){v.play().catch(()=>{});}
-    else{v.currentTime=0;v.pause();}
+    else{
+      // Seek to frame 0 then draw one still frame so she appears standing, not invisible
+      v.currentTime=0;
+      v.addEventListener('seeked',()=>{v.pause();drawRef.current?.();},{once:true});
+    }
   },[playing]);
+
   return(
     <span style={{display:'inline-block',lineHeight:0}}>
       <video ref={vRef} muted loop playsInline preload="auto" style={{display:'none'}}/>
-      <canvas ref={cRef} style={{height,display:'block',transformOrigin:'center center',transform:flip?'scaleX(-1)':'none',filter:filterStr}}/>
+      <canvas ref={cRef} style={{display:'block',transformOrigin:'center center',transform:flip?'scaleX(-1)':'none',filter:filterStr}}/>
     </span>
   );
 }

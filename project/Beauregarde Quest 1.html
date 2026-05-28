@@ -795,7 +795,7 @@ function ChromaKeyVideo({src,flip,height,playing,playbackRate,filterStr}){
 function Char({facing,walking,running=false,crouching=false,jumping=false,vertOffset=0,charBottom=116,charX,charHeight=371,currentOutfit='cyber_octavia'}){
   const vidRef=useRef(null);
   const action=jumping?'jump':crouching?(walking||running?'crouch_walk':'crouch'):running?'run':walking?'walk':'idle';
-  const effectiveHeight=crouching?Math.round(charHeight*0.75):charHeight;
+  const effectiveHeight=(crouching||jumping)?Math.round(charHeight*0.75):charHeight;
   const {src:animSrc,flip:shouldFlip}=getCharAnimation(currentOutfit,facing,action);
   // True only for outfits with dedicated idle files (rags). Others share the walk file.
   const hasIdleAnim=!!CHAR_ANIMATIONS[currentOutfit]?.idle_left;
@@ -813,7 +813,7 @@ function Char({facing,walking,running=false,crouching=false,jumping=false,vertOf
   useEffect(()=>{
     const v=vidRef.current;if(!v)return;
     v.muted=true;
-    if(jumping){v.playbackRate=1;v.play().catch(()=>{});}
+    if(jumping){v.playbackRate=1.5;v.play().catch(()=>{});}
     else if(crouching&&(walking||running)){v.playbackRate=0.65;v.play().catch(()=>{});}
     else if(crouching){v.playbackRate=1;v.play().catch(()=>{});}
     else if(walking){v.playbackRate=0.65;v.play().catch(()=>{});}
@@ -828,7 +828,7 @@ function Char({facing,walking,running=false,crouching=false,jumping=false,vertOf
       <div style={{position:'absolute',bottom:charBottom+(vertOffset||0),left:charX!==undefined?charX:'50%',zIndex:100,pointerEvents:'none',transform:'translateX(-50%)'}}>
         {ckNeeded
           ?<ChromaKeyVideo src={animSrc} flip={shouldFlip} height={effectiveHeight}
-              playing={walking||running||crouching||jumping} playbackRate={(walking&&!running&&!jumping)?0.65:1} filterStr={DROP}/>
+              playing={walking||running||crouching||jumping} playbackRate={jumping?1.5:(walking&&!running)?0.65:1} filterStr={DROP}/>
           :<video key={animSrc} ref={vidRef} src={animSrc} loop muted playsInline preload="auto"
               style={{height:effectiveHeight,display:'block',transformOrigin:'center center',
                 transform:shouldFlip?'scaleX(-1)':'none',filter:DROP,transition:'opacity 0.1s ease'}}/>

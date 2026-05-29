@@ -2,137 +2,179 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BEAUREGARDE — Quest Editor</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
+    /* ── PALETTE CUSTOM PROPERTIES ────────────────────────────── */
+    :root {
+      --bg:      #060402; --surface: #0e0b07; --raised: #141008;
+      --text:    #e8d2a0; --text2: #a08060;
+      --dim:     #5a3a18; --dimmer: #2a1a08; --border: #1a1208;
+      --accent:  #d4a020; --accent2: #c47a10; --red: #c43028;
+      --muted:   #7a6040; --tag-bg: #1a1208; --input-bg: #0e0b07; --scroll: #5a3a18;
+    }
+    body.pal-chalk {
+      --bg:#f0ebe0; --surface:#ffffff; --raised:#e8e2d4;
+      --text:#1a1208; --text2:#6a5840;
+      --dim:#b0988a; --dimmer:#d8d0c0; --border:#c8c0b0;
+      --accent:#d44414; --accent2:#a83210; --red:#c43028;
+      --muted:#8a7868; --tag-bg:#ede8dc; --input-bg:#ffffff; --scroll:#b0988a;
+    }
+    body.pal-northside {
+      --bg:#12082a; --surface:#1e1040; --raised:#281850;
+      --text:#c8f0dc; --text2:#7890a8;
+      --dim:#5040a0; --dimmer:#2a1860; --border:#381e60;
+      --accent:#a030e0; --accent2:#28cc80; --red:#e03068;
+      --muted:#6050a0; --tag-bg:#201040; --input-bg:#1e1040; --scroll:#5040a0;
+    }
+    body.pal-chromakopia {
+      --bg:#090c07; --surface:#121810; --raised:#1a2018;
+      --text:#d8e0c0; --text2:#788058;
+      --dim:#3a5030; --dimmer:#1e2a18; --border:#253020;
+      --accent:#4a9038; --accent2:#88c840; --red:#c43028;
+      --muted:#587048; --tag-bg:#151c12; --input-bg:#121810; --scroll:#3a5030;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #080604; color: #e8d2a0; font-family: 'Space Mono', monospace; height: 100vh; overflow: hidden; }
-    .editor-shell { display: flex; flex-direction: column; height: 100vh; }
+    html, body { height: 100%; }
+    body { background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; -webkit-tap-highlight-color: transparent; }
+    .editor-shell { display: flex; flex-direction: column; min-height: 100vh; }
 
-    /* HEADER */
-    .header { display: flex; align-items: center; background: #0e0b07; border-bottom: 1px solid #5a3a18; padding: 0 16px; height: 48px; flex-shrink: 0; }
-    .header-title { color: #d4a020; font-size: 11px; font-weight: 700; letter-spacing: 3px; margin-right: 24px; white-space: nowrap; }
-    .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; color: #7a6040; font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px; cursor: pointer; padding: 0 14px; height: 48px; transition: color 0.15s, border-color 0.15s; }
-    .tab-btn:hover { color: #e8d2a0; }
-    .tab-btn.active { color: #d4a020; border-bottom-color: #d4a020; }
-    .header-spacer { flex: 1; }
-    .export-btn { background: none; border: 1px solid #5a3a18; color: #7a6040; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 1px; cursor: pointer; padding: 5px 12px; transition: all 0.15s; margin-left: 8px; }
-    .export-btn:hover { border-color: #d4a020; color: #d4a020; }
+    /* ── HEADER ─────────────────────────────────────────────────── */
+    .header { display:flex; align-items:center; gap:8px; background:var(--surface); border-bottom:1px solid var(--border); padding:0 12px; height:52px; flex-shrink:0; position:sticky; top:0; z-index:200; }
+    .header-title { color:var(--accent); font-size:10px; font-weight:700; letter-spacing:3px; white-space:nowrap; }
+    @media (max-width:500px) { .header-title { display:none; } }
+    .header-spacer { flex:1; }
+    .palette-row { display:flex; gap:5px; align-items:center; }
+    .pal-btn { width:22px; height:22px; border-radius:50%; border:2px solid transparent; cursor:pointer; flex-shrink:0; transition:border-color .15s,transform .15s; }
+    .pal-btn:hover { transform:scale(1.15); }
+    .pal-btn.active { border-color:var(--text); }
+    .pal-btn-void    { background:#d4a020; }
+    .pal-btn-chalk   { background:#d44414; }
+    .pal-btn-north   { background:#a030e0; }
+    .pal-btn-chroma  { background:#4a9038; }
+    .export-btn { background:none; border:1px solid var(--dim); color:var(--muted); font-family:'Space Mono',monospace; font-size:8px; letter-spacing:1px; cursor:pointer; padding:6px 10px; transition:all .15s; white-space:nowrap; }
+    .export-btn:hover { border-color:var(--accent); color:var(--accent); }
 
-    /* LAYOUT */
-    .main { display: flex; flex: 1; overflow: hidden; }
-    .list-panel { width: 220px; flex-shrink: 0; background: #0a0805; border-right: 1px solid #5a3a18; display: flex; flex-direction: column; overflow: hidden; }
-    .list-panel-header { padding: 10px 12px; font-size: 9px; letter-spacing: 2px; color: #7a6040; border-bottom: 1px solid #2a1a08; flex-shrink: 0; }
-    .list-scroll { flex: 1; overflow-y: auto; }
-    .list-scroll::-webkit-scrollbar { width: 4px; }
-    .list-scroll::-webkit-scrollbar-track { background: #080604; }
-    .list-scroll::-webkit-scrollbar-thumb { background: #5a3a18; }
-    .list-item { padding: 10px 12px; border-bottom: 1px solid #110d07; cursor: pointer; transition: background 0.1s; }
-    .list-item:hover { background: #130f09; }
-    .list-item.selected { background: #1a1108; border-left: 2px solid #d4a020; }
-    .item-name { font-size: 11px; color: #e8d2a0; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .list-item.selected .item-name { color: #d4a020; }
-    .item-meta { font-size: 9px; color: #7a6040; }
-    .list-add-btn { background: none; border: none; border-top: 1px solid #2a1a08; color: #7a6040; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 1px; cursor: pointer; padding: 10px 12px; text-align: left; width: 100%; transition: color 0.15s; flex-shrink: 0; }
-    .list-add-btn:hover { color: #d4a020; }
+    /* ── ACCORDION LAYOUT ────────────────────────────────────────── */
+    .acc-main { flex:1; overflow-y:auto; }
+    .acc-main::-webkit-scrollbar { width:4px; }
+    .acc-main::-webkit-scrollbar-thumb { background:var(--scroll); }
+    .acc-section { border-bottom:1px solid var(--border); }
+    .acc-section-hdr { display:flex; align-items:center; gap:12px; padding:18px 16px; background:var(--surface); cursor:pointer; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; min-height:68px; transition:background .1s; }
+    .acc-section-hdr:active { background:var(--raised); }
+    .acc-section-title { font-size:clamp(22px,5.5vw,30px); font-weight:700; letter-spacing:2px; color:var(--text); flex:1; line-height:1; }
+    .acc-section-count { font-size:9px; letter-spacing:2px; color:var(--muted); white-space:nowrap; }
+    .acc-chevron { font-size:11px; color:var(--accent); flex-shrink:0; width:16px; text-align:center; transition:transform .2s; display:inline-block; }
+    .acc-chevron.open { transform:rotate(90deg); }
+    .acc-section-body { background:var(--bg); }
+    .acc-item { border-top:1px solid var(--border); }
+    .acc-item-hdr { display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; min-height:58px; -webkit-tap-highlight-color:transparent; transition:background .1s; }
+    .acc-item-hdr:active { background:var(--raised); }
+    .acc-item-name { font-size:13px; font-weight:700; color:var(--text); flex:1; letter-spacing:.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .acc-item.open .acc-item-name { color:var(--accent); }
+    .acc-item-badge { font-size:7px; letter-spacing:2px; padding:3px 7px; border:1px solid var(--dim); color:var(--muted); white-space:nowrap; flex-shrink:0; }
+    .acc-item-del { background:none; border:none; color:var(--dim); font-size:20px; cursor:pointer; padding:4px 6px; flex-shrink:0; line-height:1; transition:color .15s; min-width:36px; min-height:36px; display:flex; align-items:center; justify-content:center; }
+    .acc-item-del:hover { color:var(--red); }
+    .acc-item-body { padding:16px; border-top:1px solid var(--border); background:var(--surface); display:flex; flex-direction:column; gap:14px; }
+    .acc-add-btn { display:block; width:100%; background:none; border:none; border-top:1px solid var(--border); color:var(--muted); font-family:'Space Mono',monospace; font-size:10px; letter-spacing:2px; cursor:pointer; padding:16px; text-align:left; transition:color .15s,background .1s; min-height:52px; -webkit-tap-highlight-color:transparent; }
+    .acc-add-btn:hover { color:var(--accent); background:var(--raised); }
 
-    /* FORM PANEL */
-    .form-panel { flex: 1; overflow-y: auto; padding: 20px 24px; }
-    .form-panel::-webkit-scrollbar { width: 4px; }
-    .form-panel::-webkit-scrollbar-track { background: #080604; }
-    .form-panel::-webkit-scrollbar-thumb { background: #5a3a18; }
-    .form-title { font-size: 13px; font-weight: 700; color: #d4a020; letter-spacing: 2px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
-    .form-title .delete-btn { margin-left: auto; background: none; border: 1px solid #3a1a14; color: #7a3028; font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 1px; cursor: pointer; padding: 3px 8px; transition: all 0.15s; }
-    .form-title .delete-btn:hover { border-color: #c43028; color: #c43028; }
-    .section { margin-bottom: 24px; }
-    .section-title { font-size: 9px; letter-spacing: 2px; color: #7a6040; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #1a1208; }
-    .form-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; }
-    .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-    .form-label { font-size: 9px; letter-spacing: 1px; color: #7a6040; }
-    .form-input, .form-select, .form-textarea { background: #0e0b07; border: 1px solid #2a1a08; color: #e8d2a0; font-family: 'Space Mono', monospace; font-size: 11px; padding: 6px 8px; outline: none; width: 100%; transition: border-color 0.15s; }
-    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #5a3a18; }
-    .form-select { cursor: pointer; }
-    .form-textarea { resize: vertical; min-height: 60px; }
+    /* ── FORM ELEMENTS ───────────────────────────────────────────── */
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field-label { font-size:8px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
+    .field-id { font-size:9px; letter-spacing:2px; color:var(--dim); padding:6px 0; border-bottom:1px solid var(--border); }
+    .form-input, .form-select, .form-textarea { background:var(--input-bg); border:1px solid var(--dimmer); color:var(--text); font-family:'Space Mono',monospace; font-size:16px; padding:12px 10px; outline:none; width:100%; transition:border-color .15s; -webkit-appearance:none; appearance:none; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--accent); }
+    .form-select { cursor:pointer; }
+    .form-textarea { resize:vertical; min-height:80px; line-height:1.6; }
+    .form-row { display:flex; gap:10px; align-items:flex-start; }
+    .form-row > .field { flex:1; }
+    @media (max-width:600px) { .form-row { flex-direction:column; } }
+    .section { display:flex; flex-direction:column; gap:10px; }
+    .section-title { font-size:8px; letter-spacing:2px; color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .form-title { font-size:12px; font-weight:700; color:var(--accent); letter-spacing:2px; display:flex; align-items:center; gap:10px; }
+    .delete-btn { margin-left:auto; background:none; border:1px solid var(--dim); color:var(--muted); font-family:'Space Mono',monospace; font-size:8px; letter-spacing:1px; cursor:pointer; padding:4px 8px; transition:all .15s; }
+    .delete-btn:hover { border-color:var(--red); color:var(--red); }
 
     /* INLINE ITEMS */
-    .inline-list { display: flex; flex-direction: column; gap: 6px; }
-    .inline-item { background: #0e0b07; border: 1px solid #1a1208; padding: 10px 12px; }
-    .inline-item-header { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-    .inline-item-id { font-size: 10px; color: #d4a020; flex: 1; font-weight: 700; }
-    .inline-item-meta { font-size: 9px; color: #7a6040; }
-    .expand-btn { background: none; border: none; color: #7a6040; font-family: 'Space Mono', monospace; font-size: 10px; cursor: pointer; padding: 0; }
-    .remove-btn { background: none; border: none; color: #3a1a14; font-family: 'Space Mono', monospace; font-size: 12px; cursor: pointer; padding: 0; line-height: 1; transition: color 0.15s; }
-    .remove-btn:hover { color: #c43028; }
-    .add-inline-btn { background: none; border: 1px dashed #2a1a08; color: #7a6040; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 1px; cursor: pointer; padding: 6px 12px; text-align: left; width: 100%; transition: all 0.15s; margin-top: 6px; }
-    .add-inline-btn:hover { border-color: #5a3a18; color: #d4a020; }
+    .inline-list { display:flex; flex-direction:column; gap:6px; }
+    .inline-item { background:var(--raised); border:1px solid var(--border); padding:10px 12px; }
+    .inline-item-header { display:flex; align-items:center; gap:8px; cursor:pointer; min-height:44px; }
+    .inline-item-id { font-size:10px; color:var(--accent); flex:1; font-weight:700; }
+    .inline-item-meta { font-size:9px; color:var(--muted); }
+    .expand-btn { background:none; border:none; color:var(--muted); font-family:'Space Mono',monospace; font-size:10px; cursor:pointer; padding:0; min-width:32px; min-height:36px; text-align:center; }
+    .remove-btn { background:none; border:none; color:var(--dim); font-family:'Space Mono',monospace; font-size:16px; cursor:pointer; padding:4px; line-height:1; transition:color .15s; min-width:36px; min-height:36px; display:flex; align-items:center; justify-content:center; }
+    .remove-btn:hover { color:var(--red); }
+    .add-inline-btn { background:none; border:1px dashed var(--dimmer); color:var(--muted); font-family:'Space Mono',monospace; font-size:9px; letter-spacing:1px; cursor:pointer; padding:12px; text-align:left; width:100%; transition:all .15s; margin-top:4px; min-height:44px; }
+    .add-inline-btn:hover { border-color:var(--accent); color:var(--accent); }
 
     /* TRUST BADGES */
-    .trust-badge { display: inline-block; font-size: 8px; letter-spacing: 1px; padding: 2px 6px; border: 1px solid; white-space: nowrap; }
-    .trust-0 { color: #7a6040; border-color: #3a2808; }
-    .trust-1 { color: #a0802a; border-color: #5a4018; }
-    .trust-2 { color: #d4a020; border-color: #7a5a10; }
-    .trust-3 { color: #ff8020; border-color: #8a4a10; }
-    .trust-4 { color: #ff5030; border-color: #8a2a18; }
+    .trust-badge { display:inline-block; font-size:8px; letter-spacing:1px; padding:3px 7px; border:1px solid; white-space:nowrap; }
+    .trust-0 { color:var(--muted); border-color:var(--dimmer); }
+    .trust-1 { color:#a0802a; border-color:#5a4018; }
+    .trust-2 { color:var(--accent); border-color:var(--dim); }
+    .trust-3 { color:#ff8020; border-color:#8a4a10; }
+    .trust-4 { color:var(--red); border-color:var(--red); opacity:.75; }
 
     /* TAGS */
-    .tag-list { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-    .tag { background: #1a1208; border: 1px solid #2a1a08; color: #a08060; font-size: 9px; padding: 2px 8px; display: flex; align-items: center; gap: 4px; }
-    .tag-remove { background: none; border: none; color: #5a3a18; cursor: pointer; font-size: 11px; padding: 0; line-height: 1; transition: color 0.15s; }
-    .tag-remove:hover { color: #c43028; }
-    .tag-add-input { background: none; border: 1px dashed #2a1a08; color: #e8d2a0; font-family: 'Space Mono', monospace; font-size: 9px; padding: 2px 6px; outline: none; width: 100px; }
-    .tag-add-input::placeholder { color: #3a2808; }
+    .tag-list { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+    .tag { background:var(--tag-bg); border:1px solid var(--dimmer); color:var(--text2); font-size:9px; padding:4px 8px; display:flex; align-items:center; gap:4px; }
+    .tag-remove { background:none; border:none; color:var(--dim); cursor:pointer; font-size:12px; padding:0; line-height:1; transition:color .15s; }
+    .tag-remove:hover { color:var(--red); }
+    .tag-add-input { background:none; border:1px dashed var(--dimmer); color:var(--text); font-family:'Space Mono',monospace; font-size:16px; padding:4px 8px; outline:none; width:140px; min-height:36px; }
+    .tag-add-input::placeholder { color:var(--dimmer); }
 
-    /* TRUST STAGES (dialogue) */
-    .trust-stage { border: 1px solid #1a1208; margin-bottom: 8px; }
-    .trust-stage-header { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; background: #0e0b07; }
-    .trust-stage-body { padding: 12px; border-top: 1px solid #1a1208; display: flex; flex-direction: column; gap: 8px; }
+    /* TRUST STAGES */
+    .trust-stage { border:1px solid var(--border); margin-bottom:8px; }
+    .trust-stage-header { display:flex; align-items:center; gap:10px; padding:12px; cursor:pointer; background:var(--raised); min-height:52px; -webkit-tap-highlight-color:transparent; }
+    .trust-stage-body { padding:12px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:10px; }
 
-    .empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: #3a2808; font-size: 11px; letter-spacing: 1px; }
+    /* MISC */
+    .empty-state { display:flex; align-items:center; justify-content:center; height:160px; color:var(--dim); font-size:11px; letter-spacing:1px; }
+    .voice-dot { display:inline-block; width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .thought-preview { font-size:9px; color:var(--muted); font-style:italic; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; flex:1; }
 
-    /* THOUGHTS TAB */
-    .voice-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .thought-preview { font-size: 9px; color: #7a6040; font-style: italic; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
-
-    /* MAP TAB */
-    .map-shell { display:flex; flex:1; overflow:hidden; }
-    .map-canvas-wrap { flex:1; position:relative; overflow:hidden; background:#060402; cursor:default; }
+    /* ── MAP TAB ─────────────────────────────────────────────────── */
+    .map-shell { display:flex; flex:1; overflow:hidden; min-height:65vh; }
+    .map-canvas-wrap { flex:1; position:relative; overflow:hidden; background:var(--bg); cursor:default; touch-action:none; }
     .map-canvas-wrap.panning { cursor:grabbing; }
-    .map-grid-bg { position:absolute; inset:0; background-image: repeating-linear-gradient(0deg,#0f0b06 0,#0f0b06 1px,transparent 1px,transparent 40px), repeating-linear-gradient(90deg,#0f0b06 0,#0f0b06 1px,transparent 1px,transparent 40px); pointer-events:none; }
+    .map-grid-bg { position:absolute; inset:0; background-image:repeating-linear-gradient(0deg,var(--border) 0,var(--border) 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,var(--border) 0,var(--border) 1px,transparent 1px,transparent 40px); pointer-events:none; }
     .map-viewport { position:absolute; transform-origin:0 0; }
-    .map-node { position:absolute; width:160px; min-height:80px; border:1px solid #3a2808; background:#0e0b07; padding:10px 12px; cursor:grab; -webkit-user-select:none; user-select:none; transition:border-color .1s,box-shadow .1s; }
-    .map-node:hover { border-color:#5a3a18; }
-    .map-node.selected { border-color:#d4a020; box-shadow:0 0 0 1px #d4a020; }
+    .map-node { position:absolute; width:160px; min-height:80px; border:1px solid var(--dim); background:var(--surface); padding:10px 12px; cursor:grab; -webkit-user-select:none; user-select:none; transition:border-color .1s,box-shadow .1s; }
+    .map-node:hover { border-color:var(--muted); }
+    .map-node.selected { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
     .map-node.dragging { cursor:grabbing; box-shadow:0 4px 20px rgba(0,0,0,.6); z-index:100; }
-    .map-node-id { font-size:8px; color:#5a3a18; letter-spacing:1px; margin-bottom:3px; }
-    .map-node-name { font-size:11px; color:#e8d2a0; font-weight:700; margin-bottom:4px; }
-    .map-node-type { font-size:8px; color:#7a6040; margin-bottom:6px; }
+    .map-node-id { font-size:8px; color:var(--dim); letter-spacing:1px; margin-bottom:3px; }
+    .map-node-name { font-size:11px; color:var(--text); font-weight:700; margin-bottom:4px; }
+    .map-node-type { font-size:8px; color:var(--muted); margin-bottom:6px; }
     .map-node-ports { display:flex; justify-content:space-between; margin-top:6px; }
-    .map-port { width:10px; height:10px; border-radius:50%; border:1px solid #5a3a18; background:#0e0b07; cursor:crosshair; flex-shrink:0; transition:background .1s,border-color .1s; }
-    .map-port:hover,.map-port.active { background:#d4a020; border-color:#d4a020; }
+    .map-port { width:12px; height:12px; border-radius:50%; border:1px solid var(--dim); background:var(--surface); cursor:crosshair; flex-shrink:0; transition:background .1s,border-color .1s; }
+    .map-port:hover,.map-port.active { background:var(--accent); border-color:var(--accent); }
     .map-port.left { margin-left:-6px; }
     .map-port.right { margin-right:-6px; }
     .map-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
-    .map-connection { stroke:#5a3a18; stroke-width:1.5; fill:none; }
-    .map-connection.selected { stroke:#d4a020; }
-    .map-detail { width:300px; flex-shrink:0; background:#0a0805; border-left:1px solid #2a1a08; overflow-y:auto; display:flex; flex-direction:column; }
+    .map-connection { stroke:var(--dim); stroke-width:1.5; fill:none; }
+    .map-connection.selected { stroke:var(--accent); }
+    .map-detail { width:300px; flex-shrink:0; background:var(--surface); border-left:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; }
     .map-detail::-webkit-scrollbar { width:4px; }
-    .map-detail::-webkit-scrollbar-thumb { background:#3a2808; }
-    .map-detail-header { padding:12px; border-bottom:1px solid #1a1208; font-size:9px; letter-spacing:2px; color:#7a6040; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; }
-    .map-detail-body { padding:12px; flex:1; }
+    .map-detail::-webkit-scrollbar-thumb { background:var(--dim); }
+    .map-detail-header { padding:12px; border-bottom:1px solid var(--border); font-size:9px; letter-spacing:2px; color:var(--muted); flex-shrink:0; display:flex; align-items:center; justify-content:space-between; }
+    .map-detail-body { padding:12px; flex:1; display:flex; flex-direction:column; gap:10px; }
     .map-toolbar { position:absolute; bottom:12px; left:12px; display:flex; gap:6px; }
-    .map-tool-btn { background:#0e0b07; border:1px solid #2a1a08; color:#7a6040; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:1px; cursor:pointer; padding:5px 10px; transition:all .15s; }
-    .map-tool-btn:hover { border-color:#5a3a18; color:#d4a020; }
-    .map-minimap { position:absolute; bottom:12px; right:312px; width:160px; height:100px; background:#0a0805; border:1px solid #2a1a08; overflow:hidden; }
-    .map-mini-node { position:absolute; width:12px; height:8px; background:#3a2808; border:1px solid #5a3a18; }
+    .map-tool-btn { background:var(--surface); border:1px solid var(--border); color:var(--muted); font-family:'Space Mono',monospace; font-size:9px; letter-spacing:1px; cursor:pointer; padding:8px 12px; transition:all .15s; }
+    .map-tool-btn:hover { border-color:var(--dim); color:var(--accent); }
+    .map-minimap { position:absolute; bottom:12px; right:312px; width:160px; height:100px; background:var(--surface); border:1px solid var(--border); overflow:hidden; }
+    .map-mini-node { position:absolute; width:12px; height:8px; background:var(--dim); border:1px solid var(--muted); }
 
-    /* TREE TAB */
-    .tree-shell { display:flex; flex:1; overflow:hidden; }
-    .tree-left { width:200px; flex-shrink:0; background:#0a0805; border-right:1px solid #2a1a08; display:flex; flex-direction:column; overflow:hidden; }
-    .tree-left-header { padding:10px 12px; font-size:9px; letter-spacing:2px; color:#7a6040; border-bottom:1px solid #1a1208; flex-shrink:0; }
-    .tree-canvas-wrap { flex:1; position:relative; overflow:hidden; background:#060402; }
+    /* ── TREE TAB ─────────────────────────────────────────────────── */
+    .tree-shell { display:flex; flex:1; overflow:hidden; min-height:65vh; }
+    .tree-left { width:200px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+    .tree-left-header { padding:10px 12px; font-size:9px; letter-spacing:2px; color:var(--muted); border-bottom:1px solid var(--border); flex-shrink:0; }
+    .tree-canvas-wrap { flex:1; position:relative; overflow:hidden; background:var(--bg); touch-action:none; }
     .tree-canvas-wrap.panning { cursor:grabbing; }
     .tree-viewport { position:absolute; transform-origin:0 0; }
     .tree-svg { position:absolute; inset:0; pointer-events:none; overflow:visible; }
@@ -147,17 +189,35 @@
     .tree-port.in { margin-left:-6px; }
     .tree-port.out { margin-right:-6px; }
     .tree-out-label { font-size:8px; color:rgba(255,255,255,.5); letter-spacing:1px; flex:1; text-align:right; padding-right:6px; }
-    .tree-palette-item { padding:8px 12px; display:flex; align-items:center; gap:8px; cursor:pointer; border-bottom:1px solid #110d07; transition:background .1s; font-size:9px; letter-spacing:1px; }
-    .tree-palette-item:hover { background:#130f09; }
+    .tree-palette-item { padding:10px 12px; display:flex; align-items:center; gap:8px; cursor:pointer; border-bottom:1px solid var(--border); transition:background .1s; font-size:9px; letter-spacing:1px; -webkit-tap-highlight-color:transparent; }
+    .tree-palette-item:hover { background:var(--raised); }
     .tree-palette-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-    .tree-detail { width:280px; flex-shrink:0; background:#0a0805; border-left:1px solid #2a1a08; overflow-y:auto; display:flex; flex-direction:column; }
+    .tree-detail { width:280px; flex-shrink:0; background:var(--surface); border-left:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; }
     .tree-detail::-webkit-scrollbar { width:4px; }
-    .tree-detail::-webkit-scrollbar-thumb { background:#3a2808; }
-    .tree-detail-header { padding:12px; border-bottom:1px solid #1a1208; font-size:9px; letter-spacing:2px; flex-shrink:0; }
+    .tree-detail::-webkit-scrollbar-thumb { background:var(--dim); }
+    .tree-detail-header { padding:12px; border-bottom:1px solid var(--border); font-size:9px; letter-spacing:2px; flex-shrink:0; color:var(--muted); }
     .tree-detail-body { padding:12px; flex:1; display:flex; flex-direction:column; gap:10px; }
     .tree-toolbar { position:absolute; bottom:12px; left:12px; display:flex; gap:6px; }
-    .tree-tool-btn { background:#0e0b07; border:1px solid #2a1a08; color:#7a6040; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:1px; cursor:pointer; padding:5px 10px; transition:all .15s; }
-    .tree-tool-btn:hover { border-color:#5a3a18; color:#d4a020; }
+    .tree-tool-btn { background:var(--surface); border:1px solid var(--border); color:var(--muted); font-family:'Space Mono',monospace; font-size:9px; letter-spacing:1px; cursor:pointer; padding:8px 10px; transition:all .15s; }
+    .tree-tool-btn:hover { border-color:var(--dim); color:var(--accent); }
+
+    /* ── MOBILE CANVAS ───────────────────────────────────────────── */
+    @media (max-width:768px) {
+      .map-shell { flex-direction:column; }
+      .map-canvas-wrap { height:50vh; min-height:260px; flex:none; }
+      .map-detail { width:100%; border-left:none; border-top:1px solid var(--border); max-height:44vh; overflow-y:auto; }
+      .map-toolbar { bottom:8px; left:8px; gap:4px; }
+      .map-tool-btn { padding:10px 12px; }
+      .tree-shell { flex-direction:column; }
+      .tree-left { width:100%; max-height:110px; flex-direction:row; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; border-right:none; border-bottom:1px solid var(--border); }
+      .tree-left::-webkit-scrollbar { display:none; }
+      .tree-left-header { display:none; }
+      .tree-palette-item { flex-shrink:0; border-bottom:none; border-right:1px solid var(--border); padding:12px 14px; min-width:80px; flex-direction:column; gap:4px; align-items:center; text-align:center; }
+      .tree-canvas-wrap { height:44vh; min-height:240px; flex:none; }
+      .tree-detail { width:100%; border-left:none; border-top:1px solid var(--border); max-height:38vh; overflow-y:auto; }
+      .tree-toolbar { bottom:8px; left:8px; gap:4px; }
+      .tree-tool-btn { padding:10px 12px; }
+    }
   </style>
 </head>
 <body>
@@ -830,7 +890,7 @@ const SEED = {
 
 // ── Shared Components ──────────────────────────────────────────
 function Field({ label, children }) {
-  return <div className="form-group"><div className="form-label">{label}</div>{children}</div>;
+  return <div className="field"><div className="field-label">{label}</div>{children}</div>;
 }
 function TextInput({ value, onChange, placeholder }) {
   return <input className="form-input" value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder||''} />;
@@ -948,7 +1008,7 @@ function QuestForm({ quest, onChange, onDelete }) {
   const setF=(k,v)=>set('failureState',{...quest.failureState,[k]:v});
   return (
     <div>
-      <div className="form-title">{quest.name||'Untitled Quest'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>
+      {onDelete&&<div className="form-title">{quest.name||'Untitled Quest'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>}
       <div className="section">
         <div className="section-title">BASIC INFO</div>
         <div className="form-row">
@@ -1005,28 +1065,25 @@ function QuestForm({ quest, onChange, onDelete }) {
   );
 }
 function QuestsTab({ data, setData }) {
-  const [sel,setSel]=useState(data.quests[0]?._id||null);
-  const selected=data.quests.find(q=>q._id===sel);
-  const add=()=>{ const q=newQuest(); setData(d=>({...d,quests:[...d.quests,q]})); setSel(q._id); };
+  const [openId,setOpenId]=useState(null);
+  const toggle=id=>setOpenId(o=>o===id?null:id);
+  const add=()=>{ const q=newQuest(); setData(d=>({...d,quests:[...d.quests,q]})); setOpenId(q._id); };
   const upd=q=>setData(d=>({...d,quests:d.quests.map(x=>x._id===q._id?q:x)}));
-  const del=id=>{ const rem=data.quests.filter(q=>q._id!==id); setData(d=>({...d,quests:rem})); setSel(rem[0]?._id||null); };
+  const del=id=>{ setData(d=>({...d,quests:d.quests.filter(q=>q._id!==id)})); if(openId===id) setOpenId(null); };
   return (
-    <div className="main">
-      <div className="list-panel">
-        <div className="list-panel-header">QUESTS</div>
-        <div className="list-scroll">
-          {data.quests.map(q=>(
-            <div key={q._id} className={`list-item ${q._id===sel?'selected':''}`} onClick={()=>setSel(q._id)}>
-              <div className="item-name">{q.name||'Untitled'}</div>
-              <div className="item-meta">{q.category} · {q.threads?.length||0} threads</div>
-            </div>
-          ))}
+    <div className="acc-section-body">
+      {data.quests.map(q=>(
+        <div key={q._id} className={`acc-item${openId===q._id?' open':''}`}>
+          <div className="acc-item-hdr" onClick={()=>toggle(q._id)}>
+            <span className={`acc-chevron${openId===q._id?' open':''}`}>▶</span>
+            <span className="acc-item-name">{q.name||'Untitled Quest'}</span>
+            <span className="acc-item-badge">{q.category}</span>
+            <button className="acc-item-del" onClick={e=>{e.stopPropagation();del(q._id);}}>×</button>
+          </div>
+          {openId===q._id&&<div className="acc-item-body"><QuestForm quest={q} onChange={upd} onDelete={null} /></div>}
         </div>
-        <button className="list-add-btn" onClick={add}>+ NEW QUEST</button>
-      </div>
-      <div className="form-panel">
-        {selected?<QuestForm quest={selected} onChange={upd} onDelete={()=>del(selected._id)} />:<div className="empty-state">SELECT A QUEST OR CREATE ONE</div>}
-      </div>
+      ))}
+      <button className="acc-add-btn" onClick={add}>+ NEW QUEST</button>
     </div>
   );
 }
@@ -1068,7 +1125,7 @@ function CharForm({ char, onChange, onDelete }) {
   const remRel=i=>set('relationships',char.relationships.filter((_,j)=>j!==i));
   return (
     <div>
-      <div className="form-title">{char.name||'Untitled NPC'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>
+      {onDelete&&<div className="form-title">{char.name||'Untitled NPC'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>}
       <div className="section">
         <div className="section-title">BASIC INFO</div>
         <div className="form-row">
@@ -1125,28 +1182,25 @@ function CharForm({ char, onChange, onDelete }) {
   );
 }
 function CharactersTab({ data, setData }) {
-  const [sel,setSel]=useState(data.characters[0]?._id||null);
-  const selected=data.characters.find(c=>c._id===sel);
-  const add=()=>{ const c=newCharacter(); setData(d=>({...d,characters:[...d.characters,c]})); setSel(c._id); };
+  const [openId,setOpenId]=useState(null);
+  const toggle=id=>setOpenId(o=>o===id?null:id);
+  const add=()=>{ const c=newCharacter(); setData(d=>({...d,characters:[...d.characters,c]})); setOpenId(c._id); };
   const upd=c=>setData(d=>({...d,characters:d.characters.map(x=>x._id===c._id?c:x)}));
-  const del=id=>{ const rem=data.characters.filter(c=>c._id!==id); setData(d=>({...d,characters:rem})); setSel(rem[0]?._id||null); };
+  const del=id=>{ setData(d=>({...d,characters:d.characters.filter(c=>c._id!==id)})); if(openId===id) setOpenId(null); };
   return (
-    <div className="main">
-      <div className="list-panel">
-        <div className="list-panel-header">CHARACTERS</div>
-        <div className="list-scroll">
-          {data.characters.map(c=>(
-            <div key={c._id} className={`list-item ${c._id===sel?'selected':''}`} onClick={()=>setSel(c._id)}>
-              <div className="item-name">{c.name||'Untitled'}</div>
-              <div className="item-meta">{c.id} · {c.threads?.length||0} threads</div>
-            </div>
-          ))}
+    <div className="acc-section-body">
+      {data.characters.map(c=>(
+        <div key={c._id} className={`acc-item${openId===c._id?' open':''}`}>
+          <div className="acc-item-hdr" onClick={()=>toggle(c._id)}>
+            <span className={`acc-chevron${openId===c._id?' open':''}`}>▶</span>
+            <span className="acc-item-name">{c.name||'Untitled NPC'}</span>
+            <span className="acc-item-badge">{c.id||'no id'}</span>
+            <button className="acc-item-del" onClick={e=>{e.stopPropagation();del(c._id);}}>×</button>
+          </div>
+          {openId===c._id&&<div className="acc-item-body"><CharForm char={c} onChange={upd} onDelete={null} /></div>}
         </div>
-        <button className="list-add-btn" onClick={add}>+ NEW CHARACTER</button>
-      </div>
-      <div className="form-panel">
-        {selected?<CharForm char={selected} onChange={upd} onDelete={()=>del(selected._id)} />:<div className="empty-state">SELECT A CHARACTER OR CREATE ONE</div>}
-      </div>
+      ))}
+      <button className="acc-add-btn" onClick={add}>+ NEW CHARACTER</button>
     </div>
   );
 }
@@ -1158,7 +1212,7 @@ function DlgForm({ dlg, onChange, onDelete, characters }) {
   const [openStage,setOpenStage]=useState(null);
   return (
     <div>
-      <div className="form-title">{dlg.id||'Untitled Dialogue'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>
+      {onDelete&&<div className="form-title">{dlg.id||'Untitled Dialogue'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>}
       <div className="section">
         <div className="section-title">BASIC INFO</div>
         <div className="form-row">
@@ -1179,10 +1233,10 @@ function DlgForm({ dlg, onChange, onDelete, characters }) {
           <div key={i} className="trust-stage">
             <div className="trust-stage-header" onClick={()=>setOpenStage(openStage===i?null:i)}>
               <TrustBadge level={i} />
-              <span style={{fontSize:10,color:'#7a6040',flex:1,marginLeft:8,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>
+              <span style={{fontSize:10,color:'var(--muted)',flex:1,marginLeft:8,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>
                 {stage.text?(stage.text.slice(0,70)+(stage.text.length>70?'…':'')):'(no dialogue yet)'}
               </span>
-              <span style={{fontSize:10,color:'#5a3a18'}}>{openStage===i?'▲':'▼'}</span>
+              <span style={{fontSize:10,color:'var(--dim)'}}>{openStage===i?'▲':'▼'}</span>
             </div>
             {openStage===i&&(
               <div className="trust-stage-body">
@@ -1205,28 +1259,25 @@ function DlgForm({ dlg, onChange, onDelete, characters }) {
   );
 }
 function DialogueTab({ data, setData }) {
-  const [sel,setSel]=useState(data.dialogue[0]?._id||null);
-  const selected=data.dialogue.find(d=>d._id===sel);
-  const add=()=>{ const d=newDialogue(); setData(dt=>({...dt,dialogue:[...dt.dialogue,d]})); setSel(d._id); };
+  const [openId,setOpenId]=useState(null);
+  const toggle=id=>setOpenId(o=>o===id?null:id);
+  const add=()=>{ const d=newDialogue(); setData(dt=>({...dt,dialogue:[...dt.dialogue,d]})); setOpenId(d._id); };
   const upd=d=>setData(dt=>({...dt,dialogue:dt.dialogue.map(x=>x._id===d._id?d:x)}));
-  const del=id=>{ const rem=data.dialogue.filter(d=>d._id!==id); setData(dt=>({...dt,dialogue:rem})); setSel(rem[0]?._id||null); };
+  const del=id=>{ setData(dt=>({...dt,dialogue:dt.dialogue.filter(d=>d._id!==id)})); if(openId===id) setOpenId(null); };
   return (
-    <div className="main">
-      <div className="list-panel">
-        <div className="list-panel-header">DIALOGUE</div>
-        <div className="list-scroll">
-          {data.dialogue.map(d=>(
-            <div key={d._id} className={`list-item ${d._id===sel?'selected':''}`} onClick={()=>setSel(d._id)}>
-              <div className="item-name">{d.id||'Untitled'}</div>
-              <div className="item-meta">{d.npcId||'no npc'} · {d.location||'no location'}</div>
-            </div>
-          ))}
+    <div className="acc-section-body">
+      {data.dialogue.map(d=>(
+        <div key={d._id} className={`acc-item${openId===d._id?' open':''}`}>
+          <div className="acc-item-hdr" onClick={()=>toggle(d._id)}>
+            <span className={`acc-chevron${openId===d._id?' open':''}`}>▶</span>
+            <span className="acc-item-name">{d.id||'Untitled Dialogue'}</span>
+            <span className="acc-item-badge">{d.npcId||'no npc'}</span>
+            <button className="acc-item-del" onClick={e=>{e.stopPropagation();del(d._id);}}>×</button>
+          </div>
+          {openId===d._id&&<div className="acc-item-body"><DlgForm dlg={d} onChange={upd} onDelete={null} characters={data.characters} /></div>}
         </div>
-        <button className="list-add-btn" onClick={add}>+ NEW DIALOGUE</button>
-      </div>
-      <div className="form-panel">
-        {selected?<DlgForm dlg={selected} onChange={upd} onDelete={()=>del(selected._id)} characters={data.characters} />:<div className="empty-state">SELECT A DIALOGUE OR CREATE ONE</div>}
-      </div>
+      ))}
+      <button className="acc-add-btn" onClick={add}>+ NEW DIALOGUE</button>
     </div>
   );
 }
@@ -1248,7 +1299,7 @@ function PlaceForm({ place, onChange, onDelete }) {
   const remTrig=i=>set('questTriggers',place.questTriggers.filter((_,j)=>j!==i));
   return (
     <div>
-      <div className="form-title">{place.name||'Untitled Location'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>
+      {onDelete&&<div className="form-title">{place.name||'Untitled Location'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>}
       <div className="section">
         <div className="section-title">BASIC INFO</div>
         <div className="form-row">
@@ -1329,28 +1380,25 @@ function PlaceForm({ place, onChange, onDelete }) {
   );
 }
 function PlacesTab({ data, setData }) {
-  const [sel,setSel]=useState(data.places[0]?._id||null);
-  const selected=data.places.find(p=>p._id===sel);
-  const add=()=>{ const p=newPlace(); setData(d=>({...d,places:[...d.places,p]})); setSel(p._id); };
+  const [openId,setOpenId]=useState(null);
+  const toggle=id=>setOpenId(o=>o===id?null:id);
+  const add=()=>{ const p=newPlace(); setData(d=>({...d,places:[...d.places,p]})); setOpenId(p._id); };
   const upd=p=>setData(d=>({...d,places:d.places.map(x=>x._id===p._id?p:x)}));
-  const del=id=>{ const rem=data.places.filter(p=>p._id!==id); setData(d=>({...d,places:rem})); setSel(rem[0]?._id||null); };
+  const del=id=>{ setData(d=>({...d,places:d.places.filter(p=>p._id!==id)})); if(openId===id) setOpenId(null); };
   return (
-    <div className="main">
-      <div className="list-panel">
-        <div className="list-panel-header">PLACES</div>
-        <div className="list-scroll">
-          {data.places.map(p=>(
-            <div key={p._id} className={`list-item ${p._id===sel?'selected':''}`} onClick={()=>setSel(p._id)}>
-              <div className="item-name">{p.name||'Untitled'}</div>
-              <div className="item-meta">{p.district} · {p.type}</div>
-            </div>
-          ))}
+    <div className="acc-section-body">
+      {data.places.map(p=>(
+        <div key={p._id} className={`acc-item${openId===p._id?' open':''}`}>
+          <div className="acc-item-hdr" onClick={()=>toggle(p._id)}>
+            <span className={`acc-chevron${openId===p._id?' open':''}`}>▶</span>
+            <span className="acc-item-name">{p.name||'Untitled Location'}</span>
+            <span className="acc-item-badge">{p.type||p.district}</span>
+            <button className="acc-item-del" onClick={e=>{e.stopPropagation();del(p._id);}}>×</button>
+          </div>
+          {openId===p._id&&<div className="acc-item-body"><PlaceForm place={p} onChange={upd} onDelete={null} /></div>}
         </div>
-        <button className="list-add-btn" onClick={add}>+ NEW PLACE</button>
-      </div>
-      <div className="form-panel">
-        {selected?<PlaceForm place={selected} onChange={upd} onDelete={()=>del(selected._id)} />:<div className="empty-state">SELECT A PLACE OR CREATE ONE</div>}
-      </div>
+      ))}
+      <button className="acc-add-btn" onClick={add}>+ NEW PLACE</button>
     </div>
   );
 }
@@ -1361,10 +1409,7 @@ function ThoughtForm({ thought, onChange, onDelete }) {
   const vc=VOICE_COLORS[thought.voice]||'#7a6040';
   return (
     <div>
-      <div className="form-title" style={{color:vc}}>
-        {thought.voice||'New Thought'} — {thought.category||'Uncategorized'}
-        <button className="delete-btn" onClick={onDelete}>DELETE</button>
-      </div>
+      {onDelete&&<div className="form-title" style={{color:vc}}>{thought.voice||'New Thought'} — {thought.category||'Uncategorized'}<button className="delete-btn" onClick={onDelete}>DELETE</button></div>}
       <div className="section">
         <div className="section-title">VOICE & CATEGORY</div>
         <div className="form-row">
@@ -1411,35 +1456,25 @@ function ThoughtForm({ thought, onChange, onDelete }) {
 }
 function ThoughtsTab({ data, setData }) {
   const thoughts=data.thoughts||[];
-  const [sel,setSel]=useState(thoughts[0]?._id||null);
-  const selected=thoughts.find(t=>t._id===sel);
-  const add=()=>{ const t=newThought(); setData(d=>({...d,thoughts:[...(d.thoughts||[]),t]})); setSel(t._id); };
+  const [openId,setOpenId]=useState(null);
+  const toggle=id=>setOpenId(o=>o===id?null:id);
+  const add=()=>{ const t=newThought(); setData(d=>({...d,thoughts:[...(d.thoughts||[]),t]})); setOpenId(t._id); };
   const upd=t=>setData(d=>({...d,thoughts:(d.thoughts||[]).map(x=>x._id===t._id?t:x)}));
-  const del=id=>{ const rem=thoughts.filter(t=>t._id!==id); setData(d=>({...d,thoughts:rem})); setSel(rem[0]?._id||null); };
+  const del=id=>{ setData(d=>({...d,thoughts:(d.thoughts||[]).filter(t=>t._id!==id)})); if(openId===id) setOpenId(null); };
   return (
-    <div className="main">
-      <div className="list-panel">
-        <div className="list-panel-header">THOUGHTS ({thoughts.length})</div>
-        <div className="list-scroll">
-          {thoughts.map(t=>(
-            <div key={t._id} className={`list-item ${t._id===sel?'selected':''}`} onClick={()=>setSel(t._id)}>
-              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
-                <span className="voice-dot" style={{background:VOICE_COLORS[t.voice]||'#7a6040'}} />
-                <span className="item-name" style={{color:t._id===sel?(VOICE_COLORS[t.voice]||'#d4a020'):'#e8d2a0'}}>{t.voice||'?'}</span>
-              </div>
-              <div className="item-meta" style={{overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>
-                {(t.text||'(no text)').slice(0,38)}{(t.text||'').length>38?'…':''}
-              </div>
-            </div>
-          ))}
+    <div className="acc-section-body">
+      {thoughts.map(t=>(
+        <div key={t._id} className={`acc-item${openId===t._id?' open':''}`}>
+          <div className="acc-item-hdr" onClick={()=>toggle(t._id)}>
+            <span className={`acc-chevron${openId===t._id?' open':''}`}>▶</span>
+            <span className="voice-dot" style={{background:VOICE_COLORS[t.voice]||'var(--muted)',flexShrink:0}} />
+            <span className="acc-item-name">{t.voice||'?'} — {t.category||'Uncategorized'}</span>
+            <button className="acc-item-del" onClick={e=>{e.stopPropagation();del(t._id);}}>×</button>
+          </div>
+          {openId===t._id&&<div className="acc-item-body"><ThoughtForm thought={t} onChange={upd} onDelete={null} /></div>}
         </div>
-        <button className="list-add-btn" onClick={add}>+ NEW THOUGHT</button>
-      </div>
-      <div className="form-panel">
-        {selected
-          ?<ThoughtForm thought={selected} onChange={upd} onDelete={()=>del(selected._id)} />
-          :<div className="empty-state">SELECT A THOUGHT OR CREATE ONE</div>}
-      </div>
+      ))}
+      <button className="acc-add-btn" onClick={add}>+ NEW THOUGHT</button>
     </div>
   );
 }
@@ -1591,6 +1626,7 @@ function MapTab({data,setData}){
   const wrapRef=uR(null);
   const panRef=uR(null);
   const dragRef=uR(null);
+  const pinchRef=uR(null);
 
   const toCanvas=(cx,cy)=>({ x:(cx-pan.x)/zoom, y:(cy-pan.y)/zoom });
 
@@ -1623,12 +1659,51 @@ function MapTab({data,setData}){
     return()=>el.removeEventListener('wheel',onWheel);
   },[onWheel]);
 
+  const onTouchStart=uCB(e=>{
+    const ts=e.touches;
+    if(ts.length===1){
+      const t=ts[0];
+      if(e.target===wrapRef.current||e.target.classList.contains('map-grid-bg')){
+        panRef.current={startX:t.clientX-pan.x,startY:t.clientY-pan.y};
+        setPanning(true);
+      }
+    } else if(ts.length===2){
+      const dx=ts[0].clientX-ts[1].clientX, dy=ts[0].clientY-ts[1].clientY;
+      pinchRef.current={dist:Math.hypot(dx,dy),zoom};
+      setPanning(false);
+    }
+  },[pan,zoom]);
+
+  const onTouchMove=uCB(e=>{
+    const ts=e.touches;
+    const rect=wrapRef.current?.getBoundingClientRect();
+    if(ts.length===1){
+      const t=ts[0];
+      if(rect) setMousePos({x:t.clientX-rect.left,y:t.clientY-rect.top});
+      if(panning&&panRef.current) setPan({x:t.clientX-panRef.current.startX,y:t.clientY-panRef.current.startY});
+      if(dragging&&dragRef.current){
+        const dx=(t.clientX-dragRef.current.sx)/zoom, dy=(t.clientY-dragRef.current.sy)/zoom;
+        setNodes(nodes.map(n=>n._id===dragging?{...n,x:dragRef.current.ox+dx,y:dragRef.current.oy+dy}:n));
+      }
+    } else if(ts.length===2&&pinchRef.current){
+      const dx=ts[0].clientX-ts[1].clientX, dy=ts[0].clientY-ts[1].clientY;
+      setZoom(Math.max(0.3,Math.min(3,pinchRef.current.zoom*Math.hypot(dx,dy)/pinchRef.current.dist)));
+    }
+  },[panning,dragging,nodes,zoom]);
+
+  const onTouchEnd=uCB(()=>{setPanning(false);setDragging(null);pinchRef.current=null;},[]);
+
   const startNodeDrag=(e,id)=>{
     if(e.button!==0) return;
     e.stopPropagation();
     const n=nodes.find(x=>x._id===id);
     dragRef.current={sx:e.clientX,sy:e.clientY,ox:n.x,oy:n.y};
     setDragging(id); setSel(id);
+  };
+  const startNodeTouchDrag=(e,id)=>{
+    if(e.touches.length!==1) return;
+    const t=e.touches[0];
+    startNodeDrag({clientX:t.clientX,clientY:t.clientY,button:0,stopPropagation:()=>e.stopPropagation()},id);
   };
 
   const addNode=()=>{
@@ -1667,6 +1742,7 @@ function MapTab({data,setData}){
     <div className="map-shell">
       <div ref={wrapRef} className={`map-canvas-wrap${panning?' panning':''}`}
         onMouseDown={onWrapMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
       >
         <div className="map-grid-bg" />
         <svg className="map-svg">
@@ -1692,6 +1768,7 @@ function MapTab({data,setData}){
               className={`map-node${sel===n._id?' selected':''}${dragging===n._id?' dragging':''}`}
               style={{left:n.x,top:n.y,width:MAP_NODE_W,minHeight:MAP_NODE_H}}
               onMouseDown={e=>startNodeDrag(e,n._id)}
+              onTouchStart={e=>startNodeTouchDrag(e,n._id)}
             >
               <div className="map-node-id">{n.placeId||n._id.slice(0,6)}</div>
               <div className="map-node-name">{n.label||'Location'}</div>
@@ -1755,13 +1832,14 @@ const newTreeNode=(type,x,y)=>({
 });
 const newTreeConn=()=>({id:uid(),fromNode:'',fromPort:'',toNode:''});
 
-function TreeNodeView({node,selected,dragging:isDragging,onMouseDown,onPortMouseDown,onPortMouseUp,connStart}){
+function TreeNodeView({node,selected,dragging:isDragging,onMouseDown,onTouchStart:onTS,onPortMouseDown,onPortMouseUp,connStart}){
   const t=TREE_NODE_TYPES[node.type]||TREE_NODE_TYPES.NPC;
   const isConnSrc=connStart&&connStart.nodeId===node._id;
   return(
     <div className={`tree-node${selected?' selected':''}${isDragging?' dragging':''}`}
       style={{left:node.x,top:node.y,border:`1px solid ${selected?t.color:t.border}`,background:t.bg,boxShadow:selected?`0 0 0 1px ${t.color}`:undefined}}
       onMouseDown={e=>onMouseDown(e,node._id)}
+      onTouchStart={e=>onTS&&onTS(e,node._id)}
     >
       <div className="tree-node-header" style={{background:t.border,color:t.color}}>
         <div style={{width:8,height:8,borderRadius:'50%',background:t.color,flexShrink:0}} />
@@ -1877,6 +1955,7 @@ function TreeTab({data,setData}){
   const wrapRef=uR(null);
   const panRef=uR(null);
   const dragRef=uR(null);
+  const pinchRef=uR(null);
 
   const onWrapMD=uCB(e=>{
     if(e.target===wrapRef.current||e.target.classList.contains('map-grid-bg')){
@@ -1897,11 +1976,50 @@ function TreeTab({data,setData}){
   const onWheel=uCB(e=>{e.preventDefault();setZoom(z=>Math.max(0.3,Math.min(3,z*(e.deltaY<0?1.1:0.9))));},{passive:false},[]);
   uE(()=>{const el=wrapRef.current;if(!el)return;el.addEventListener('wheel',onWheel,{passive:false});return()=>el.removeEventListener('wheel',onWheel);},[onWheel]);
 
+  const onTouchStart=uCB(e=>{
+    const ts=e.touches;
+    if(ts.length===1){
+      const t=ts[0];
+      if(e.target===wrapRef.current||e.target.classList.contains('map-grid-bg')){
+        panRef.current={sx:t.clientX-pan.x,sy:t.clientY-pan.y};
+        setPanning(true);
+      }
+    } else if(ts.length===2){
+      const dx=ts[0].clientX-ts[1].clientX, dy=ts[0].clientY-ts[1].clientY;
+      pinchRef.current={dist:Math.hypot(dx,dy),zoom};
+      setPanning(false);
+    }
+  },[pan,zoom]);
+
+  const onTouchMove=uCB(e=>{
+    const ts=e.touches;
+    const r=wrapRef.current?.getBoundingClientRect();
+    if(ts.length===1){
+      const t=ts[0];
+      if(r) setMousePos({x:t.clientX-r.left,y:t.clientY-r.top});
+      if(panning&&panRef.current) setPan({x:t.clientX-panRef.current.sx,y:t.clientY-panRef.current.sy});
+      if(dragging&&dragRef.current){
+        const dx=(t.clientX-dragRef.current.sx)/zoom, dy=(t.clientY-dragRef.current.sy)/zoom;
+        setTNodes(tNodes.map(n=>n._id===dragging?{...n,x:dragRef.current.ox+dx,y:dragRef.current.oy+dy}:n));
+      }
+    } else if(ts.length===2&&pinchRef.current){
+      const dx=ts[0].clientX-ts[1].clientX, dy=ts[0].clientY-ts[1].clientY;
+      setZoom(Math.max(0.3,Math.min(3,pinchRef.current.zoom*Math.hypot(dx,dy)/pinchRef.current.dist)));
+    }
+  },[panning,dragging,tNodes,zoom,pan]);
+
+  const onTouchEnd=uCB(()=>{setPanning(false);setDragging(null);pinchRef.current=null;},[]);
+
   const startDrag=(e,id)=>{
     if(e.button!==0)return; e.stopPropagation();
     const n=tNodes.find(x=>x._id===id);
     dragRef.current={sx:e.clientX,sy:e.clientY,ox:n.x,oy:n.y};
     setDragging(id); setSel(id);
+  };
+  const startTouchDrag=(e,id)=>{
+    if(e.touches.length!==1)return;
+    const t=e.touches[0];
+    startDrag({clientX:t.clientX,clientY:t.clientY,button:0,stopPropagation:()=>e.stopPropagation()},id);
   };
   const onPortMD=(e,nodeId,portId)=>{ e.stopPropagation(); setConnStart({nodeId,portId}); };
   const onPortMU=(e,nodeId,portId)=>{
@@ -1967,6 +2085,7 @@ function TreeTab({data,setData}){
       </div>
       <div ref={wrapRef} className={`tree-canvas-wrap${panning?' panning':''}`}
         onMouseDown={onWrapMD} onMouseMove={onMM} onMouseUp={onMU}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
       >
         <div className="map-grid-bg" />
         {!activeTree&&<div className="empty-state">CREATE A TREE OR SELECT ONE</div>}
@@ -1992,7 +2111,7 @@ function TreeTab({data,setData}){
           <div className="tree-viewport" style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`}}>
             {tNodes.map(n=>(
               <TreeNodeView key={n._id} node={n} selected={sel===n._id} dragging={dragging===n._id}
-                connStart={connStart} onMouseDown={startDrag}
+                connStart={connStart} onMouseDown={startDrag} onTouchStart={startTouchDrag}
                 onPortMouseDown={onPortMD} onPortMouseUp={onPortMU} />
             ))}
           </div>
@@ -2014,8 +2133,25 @@ function TreeTab({data,setData}){
 }
 
 // ── APP ────────────────────────────────────────────────────────
+const SECTIONS=[
+  {id:'quests',    label:'QUESTS'},
+  {id:'characters',label:'CHARACTERS'},
+  {id:'places',    label:'PLACES'},
+  {id:'dialogue',  label:'DIALOGUE'},
+  {id:'thoughts',  label:'THOUGHTS'},
+  {id:'map',       label:'MAP'},
+  {id:'tree',      label:'TREE'},
+];
+const PALETTES=[
+  {id:'void',   cls:'',              btnCls:'pal-btn-void',   title:'VOID'},
+  {id:'chalk',  cls:'pal-chalk',     btnCls:'pal-btn-chalk',  title:'CHALK'},
+  {id:'north',  cls:'pal-northside', btnCls:'pal-btn-north',  title:'NORTHSIDE'},
+  {id:'chroma', cls:'pal-chromakopia',btnCls:'pal-btn-chroma',title:'CHROMAKOPIA'},
+];
+
 function App() {
-  const [tab,setTab]=useState('quests');
+  const [openSection,setOpenSection]=useState('quests');
+  const [palette,setPalette]=useState(()=>localStorage.getItem('beau_palette')||'void');
   const [data,setData]=useState(()=>{
     try {
       const s=localStorage.getItem('beau_editor_v1');
@@ -2031,6 +2167,11 @@ function App() {
     } catch { return SEED; }
   });
   useEffect(()=>{ try { localStorage.setItem('beau_editor_v1',JSON.stringify(data)); } catch(e){} },[data]);
+  useEffect(()=>{
+    const pal=PALETTES.find(p=>p.id===palette)||PALETTES[0];
+    document.body.className=pal.cls;
+    localStorage.setItem('beau_palette',palette);
+  },[palette]);
 
   const exportJSON=()=>{
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -2040,23 +2181,53 @@ function App() {
   };
   const reset=()=>{ if(window.confirm('Reset all data to seed? Cannot be undone.')) setData(SEED); };
 
-  const TABS=[{id:'quests',label:'QUESTS'},{id:'dialogue',label:'DIALOGUE'},{id:'characters',label:'CHARACTERS'},{id:'places',label:'PLACES'},{id:'thoughts',label:'THOUGHTS'},{id:'map',label:'MAP'},{id:'tree',label:'TREE'}];
+  const sectionCount=(id)=>{
+    if(id==='quests')     return data.quests.length;
+    if(id==='characters') return data.characters.length;
+    if(id==='places')     return data.places.length;
+    if(id==='dialogue')   return data.dialogue.length;
+    if(id==='thoughts')   return (data.thoughts||[]).length;
+    return '';
+  };
+
   return (
     <div className="editor-shell">
       <div className="header">
-        <div className="header-title">BEAUREGARDE — QUEST EDITOR</div>
-        {TABS.map(t=><button key={t.id} className={`tab-btn ${tab===t.id?'active':''}`} onClick={()=>setTab(t.id)}>{t.label}</button>)}
+        <div className="header-title">BEAUREGARDE</div>
+        <div className="palette-row">
+          {PALETTES.map(p=>(
+            <button key={p.id} className={`pal-btn ${p.btnCls}${palette===p.id?' active':''}`}
+              title={p.title} onClick={()=>setPalette(p.id)} />
+          ))}
+        </div>
         <div className="header-spacer" />
         <button className="export-btn" onClick={reset}>RESET</button>
-        <button className="export-btn" onClick={exportJSON}>EXPORT JSON</button>
+        <button className="export-btn" onClick={exportJSON}>EXPORT</button>
       </div>
-      {tab==='quests'     && <QuestsTab     data={data} setData={setData} />}
-      {tab==='dialogue'   && <DialogueTab   data={data} setData={setData} />}
-      {tab==='characters' && <CharactersTab data={data} setData={setData} />}
-      {tab==='places'     && <PlacesTab     data={data} setData={setData} />}
-      {tab==='thoughts'   && <ThoughtsTab   data={data} setData={setData} />}
-      {tab==='map'        && <MapTab        data={data} setData={setData} />}
-      {tab==='tree'       && <TreeTab       data={data} setData={setData} />}
+      <div className="acc-main">
+        {SECTIONS.map(sec=>{
+          const isOpen=openSection===sec.id;
+          const count=sectionCount(sec.id);
+          return (
+            <div key={sec.id} className="acc-section">
+              <div className="acc-section-hdr" onClick={()=>setOpenSection(isOpen?null:sec.id)}>
+                <span className={`acc-chevron${isOpen?' open':''}`}>▶</span>
+                <span className="acc-section-title">{sec.label}</span>
+                {count!==''&&<span className="acc-section-count">{count}</span>}
+              </div>
+              {isOpen&&(
+                sec.id==='quests'     ?<QuestsTab     data={data} setData={setData} />:
+                sec.id==='characters' ?<CharactersTab data={data} setData={setData} />:
+                sec.id==='places'     ?<PlacesTab     data={data} setData={setData} />:
+                sec.id==='dialogue'   ?<DialogueTab   data={data} setData={setData} />:
+                sec.id==='thoughts'   ?<ThoughtsTab   data={data} setData={setData} />:
+                sec.id==='map'        ?<MapTab        data={data} setData={setData} />:
+                sec.id==='tree'       ?<TreeTab       data={data} setData={setData} />:null
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

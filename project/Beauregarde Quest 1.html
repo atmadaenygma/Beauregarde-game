@@ -412,6 +412,7 @@ const CHAR_ANIMATIONS={
     jump_start_right:'../graphics/characters/cyberOctavia/cyber_octavia_jump_right.webm',
     jump_air_right:'../graphics/characters/cyberOctavia/cyber_octavia_jump_in_air_right.webm',
     jump_end_right:'../graphics/characters/cyberOctavia/cyber_octavia_jump_end_right.webm',
+    kick_right:'../graphics/characters/cyberOctavia/cyber_octavia_right_mid_kick.webm',
     walk:'../graphics/characters/cyberOctavia/cyber_octavia_walk_right.webm',
     run:'../graphics/characters/cyberOctavia/cyber_octavia_run_right.webm',
   },
@@ -432,6 +433,7 @@ const getCharAnimation=(outfit,facing,action)=>{
     if(action==='jump_start') return {src:def.jump_start_right||def.walk||null, flip:facing==='left'};
     if(action==='jump_air')   return {src:def.jump_air_right||def.jump_start_right||def.walk||null, flip:facing==='left'};
     if(action==='jump_end')   return {src:def.jump_end_right||def.jump_start_right||def.walk||null, flip:facing==='left'};
+    if(action==='kick')       return {src:def.kick_right||def.walk||null, flip:facing==='left'};
     const src=(action==='run'&&def.run)?def.run:def.walk;
     return {src:src||null, flip:facing==='left'};
   }
@@ -796,9 +798,9 @@ function ChromaKeyVideo({src,flip,height,playing,playbackRate,filterStr}){
   );
 }
 
-function Char({facing,walking,running=false,crouching=false,jumpPhase=null,vertOffset=0,charBottom=116,charX,charHeight=371,currentOutfit='cyber_octavia'}){
+function Char({facing,walking,running=false,crouching=false,kicking=false,jumpPhase=null,vertOffset=0,charBottom=116,charX,charHeight=371,currentOutfit='cyber_octavia'}){
   const vidRef=useRef(null);
-  const action=jumpPhase?('jump_'+jumpPhase):crouching?(walking||running?'crouch_walk':'crouch'):running?'run':walking?'walk':'idle';
+  const action=jumpPhase?('jump_'+jumpPhase):kicking?'kick':crouching?(walking||running?'crouch_walk':'crouch'):running?'run':walking?'walk':'idle';
   const effectiveHeight=jumpPhase?Math.round(charHeight*0.9):crouching?Math.round(charHeight*0.75):charHeight;
   const {src:animSrc,flip:shouldFlip}=getCharAnimation(currentOutfit,facing,action);
   // True only for outfits with dedicated idle files (rags). Others share the walk file.
@@ -808,16 +810,23 @@ function Char({facing,walking,running=false,crouching=false,jumpPhase=null,vertO
     // Hide until alpha is decoded to prevent green flash on src change
     v.style.opacity='0';
     v.load();v.muted=true;
-    v.playbackRate=walking?0.65:1;
+    v.playbackRate=action==='kick'?2.5:walking?0.65:1;
     const onReady=()=>{v.style.opacity='1';};
     v.addEventListener('loadeddata',onReady,{once:true});
+    if(action==='kick'){
+      const onEnded=()=>document.dispatchEvent(new CustomEvent('kickEnd'));
+      v.addEventListener('ended',onEnded,{once:true});
+      v.play().catch(()=>{});
+      return()=>{v.removeEventListener('loadeddata',onReady);v.removeEventListener('ended',onEnded);};
+    }
     v.play().catch(()=>{});
     return()=>v.removeEventListener('loadeddata',onReady);
-  },[animSrc,running,walking,crouching,jumpPhase]);
+  },[animSrc,running,walking,crouching,kicking,jumpPhase]);
   useEffect(()=>{
     const v=vidRef.current;if(!v)return;
     v.muted=true;
-    if(jumpPhase==='start'||jumpPhase==='end'){v.playbackRate=1.5;v.play().catch(()=>{});}
+    if(kicking){v.playbackRate=2.5;v.play().catch(()=>{});}
+    else if(jumpPhase==='start'||jumpPhase==='end'){v.playbackRate=1.5;v.play().catch(()=>{});}
     else if(jumpPhase==='air'){v.playbackRate=1;v.play().catch(()=>{});}
     else if(crouching&&(walking||running)){v.playbackRate=0.65;v.play().catch(()=>{});}
     else if(crouching){v.playbackRate=1;v.play().catch(()=>{});}
@@ -825,7 +834,7 @@ function Char({facing,walking,running=false,crouching=false,jumpPhase=null,vertO
     else if(running){v.playbackRate=1;v.play().catch(()=>{});}
     else if(hasIdleAnim){/* rags: idle_left/idle_right loop plays via animSrc change */}
     else{v.currentTime=0;v.addEventListener('seeked',()=>v.pause(),{once:true});} // single-file outfit idle: freeze at frame 0
-  },[running,walking,crouching,jumpPhase]);
+  },[running,walking,crouching,kicking,jumpPhase]);
   if(animSrc){
     const ckNeeded=CHAR_ANIMATIONS[currentOutfit]?.needsChromaKey;
     const DROP='drop-shadow(0 6px 16px rgba(196,48,40,.55))';
@@ -834,7 +843,7 @@ function Char({facing,walking,running=false,crouching=false,jumpPhase=null,vertO
         {ckNeeded
           ?<ChromaKeyVideo src={animSrc} flip={shouldFlip} height={effectiveHeight}
               playing={walking||running||crouching||!!jumpPhase} playbackRate={(jumpPhase==='start'||jumpPhase==='end')?1.5:jumpPhase==='air'?1:(walking&&!running)?0.65:1} filterStr={DROP}/>
-          :<video key={animSrc} ref={vidRef} src={animSrc} loop muted playsInline preload="auto"
+          :<video key={animSrc} ref={vidRef} src={animSrc} loop={action!=='kick'} muted playsInline preload="auto"
               style={{height:effectiveHeight,display:'block',transformOrigin:'center center',
                 transform:shouldFlip?'scaleX(-1)':'none',filter:DROP,transition:'opacity 0.1s ease'}}/>
         }
@@ -1335,7 +1344,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
   const [bedOptionIdx,setBedOptionIdx]=useState(0); // 0=REST, 1=SLEEP
   const raf=useRef(null);
   const aptSPD=SPD*0.42;
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const near=APT_OBJ.find(o=>{
     if(!o.prompt)return false;
     if(o.id==='money'&&money>0)return false;
@@ -1403,10 +1412,10 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
         const left =keys.current['ArrowLeft'] ||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const isMoving=left||right;
-        const {currentSpeed}=updateMovement(isMoving);
+        const {currentSpeed,isKicking}=updateMovement(isMoving);
 
-        if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       } else {
         setWalking(false);
@@ -1452,7 +1461,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
           <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
         )}
       </div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charHeight={297} charBottom={53} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charHeight={297} charBottom={53} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="OAKWOOD ARMS — 4C"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="apartment" onSceneChange={debugGo}/>}
@@ -1637,7 +1646,7 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
   },[]);
   const raf=useRef(null);
   const hallwaySPD=SPD*0.2;
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(hallwaySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(hallwaySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const near=HALL_OBJ.find(o=>Math.abs(o.wx-px)<70&&o.prompt);
 
   useEffect(()=>{
@@ -1689,10 +1698,10 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
         const left=keys.current['ArrowLeft']||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const isMoving=left||right;
-        const {currentSpeed}=updateMovement(isMoving);
+        const {currentSpeed,isKicking}=updateMovement(isMoving);
 
-        if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setPx(x=>Math.min(hallwayMaxX,x+currentSpeed));setFacing('right');setWalking(true);}
+        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setPx(x=>Math.min(hallwayMaxX,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       }else setWalking(false);
       raf.current=requestAnimationFrame(loop);
@@ -1725,7 +1734,7 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
         <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
         <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
       </div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="hallway" onSceneChange={debugGo}/>}
@@ -1831,7 +1840,7 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
   const [popup,setPopup]=useState(null);
   const raf=useRef(null);
   const lobbySPD=2.8;
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(lobbySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(lobbySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
 
   const elevRange={xMin:560,xMax:840};
   const nearElev=px>=elevRange.xMin&&px<=elevRange.xMax?{id:'elevator'}:null;
@@ -1860,9 +1869,9 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
         const left=keys.current['ArrowLeft']||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const isMoving=left||right;
-        const {currentSpeed}=updateMovement(isMoving);
-        if(left){setPx(x=>Math.max(lobbyMinX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setPx(x=>Math.min(lobbyMaxX,x+currentSpeed));setFacing('right');setWalking(true);}
+        const {currentSpeed,isKicking}=updateMovement(isMoving);
+        if(!isKicking&&left){setPx(x=>Math.max(lobbyMinX,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setPx(x=>Math.min(lobbyMaxX,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       } else setWalking(false);
       raf.current=requestAnimationFrame(loop);
@@ -1875,7 +1884,7 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
       <img src="../graphics/maps/the_veil/move_block/residential_zone/apartment_building/lobby/lobby.png"
         style={{position:'absolute',top:0,width:'170%',height:'100%',objectFit:'contain',zIndex:0,left:`${200-px*1.0}px`,objectPosition:'left'}}
         alt="lobby"/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={92} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={92} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
       {(nearObj||nearElev)&&(nearObj?.prompt||nearElev?.id==='elevator')&&(
         <div style={{position:'absolute',bottom:130,left:'50%',transform:'translateX(-50%)',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,fontFamily:"'Blue Screen',monospace",zIndex:300}}>
           {nearObj?.prompt||'[ E ] ELEVATOR'}
@@ -1902,7 +1911,7 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
   const [walking,setWalking]=useState(false);
   const [doorMsg,setDoorMsg]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.5,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.5,stamina,onStaminaChange,currentOutfit,hudOpen);
   const atElevatorHall=px>=80&&px<=124;
   const atApt=px>=991&&px<=1057;
   const nearBusyDoor=px>=623&&px<=696;
@@ -1937,9 +1946,9 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
     const loop=()=>{
       const left=keys.current['ArrowLeft']||keys.current['KeyA'];
       const right=keys.current['ArrowRight']||keys.current['KeyD'];
-      const {currentSpeed}=updateMovement(left||right);
-      if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-      else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+      const {currentSpeed,isKicking}=updateMovement(left||right);
+      if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+      else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
       else setWalking(false);
       raf.current=requestAnimationFrame(loop);
     };
@@ -1954,7 +1963,7 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
       {nearBusyDoor&&!doorMsg&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
       {nearNoAnswerDoor&&!doorMsg&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
       {doorMsg&&<div style={{position:'absolute',bottom:200,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:8,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace",whiteSpace:'nowrap'}}>{doorMsg}</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={102} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={102} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="fourth_floor_hallway" onSceneChange={debugGo}/>}
@@ -1968,7 +1977,7 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
   const [facing,setFacing]=useState(spawnX>600?'left':'right');
   const [walking,setWalking]=useState(false);
   const raf=useRef(null);
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.55,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.55,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearStairwell=px>=612&&px<=732;
   const nearElevator=px>=138&&px<=302;
   const atReturn=px>=951&&px<=1121;
@@ -1989,9 +1998,9 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
     const loop=()=>{
       const left=keys.current['ArrowLeft']||keys.current['KeyA'];
       const right=keys.current['ArrowRight']||keys.current['KeyD'];
-      const {currentSpeed}=updateMovement(left||right);
-      if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-      else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+      const {currentSpeed,isKicking}=updateMovement(left||right);
+      if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+      else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
       else setWalking(false);
       raf.current=requestAnimationFrame(loop);
     };
@@ -2003,7 +2012,7 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
       {nearStairwell&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] STAIRWELL"/></div>}
       {nearElevator&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR"/></div>}
       {atReturn&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] 4TH FLOOR HALL"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={354} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={354} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="ELEVATOR HALL — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="elevator_hallway" onSceneChange={debugGo}/>}
@@ -2017,7 +2026,7 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
   const [facing,setFacing]=useState('right');
   const [walking,setWalking]=useState(false);
   const raf=useRef(null);
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.25,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.25,stamina,onStaminaChange,currentOutfit,hudOpen);
   const atReturn=px>=VIEWPORT.maxX-20;
   const atDown=px<=VIEWPORT.minX+20;
   useEffect(()=>{
@@ -2036,9 +2045,9 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
     const loop=()=>{
       const left=keys.current['ArrowLeft']||keys.current['KeyA'];
       const right=keys.current['ArrowRight']||keys.current['KeyD'];
-      const {currentSpeed}=updateMovement(left||right);
-      if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-      else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+      const {currentSpeed,isKicking}=updateMovement(left||right);
+      if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+      else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
       else setWalking(false);
       raf.current=requestAnimationFrame(loop);
     };
@@ -2049,7 +2058,7 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
       <video src={APT_STAIRWELL_VID} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}} autoPlay muted loop playsInline/>
       {atReturn&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR HALL"/></div>}
       {atDown&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] GROUND FLOOR"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="STAIRWELL — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="apt_stairwell" onSceneChange={debugGo}/>}
@@ -2086,7 +2095,7 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
   const [streetTexts,setStreetTexts]=useState([]);
   const raf=useRef(null);
   const strSPD=SPD*0.1024;
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen,0.35);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen,0.35);
   // Camera: follows worldX but stops at image edges — never shows black
   const cam=clamp(worldX-VW/2,0,STR_CAM_MAX);
   const nearNpc=STR_NPCS.find(n=>Math.abs(n.wx-worldX)<85);
@@ -2122,10 +2131,10 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
         const left=keys.current['ArrowLeft']||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const isMoving=left||right;
-        const {currentSpeed}=updateMovement(isMoving);
+        const {currentSpeed,isKicking}=updateMovement(isMoving);
 
-        if(left){setWorldX(x=>Math.max(0,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setWorldX(x=>Math.min(STR_IMG_W,x+currentSpeed));setFacing('right');setWalking(true);}
+        if(!isKicking&&left){setWorldX(x=>Math.max(0,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setWorldX(x=>Math.min(STR_IMG_W,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       }else setWalking(false);
       raf.current=requestAnimationFrame(loop);
@@ -2178,7 +2187,7 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
       <div style={{position:'absolute',inset:0,zIndex:0,backgroundImage:`url('${EXTERIOR_IMG}')`,backgroundSize:'auto 120%',backgroundPosition:`${-cam}px 105%`,backgroundRepeat:'no-repeat',backgroundColor:'#0a0907'}}/>
       {nearLoc&&!conv&&<div style={{position:'absolute',bottom:25,left:worldX-cam,zIndex:9999}}><Prompt text={`[ E ] ${nearLoc.label}`}/></div>}
       {nearNpc&&!conv&&<div style={{position:'absolute',bottom:25,left:worldX-cam,zIndex:9999}}><Prompt text="[ E ] TALK"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={worldX-cam} charHeight={74} charBottom={25} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={worldX-cam} charHeight={74} charBottom={25} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label={mode==='return'?'THE VEIL — RETURNING':'THE VEIL — MOVE BLOCK'}/>
       <Controls hints={[['← →','MOVE'],['E','TALK/ENTER'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={worldX} scene="street" onSceneChange={debugGo}/>}
@@ -2216,7 +2225,7 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
   const [stolen,setStolen]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearItem=STORE_ITEMS.find(i=>Math.abs(i.wx-px)<52&&!basket.includes(i.id));
   const nearLookItem=STORE_ITEMS.find(i=>Math.abs(i.wx-px)<90&&!basket.includes(i.id));
   const nearCounter=Math.abs(px-1144)<100&&!conv;
@@ -2256,9 +2265,9 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
       if(!conv){
         const left=keys.current['ArrowLeft']||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
-        const {currentSpeed}=updateMovement(left||right);
-        if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+        const {currentSpeed,isKicking}=updateMovement(left||right);
+        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       }else setWalking(false);
       raf.current=requestAnimationFrame(loop);
@@ -2305,7 +2314,7 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
       {stolen&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.red,fontSize:8,letterSpacing:4,fontFamily:"'Blue Screen',monospace",textShadow:`0 0 12px ${C.red}`}}>// THEFT</div>}
       {paid&&!credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// PAID — ${money-total} REMAINING</div>}
       {credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.gold,fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// CREDIT — COME BACK WHEN YOU CAN</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={65} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={65} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="CORNER STORE"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="store" onSceneChange={debugGo}/>}
@@ -2324,7 +2333,7 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
   const [paid,setPaid]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const guardBlocking=currentOutfit!=='hoodie';
   const nearGuard=Math.abs(px-GUARD_X)<80&&!conv;
   const nearPharmacist=Math.abs(px-1057)<100&&!conv;
@@ -2364,10 +2373,10 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
       if(!conv){
         const left=keys.current['ArrowLeft']||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
-        const {currentSpeed}=updateMovement(left||right);
+        const {currentSpeed,isKicking}=updateMovement(left||right);
         const maxRight=guardBlocking?GUARD_X-60:VIEWPORT.maxX;
-        if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setPx(x=>Math.min(maxRight,x+currentSpeed));setFacing('right');setWalking(true);}
+        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setPx(x=>Math.min(maxRight,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       }else setWalking(false);
       raf.current=requestAnimationFrame(loop);
@@ -2392,7 +2401,7 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
       {paid&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// THANK YOU — STAY SAFE</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={23} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={23} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="PHARMACY — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="pharmacy" onSceneChange={debugGo}/>}
@@ -2411,7 +2420,7 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
   const [paid,setPaid]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearOwner=Math.abs(px-821)<100&&!conv;
   const nearChef=Math.abs(px-384)<80&&!conv;
   const atExit=px>=1054;
@@ -2444,9 +2453,9 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
       if(!conv){
         const left=keys.current['ArrowLeft']||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
-        const {currentSpeed}=updateMovement(left||right);
-        if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+        const {currentSpeed,isKicking}=updateMovement(left||right);
+        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       }else setWalking(false);
       raf.current=requestAnimationFrame(loop);
@@ -2469,7 +2478,7 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
       </div>
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={95} charHeight={317} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={95} charHeight={317} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="RESTAURANT — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="restaurant" onSceneChange={debugGo}/>}
@@ -2486,7 +2495,7 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
   const [facing,setFacing]=useState('right');
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearCounter=px>900&&px<1200&&!conv;
   const atExit=px<200;
 
@@ -2507,9 +2516,9 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
       if(!conv){
         const left=keys.current['ArrowLeft']||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
-        const {currentSpeed}=updateMovement(left||right);
-        if(left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
+        const {currentSpeed,isKicking}=updateMovement(left||right);
+        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
         else setWalking(false);
       }else setWalking(false);
       raf.current=requestAnimationFrame(loop);
@@ -2527,7 +2536,7 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
       </div>
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={29} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={29} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="ALLEY WAY — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="alley_video_store" onSceneChange={debugGo}/>}
@@ -2939,8 +2948,8 @@ function useInputSource(){
 // All new scenes MUST implement running mechanics and stamina this way:
 //
 // 1. Function signature: Add `stamina` and `onStaminaChange` props
-// 2. Call hook: `const {keys,running,isCrouching,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit);`
-// 3. Movement loop: Before movement checks, call `const {currentSpeed}=updateMovement(isMoving);`
+// 2. Call hook: `const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit);`
+// 3. Movement loop: Before movement checks, call `const {currentSpeed,isKicking}=updateMovement(isMoving);`
 // 4. Use speed: Replace hardcoded SPD with `currentSpeed` (applies 2.1x multiplier when running)
 // 5. Character: Pass `running={running}` to <Char> component
 // 6. Mono: Show bark: `<Mono text={bark||mono}/>`
@@ -2952,6 +2961,7 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   const keys=useRef({});
   const [running,setRunning]=useState(false);
   const [isCrouching,setIsCrouching]=useState(false);
+  const [kicking,setKicking]=useState(false);
   const [jumpPhase,setJumpPhase]=useState(null); // null | 'start' | 'air' | 'end'
   const [vertOffset,setVertOffset]=useState(0);
   const [bark,setBark]=useState(null);
@@ -2975,11 +2985,13 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   const onStaminaChangeRef=useRef(onStaminaChange);
   const baseSpeedRef=useRef(baseSpeed);
   const pausedRef=useRef(paused);
+  const kickingRef=useRef(false);
   staminaRef.current=stamina;
   outfitRef.current=currentOutfit;
   onStaminaChangeRef.current=onStaminaChange;
   baseSpeedRef.current=baseSpeed;
   pausedRef.current=paused;
+  kickingRef.current=kicking;
 
   // When HUD opens or closes, clear held keys so stale holds don't carry over
   useEffect(()=>{
@@ -3014,8 +3026,7 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
         if(progress>=1){jumpingRef.current=false;setJumpPhase(null);setVertOffset(0);}
       } else if(!isMovingRef.current&&!pausedRef.current){
         setJumpPhase(null);
-        // Gentle idle bob — ±3px sine wave
-        setVertOffset(Math.round(Math.sin(now/600)*3));
+        setVertOffset(0);
       } else {
         setJumpPhase(null);
         setVertOffset(0);
@@ -3029,11 +3040,17 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   // Stable callback — no deps needed because everything is read from refs
   const updateMovement=useCallback((isMoving)=>{
     isMovingRef.current=isMoving;
+    if(kickingRef.current){
+      setRunning(false);
+      setIsCrouching(false);
+      isRunningRef.current=false;
+      return {canRun:false,currentSpeed:0,isKicking:true};
+    }
     if(pausedRef.current){
       setRunning(false);
       setIsCrouching(false);
       isRunningRef.current=false;
-      return {canRun:false, currentSpeed:baseSpeedRef.current};
+      return {canRun:false, currentSpeed:baseSpeedRef.current,isKicking:false};
     }
 
     const spd=baseSpeedRef.current;
@@ -3078,7 +3095,7 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
     }
 
     const baseSpd=canRun&&!barkMsg?spd*2.1:spd;
-    return {canRun:canRun&&!barkMsg, currentSpeed:crouching?baseSpd*0.4:baseSpd};
+    return {canRun:canRun&&!barkMsg, currentSpeed:crouching?baseSpd*0.4:baseSpd, isKicking:false};
   },[]); // stable — reads everything from refs
 
   useEffect(()=>{
@@ -3101,10 +3118,15 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
         const isCrouch=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
         const jScale=jumpScaleRef.current;
         // Hierarchy: standing (lowest) < walking < crouched jump < running (highest/furthest)
-        jumpPeakRef.current=(isRun?300:isCrouch?250:isMove?200:100)*jScale;
-        jumpDurRef.current =(isRun?900:isCrouch?720:isMove?620:380)*Math.sqrt(jScale);
+        jumpPeakRef.current=(isRun?240:isCrouch?190:isMove?200:130)*jScale;
+        jumpDurRef.current =(isRun?720:isCrouch?720:isMove?620:380)*Math.sqrt(jScale);
         jumpingRef.current=true;
         jumpStartRef.current=Date.now();
+      }
+      // Right shoulder button kick — KeyW in gameplay (RB/R1 controller, W keyboard)
+      // Only cyber_octavia can kick; hoodie cannot. Blocked while jumping or HUD open.
+      if(e.code==='KeyW'&&!pausedRef.current&&outfitRef.current==='cyber_octavia'&&!jumpingRef.current&&!(keys.current['ShiftLeft']||keys.current['ArrowDown'])){
+        setKicking(true);
       }
     };
     const ku=e=>{delete keys.current[e.code];};
@@ -3116,7 +3138,13 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
     };
   },[]);
 
-  return {keys,running,isCrouching,jumpPhase,vertOffset,bark,setBark,updateMovement};
+  useEffect(()=>{
+    const onKickEnd=()=>setKicking(false);
+    document.addEventListener('kickEnd',onKickEnd);
+    return()=>document.removeEventListener('kickEnd',onKickEnd);
+  },[]);
+
+  return {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,setBark,updateMovement};
 }
 
 // ── DEVICE HUD ───────────────────────────────────────────────

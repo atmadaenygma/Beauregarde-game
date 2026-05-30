@@ -25,6 +25,10 @@ const VW=1280,VH=720,SPD=14.58;
 // ── VIEWPORT CONSTANTS ──────────────────────────────────────────
 const VIEWPORT={minX:80,maxX:1200,spawnX:200,promptZ:9999,objZ:200};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+// Directional detection box: true if targetX is within Octavia's facing arc.
+// front = reach forward (direction she faces), back = tolerance behind her.
+const inDetectionBox=(px,facing,targetX,front=120,back=40)=>
+  facing==='right'?(targetX>=px-back&&targetX<=px+front):(targetX>=px-front&&targetX<=px+back);
 const sr=(i,n)=>Math.abs(Math.sin(i*127.1+n*311.7))%1;
 // ── UI COLOR PALETTE ───────────────────────────────────────────
 // All interact prompts, HUD, dialogue UI, and any future UI element pull their
@@ -83,6 +87,13 @@ const KEYS={
 const HER_IMG  = 'uploads/05_protagonist_color scheme-ef16d259.png';
 const CLERK_IMG= 'uploads/store clerk.png';
 const CHARLIE_PORTRAIT = '../graphics/portraits/charlie_winston_portrait.png';
+const OCT_PORTRAIT     = '../graphics/portraits/cyber_octavia_portrait.png';
+const RAYMOND_PORTRAIT = '../graphics/portraits/convenient_store_clerk_portrait.png';
+const PHARMACIST_PORTRAIT = '../graphics/portraits/pharmacist_portrait.png';
+const DIEGO_PORTRAIT   = '../graphics/portraits/restauarant_owner_portrait.png';
+const GUARD_PORTRAIT   = '../graphics/portraits/security_guard_portrait.png';
+const CHEF_PORTRAIT    = '../graphics/portraits/chef__portrait.png';
+const WAITRESS_PORTRAIT= '../graphics/portraits/waitress_portrait.png';
 const BATHROOM_IMG    = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/apartment/bathroom/bathroom.png';
 const BATHROOM_VID    = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/apartment/bathroom/octavias_bathroom_.mp4';
 const APT_IMG         = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/apartment/otavias_apt_.webm';
@@ -945,73 +956,165 @@ function VoiceBox({seq,onChoose,onFinish}){
 
 // ── CHATBOX COMPONENT ─────────────────────────────────────────
 function ChatBox({convKey,npcName,npcImg,total,onAct}){
-  const [nodeId,setNodeId]=useState('s0');
+  const [nodeId,setNodeId]=useState(null);
   const [sel,setSel]=useState(0);
+  const [history,setHistory]=useState([]);
+  const histRef=useRef(null);
   const outfit=window.__beau_outfit||'cyber_octavia';
   const tree=CONV[convKey+'__'+outfit]||CONV[convKey]||[];
-  const node=tree.find(n=>n.id===nodeId)||tree[0];
+  const node=nodeId?tree.find(n=>n.id===nodeId):tree[0];
   const npcText=(node?.npc||'').replace('__TOTAL__',`That'll be $${total}.`);
+  const allOpts=node?.opts||[];
+  const choices=allOpts.filter(o=>o.t!=='(continue)');
+  const isChoice=choices.length>0;
+  const speakerIsOctavia=node?.speaker==='OCTAVIA'||node?.speaker==='octavia';
 
-  const confirm=useCallback((idx)=>{
-    const opt=node?.opts?.[idx];
-    if(!opt)return;
-    const result=opt.act?onAct(opt.act):null;
-    if(result==='blocked')return;
-    if(opt.next){setNodeId(opt.next);setSel(0);}
-    else onAct('end');
-  },[node,onAct]);
+  // append NPC/Octavia-speaks lines to history as nodes advance
+  useEffect(()=>{
+    if(!node||!npcText)return;
+    const speaker=speakerIsOctavia?'OCTAVIA':npcName;
+    setHistory(h=>{
+      const last=h[h.length-1];
+      if(last&&last.text===npcText&&last.speaker===speaker)return h;
+      return[...h,{speaker,text:npcText,isOct:speakerIsOctavia}];
+    });
+  },[node?.id]);
 
-  useEffect(()=>{setNodeId('s0');setSel(0);},[convKey]);
+  // scroll to bottom whenever history grows
+  useEffect(()=>{
+    if(histRef.current)histRef.current.scrollTop=histRef.current.scrollHeight;
+  },[history]);
+
+  const goTo=useCallback((nextId,act,choiceLabel)=>{
+    if(act){const r=onAct(act);if(r==='blocked')return;}
+    if(choiceLabel)setHistory(h=>[...h,{speaker:'OCTAVIA',text:choiceLabel,isOct:true,isChoice:true}]);
+    if(!nextId){onAct('end');return;}
+    const next=tree.find(n=>n.id===nextId);
+    if(!next){onAct('end');return;}
+    setNodeId(next.id);setSel(0);
+  },[tree,onAct]);
+
+  const confirm=useCallback(()=>{
+    if(isChoice){const o=choices[sel];goTo(o?.next,o?.act,o?.t);}
+    else{const o=allOpts[0];goTo(o?.next,o?.act,null);}
+  },[isChoice,choices,sel,allOpts,goTo]);
+
+  useEffect(()=>{setNodeId(null);setSel(0);setHistory([]);},[convKey]);
 
   useEffect(()=>{
+    const scroll=delta=>{if(histRef.current)histRef.current.scrollTop+=delta;};
     const kd=e=>{
-      if(e.key==='1')setSel(0);
+      if(e.code==='ArrowUp'){
+        e.preventDefault();
+        if(isChoice)setSel(s=>Math.max(0,s-1));
+        else scroll(-80);
+      } else if(e.code==='ArrowDown'){
+        e.preventDefault();
+        if(isChoice)setSel(s=>Math.min(choices.length-1,s+1));
+        else scroll(80);
+      } else if(e.code==='PageUp'){e.preventDefault();scroll(-200);}
+      else if(e.code==='PageDown'){e.preventDefault();scroll(200);}
+      else if(e.key==='1')setSel(0);
       else if(e.key==='2')setSel(1);
       else if(e.key==='3')setSel(2);
-      else if(e.code==='ArrowUp')setSel(s=>Math.max(0,s-1));
-      else if(e.code==='ArrowDown')setSel(s=>Math.min((node?.opts?.length||1)-1,s+1));
-      else if(e.code==='KeyE')confirm(sel);
+      else if(e.code==='KeyE'){e.preventDefault();confirm();}
     };
     window.addEventListener('keydown',kd);
     return()=>window.removeEventListener('keydown',kd);
-  },[confirm,sel,node]);
+  },[confirm,isChoice,choices.length]);
 
   if(!node)return null;
+
+  const panel={background:'#fff',border:'3px solid #000',fontFamily:"'Space Mono',monospace",boxShadow:'6px 6px 0 #000'};
+  // 70% bigger than original 360×560 / 300×440
+  const OCT_W=612,OCT_H=952;
+  const NPC_W=510,NPC_H=748;
+
   return(
-    <div style={{position:'absolute',bottom:0,left:0,right:0,height:195,
-      background:'linear-gradient(to top,#0a0704f9 0%,#0a070488 100%)',
-      borderTop:`1px solid ${C.border}`,display:'grid',gridTemplateColumns:'1fr 1fr',
-      padding:'16px 44px 14px',zIndex:250}}>
-      {/* NPC side */}
-      <div style={{display:'flex',gap:14,alignItems:'flex-start',paddingRight:24,borderRight:`1px solid ${C.border}44`}}>
-        <div style={{width:82,height:92,flexShrink:0,overflow:'hidden',border:`1px solid ${C.border}`,background:C.selBg}}>
-          <img src={npcImg} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top center'}}/>
-        </div>
-        <div style={{flex:1}}>
-          <div style={{color:C.gold,fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace",marginBottom:8}}>// {npcName}</div>
-          <div style={{color:C.text,fontSize:7,lineHeight:1.65,fontFamily:"'Blue Screen',monospace"}}>{npcText}</div>
-        </div>
+    <div style={{position:'absolute',inset:0,zIndex:400,
+      backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
+      background:'rgba(0,0,0,0.40)',pointerEvents:'auto'}}>
+
+      {/* ── Octavia portrait — bottom left, large, behind panels ── */}
+      <div style={{position:'absolute',bottom:0,left:-30,width:OCT_W,height:OCT_H,pointerEvents:'none',zIndex:1}}>
+        <img src={OCT_PORTRAIT} alt="" style={{width:'100%',height:'100%',objectFit:'contain',objectPosition:'bottom center'}}
+          onError={e=>{e.target.style.display='none';}}/>
       </div>
-      {/* Her side */}
-      <div style={{display:'flex',gap:12,alignItems:'flex-start',paddingLeft:24}}>
-        <div style={{width:64,height:72,flexShrink:0,overflow:'hidden',border:`2px solid ${C.red}66`,background:C.selBg}}>
-          <img src={HER_IMG} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top center'}}/>
+
+      {/* ── NPC portrait — top right, large, behind panels ── */}
+      {npcImg&&(
+        <div style={{position:'absolute',top:0,right:-20,width:NPC_W,height:NPC_H,pointerEvents:'none',zIndex:1}}>
+          <img src={npcImg} alt="" style={{width:'100%',height:'100%',objectFit:'contain',objectPosition:'top center'}}/>
         </div>
-        <div style={{flex:1,display:'flex',flexDirection:'column',gap:5}}>
-          {node.opts?.map((opt,i)=>(
-            <div key={i} onClick={()=>setSel(i)}
-              style={{display:'flex',gap:8,alignItems:'flex-start',cursor:'pointer',padding:'4px 8px',
-                borderLeft:`2px solid ${sel===i?C.red:'transparent'}`,
-                background:sel===i?C.selBg+"80":'transparent'}}>
-              <span style={{color:C.gold,fontSize:7,fontFamily:"'Blue Screen',monospace",minWidth:12}}>{i+1}</span>
-              <span style={{color:opt.muted?C.dim:C.text,fontSize:7,lineHeight:1.5,
-                fontFamily:"'Blue Screen',monospace",fontStyle:opt.muted?'italic':'normal'}}>{opt.t}</span>
+      )}
+
+      {/* ── CENTER COLUMN — conversation log + choices ── */}
+      <div style={{
+        position:'absolute',top:'4%',bottom:'4%',
+        left:'50%',transform:'translateX(-50%)',
+        width:420,zIndex:10,
+        display:'flex',flexDirection:'column',gap:10,
+      }}>
+
+        {/* Scrollable conversation history */}
+        <div ref={histRef} style={{
+          ...panel,flex:1,overflowY:'auto',
+          padding:'20px 22px',display:'flex',flexDirection:'column',gap:16,
+          scrollbarWidth:'thin',scrollbarColor:'#000 #eee',
+        }}>
+          {history.map((h,i)=>(
+            <div key={i}>
+              <div style={{
+                fontSize:9,fontWeight:700,letterSpacing:3,marginBottom:5,
+                color:h.isOct?'#c43028':'#000',
+              }}>{h.speaker}</div>
+              <div style={{
+                fontSize:12,lineHeight:1.85,
+                color:h.isChoice?'#555':'#111',
+                fontStyle:h.isChoice?'italic':'normal',
+              }}>{h.text}</div>
             </div>
           ))}
-          <div style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginTop:2}}>
-            [ 1/2/3 ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM
-          </div>
+          {history.length===0&&(
+            <div style={{color:'#bbb',fontSize:10,fontStyle:'italic',letterSpacing:1}}>...</div>
+          )}
+          {history.length>3&&(
+            <div style={{fontSize:7,color:'#bbb',letterSpacing:2,textAlign:'center',marginTop:4,fontFamily:"'Space Mono',monospace"}}>
+              {isChoice?'PG↑↓ SCROLL HISTORY':'↑↓ SCROLL'}
+            </div>
+          )}
         </div>
+
+        {/* Choice selection */}
+        {isChoice&&(
+          <div style={{...panel,padding:'18px 22px',flexShrink:0}}>
+            <div style={{fontSize:13,fontWeight:700,letterSpacing:1,marginBottom:14,borderBottom:'2px solid #000',paddingBottom:10}}>
+              Octavia's dialogue selection
+            </div>
+            {choices.map((o,i)=>(
+              <div key={i} onClick={()=>{setSel(i);goTo(o.next,o.act,o.t);}}
+                style={{fontSize:11,lineHeight:2.4,cursor:'pointer',letterSpacing:1,
+                  fontWeight:i===sel?700:400,color:i===sel?'#000':'#555',
+                  paddingLeft:i===sel?10:0,
+                  borderLeft:i===sel?'3px solid #c43028':'3px solid transparent',
+                  transition:'all .1s',
+                }}>
+                {String.fromCharCode(97+i)})&nbsp;&nbsp;{o.t}
+              </div>
+            ))}
+            <div style={{fontSize:8,color:'#999',letterSpacing:2,marginTop:10,borderTop:'1px solid #eee',paddingTop:8}}>
+              ↑↓ NAVIGATE &nbsp;·&nbsp; [ E ] CONFIRM
+            </div>
+          </div>
+        )}
+
+        {/* Continue hint when no choices */}
+        {!isChoice&&(
+          <div style={{textAlign:'center',fontSize:8,color:'rgba(255,255,255,0.55)',
+            letterSpacing:3,fontFamily:"'Space Mono',monospace"}}>
+            [ E ] CONTINUE
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1471,9 +1574,10 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
 }
 
 // ── BATHROOM SCENE ───────────────────────────────────────────
-function BathroomScene({heart,mono,onLeave,onShowerDone,bathroomSpawnPos,bathroomSpawnFacing,showerStat,debug,debugGo,currentOutfit,onEquipItem,onFindPhone}){
+function BathroomScene({heart,mono,onLeave,onShowerDone,bathroomSpawnPos,bathroomSpawnFacing,showerStat,debug,debugGo,currentOutfit,onEquipItem,onFindPhone,firstEntry=false}){
   const[px,setPx]=useState(bathroomSpawnPos??350);
   const[facing,setFacing]=useState(bathroomSpawnFacing??'right');
+  const[blink,setBlink]=useState(firstEntry);
   const[walking,setWalking]=useState(false);
   const[pendingEquip,setPendingEquip]=useState(null);
   const[popup,setPopup]=useState(null);
@@ -1625,6 +1729,7 @@ function BathroomScene({heart,mono,onLeave,onShowerDone,bathroomSpawnPos,bathroo
       {debug&&<DebugOverlay px={px} scene="bathroom" onSceneChange={debugGo}/>}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 40%,#060402c0 100%)'}}/>
+      {blink&&<BlinkTransition onDone={()=>setBlink(false)}/>}
     </div>
   );
 }
@@ -1905,6 +2010,55 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
   );
 }
 
+// ── INTERNAL THOUGHTS BOX ─────────────────────────────────────
+// Octavia's internal monologue — distinct from NPC ChatBox.
+// Style this component to match the custom thoughts UI design.
+function InternalThoughtsBox({convKey,onDone}){
+  const [nodeId,setNodeId]=useState(null);
+  const outfit=window.__beau_outfit||'cyber_octavia';
+  const tree=CONV[convKey+'__'+outfit]||CONV[convKey]||[];
+  const node=nodeId?tree.find(n=>n.id===nodeId):tree[0];
+  const emotion=(node?.emotion||node?.voice||'').toUpperCase();
+
+  const advance=useCallback(()=>{
+    if(!node){onDone();return;}
+    const nextId=node.opts?.[0]?.next;
+    if(!nextId){onDone();return;}
+    const next=tree.find(n=>n.id===nextId);
+    if(!next){onDone();return;}
+    setNodeId(next.id);
+  },[node,tree,onDone]);
+
+  useEffect(()=>{
+    const h=e=>{
+      if(e.code==='KeyE'||e.code==='Space'){e.preventDefault();advance();}
+    };
+    window.addEventListener('keydown',h);
+    return()=>window.removeEventListener('keydown',h);
+  },[advance]);
+
+  if(!node)return null;
+
+  return(
+    <div style={{position:'absolute',inset:0,zIndex:400,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto'}}>
+      <div style={{
+        maxWidth:520,width:'90%',padding:'32px 40px',
+        background:'rgba(8,9,10,0.92)',
+        borderLeft:'3px solid #40e090',
+        fontFamily:"'Space Mono',monospace",letterSpacing:'1px',
+      }}>
+        {emotion&&<div style={{fontSize:7,color:'#40e090',marginBottom:14,letterSpacing:'3px'}}>〰 {emotion}</div>}
+        <div style={{fontSize:10,color:'rgba(220,230,220,0.9)',lineHeight:2,fontStyle:'italic'}}>
+          {node.npc||node.text||''}
+        </div>
+        <div style={{marginTop:20,fontSize:6,color:'rgba(255,255,255,0.3)',textAlign:'right',letterSpacing:'2px'}}>
+          [ E ] continue
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 4TH FLOOR HALLWAY SCENE ───────────────────────────────────
 function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
   const [px,setPx]=useState(spawnX);
@@ -1912,9 +2066,11 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
   const [walking,setWalking]=useState(false);
   const [doorMsg,setDoorMsg]=useState(null);
   const [conv,setConv]=useState(null);
-  const firedTriggers=useRef(new Set());
+  const [convType,setConvType]=useState('dialogue');
+  const [nearTrigger,setNearTrigger]=useState(null);
   const raf=useRef(null);
   const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.5,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const kickHitbox=useKickHitbox(kicking,px,facing,102);
   const atElevatorHall=px>=80&&px<=124;
   const atApt=px>=991&&px<=1057;
   const nearBusyDoor=px>=623&&px<=696;
@@ -1958,18 +2114,32 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
     raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
   },[]);
 
-  // worldX dialogue triggers from construction kit
+  // worldX dialogue triggers — directional detection box, condition-gated
   useEffect(()=>{
-    if(conv)return;
+    if(conv){setNearTrigger(null);return;}
     const triggers=(window.__beau_scene_triggers||{})['fourth_floor_hallway']||[];
+    let found=null;
     for(const t of triggers){
-      if(!firedTriggers.current.has(t.key)&&Math.abs(px-t.worldX)<40){
-        firedTriggers.current.add(t.key);
-        setConv(t.key);
-        break;
-      }
+      if(inDetectionBox(px,facing,t.worldX)&&(window.evalTriggerConditions?.(t)??true)){found=t;break;}
     }
-  },[px,conv]);
+    setNearTrigger(found);
+  },[px,facing,conv]);
+
+  useEffect(()=>{
+    if(!nearTrigger||conv)return;
+    const h=e=>{
+      if(e.code==='KeyE'){
+        // increment fire count
+        window.__beau_fire_counts=window.__beau_fire_counts||{};
+        window.__beau_fire_counts[nearTrigger.key]=(window.__beau_fire_counts[nearTrigger.key]||0)+1;
+        setConvType(nearTrigger.treeType||'dialogue');
+        setConv(nearTrigger.key);
+        setNearTrigger(null);
+      }
+    };
+    window.addEventListener('keydown',h);
+    return()=>window.removeEventListener('keydown',h);
+  },[nearTrigger,conv]);
 
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#08090a'}}>
@@ -1983,7 +2153,27 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="fourth_floor_hallway" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName="OCTAVIA" npcImg={''} total={0} onAct={act=>{if(act==='end'||!act)setConv(null);}}/>}
+      {/* debug: kick hitbox visualiser */}
+      {debug&&kickHitbox&&(
+        <div style={{position:'absolute',left:kickHitbox.x,bottom:kickHitbox.bottom,width:kickHitbox.w,height:kickHitbox.h,
+          border:'2px solid #ff3030',background:'rgba(255,48,48,0.25)',zIndex:999,pointerEvents:'none',
+          boxSizing:'border-box'}}/>
+      )}
+      {/* debug: detection box visualiser */}
+      {debug&&(
+        <div style={{position:'absolute',bottom:102,
+          left:facing==='right'?px-40:px-120,width:160,height:4,
+          background:'rgba(64,224,144,0.5)',zIndex:998,pointerEvents:'none'}}/>
+      )}
+      {nearTrigger&&!conv&&(
+        <div style={{position:'absolute',bottom:160,left:'50%',transform:'translateX(-50%)',zIndex:300}}>
+          {nearTrigger.treeType==='thoughts'
+            ?<Prompt text="[ E ] THOUGHTS"/>
+            :<Prompt text="[ E ] TALK"/>}
+        </div>
+      )}
+      {conv&&convType==='thoughts'&&<InternalThoughtsBox convKey={conv} onDone={()=>setConv(null)}/>}
+      {conv&&convType!=='thoughts'&&<ChatBox convKey={conv} npcName="OCTAVIA" npcImg={''} total={0} onAct={act=>{if(act==='end'||!act)setConv(null);}}/>}
     </div>
   );
 }
@@ -2335,7 +2525,7 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
       <SceneLabel label="CORNER STORE"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="store" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName="RAYMOND" npcImg={CLERK_IMG} total={total} onAct={handleAct}/>}
+      {conv&&<ChatBox convKey={conv} npcName="RAYMOND" npcImg={RAYMOND_PORTRAIT} total={total} onAct={handleAct}/>}
     </div>
   );
 }
@@ -2422,7 +2612,7 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
       <SceneLabel label="PHARMACY — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="pharmacy" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName={conv.startsWith('guard')?'GUARD':'PHARMACIST'} npcImg={''} total={total} onAct={handleAct}/>}
+      {conv&&<ChatBox convKey={conv} npcName={conv.startsWith('guard')?'GUARD':'PHARMACIST'} npcImg={conv.startsWith('guard')?GUARD_PORTRAIT:PHARMACIST_PORTRAIT} total={total} onAct={handleAct}/>}
       {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
     </div>
   );
@@ -2499,7 +2689,7 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
       <SceneLabel label="RESTAURANT — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="restaurant" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName={conv==='chef_browse'?'CHEF':'OWNER'} npcImg={''} total={0} onAct={handleAct}/>}
+      {conv&&<ChatBox convKey={conv} npcName={conv==='chef_browse'?'CHEF':'DIEGO'} npcImg={conv==='chef_browse'?CHEF_PORTRAIT:DIEGO_PORTRAIT} total={0} onAct={handleAct}/>}
       {atExit&&!conv&&<div style={{position:'absolute',bottom:240,right:20,zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
     </div>
   );
@@ -2579,6 +2769,19 @@ function Nightmare({onDone}){
     {line.t&&<div style={{color:line.g?C.gold:C.text,fontSize:line.g?13:17,fontFamily:"'Blue Screen',monospace",textAlign:'center',maxWidth:700,lineHeight:1.8,fontStyle:'italic',letterSpacing:.5,opacity:vis?1:0,transition:'opacity .38s',animation:line.g?'ng 3s steps(1) infinite':'none',textShadow:line.g?`0 0 12px ${C.gold}`:undefined}}>{line.t}</div>}
     {ph===6&&<div style={{position:'absolute',inset:0,background:C.red,opacity:.12,animation:'flash .9s ease-out 1'}}/>}
   </div>);
+}
+
+// ── BLINK TRANSITION ─────────────────────────────────────────
+function BlinkTransition({onDone}){
+  useEffect(()=>{
+    const t=setTimeout(onDone,2200);
+    return()=>clearTimeout(t);
+  },[onDone]);
+  return(
+    <div style={{position:'absolute',inset:0,zIndex:500,
+      animation:'blinkOpen 2.2s ease-in-out forwards',
+      background:'#000',pointerEvents:'none'}}/>
+  );
 }
 
 // ── OPENING SEQUENCE ─────────────────────────────────────────
@@ -2700,8 +2903,6 @@ function Opening({onDone}){
     <div style={{width:VW,height:VH,background:'#000',position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <audio ref={showerRef} src={SHOWER_SFX} loop preload="auto" muted/>
       <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse 70% 65% at 50% 55%,#090201 0%,#000 100%)'}}/>
-      <StaticNoise/>
-      <div style={{position:'absolute',inset:0,zIndex:6,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000018 3px,#00000018 4px)'}}/>
       <div style={{position:'relative',zIndex:10,width:660,...gxf}}>
         {/* chromatic aberration ghosts during glitch */}
         {glitch&&shown&&<>
@@ -3162,6 +3363,43 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   },[]);
 
   return {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,setBark,updateMovement};
+}
+
+// ── KICK HIT DETECTION ────────────────────────────────────────
+// Splits the kick animation into startup / active / recovery windows.
+// Returns the live hitbox rect during active frames, null otherwise.
+// Tune STARTUP_MS and ACTIVE_MS to match where the foot connects in your animation.
+const KICK_STARTUP_MS = 110; // wind-up before hitbox activates
+const KICK_ACTIVE_MS  = 200; // how long the hitbox is live
+const KICK_HITBOX_W   = 80;  // width of the hitbox rectangle
+const KICK_HITBOX_H   = 100; // height of the hitbox rectangle
+const KICK_OFFSET_X   = 40;  // how far in front of charX the box starts
+const KICK_OFFSET_Y   = 80;  // px above charBottom the box sits
+
+function useKickHitbox(kicking,charX,facing,charBottom){
+  const [hitbox,setHitbox]=useState(null);
+  const startRef=useRef(null);
+
+  useEffect(()=>{
+    if(kicking){startRef.current=Date.now();}
+    else{startRef.current=null;setHitbox(null);}
+  },[kicking]);
+
+  useEffect(()=>{
+    if(!kicking)return;
+    const id=setInterval(()=>{
+      const elapsed=Date.now()-(startRef.current||Date.now());
+      if(elapsed>=KICK_STARTUP_MS&&elapsed<KICK_STARTUP_MS+KICK_ACTIVE_MS){
+        const x=facing==='right'?charX+KICK_OFFSET_X:charX-KICK_OFFSET_X-KICK_HITBOX_W;
+        setHitbox({x,bottom:charBottom+KICK_OFFSET_Y,w:KICK_HITBOX_W,h:KICK_HITBOX_H,active:true});
+      }else{
+        setHitbox(null);
+      }
+    },16);
+    return()=>clearInterval(id);
+  },[kicking,charX,facing,charBottom]);
+
+  return hitbox; // null = no hitbox; {x,bottom,w,h,active} = hitbox is live
 }
 
 // ── DEVICE HUD ───────────────────────────────────────────────
@@ -4702,6 +4940,7 @@ function LoadingScreen({onStart}){
 
 function QuestApp(){
   const [scene,setScene]=useState('opening');
+  const prevScene=useRef('opening');
   const [fading,setFading]=useState(true);
   const [money,setMoney]=useState(0);
   const [inventory,setInventory]=useState(['hoodie']);
@@ -4727,6 +4966,7 @@ function QuestApp(){
   });
   const [currentOutfit,setCurrentOutfit]=useState('cyber_octavia');
   useEffect(()=>{ window.__beau_outfit=currentOutfit; },[currentOutfit]);
+  useEffect(()=>{ window.__beau_inventory=inventory; },[inventory]);
   const [playerFacing,setPlayerFacing]=useState('right'); // 'left' or 'right'
   const [isPlayerMoving,setIsPlayerMoving]=useState(false);
   const handleChangeColor=useCallback((presetId)=>{
@@ -4793,7 +5033,7 @@ function QuestApp(){
     setInventory(p=>{const n=[...p];n.splice(n.indexOf(itemId),1);return n;});
   },[]);
 
-  const go=useCallback(next=>{setFading(true);setTimeout(()=>{setScene(next);setFading(false);},680);},[]);
+  const go=useCallback(next=>{setFading(true);setTimeout(()=>{prevScene.current=scene;window.__beau_visited_scenes=window.__beau_visited_scenes||new Set();window.__beau_visited_scenes.add(next);setScene(next);setFading(false);},680);},[scene]);
   useEffect(()=>{setTimeout(()=>setFading(false),500);},[]);
 
   useEffect(()=>{
@@ -4843,9 +5083,18 @@ function QuestApp(){
         @keyframes flash{0%{opacity:.25}100%{opacity:0}}
         @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
         @keyframes fade{0%{opacity:1}100%{opacity:0;transform:translateY(-40px)}}
+        @keyframes blinkOpen{
+          0%   {background:rgba(0,0,0,1);  backdrop-filter:blur(0px);  -webkit-backdrop-filter:blur(0px);  opacity:1}
+          13%  {background:rgba(0,0,0,0);  backdrop-filter:blur(38px); -webkit-backdrop-filter:blur(38px); opacity:1}
+          25%  {background:rgba(0,0,0,1);  backdrop-filter:blur(0px);  -webkit-backdrop-filter:blur(0px);  opacity:1}
+          38%  {background:rgba(0,0,0,0);  backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px); opacity:1}
+          60%  {background:rgba(0,0,0,0);  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); opacity:1}
+          85%  {background:rgba(0,0,0,0);  backdrop-filter:blur(4px);  -webkit-backdrop-filter:blur(4px);  opacity:1}
+          100% {background:rgba(0,0,0,0);  backdrop-filter:blur(0px);  -webkit-backdrop-filter:blur(0px);  opacity:0}
+        }
       `}</style>
       {scene==='opening'&&<Opening onDone={()=>go('bathroom')}/>}
-      {scene==='bathroom'&&<BathroomScene heart={heart} mono={moState.text} onLeave={()=>go('apartment')} onShowerDone={stat=>setNewShowerStat(stat)} bathroomSpawnPos={bathroomSpawnPos} bathroomSpawnFacing={bathroomSpawnFacing} showerStat={showerStat} debug={debug} debugGo={go} currentOutfit={currentOutfit} onEquipItem={handleEquipItem} onFindPhone={()=>{setHasPhone(true);addItems(['phone']);}}/>}
+      {scene==='bathroom'&&<BathroomScene heart={heart} mono={moState.text} onLeave={()=>go('apartment')} onShowerDone={stat=>setNewShowerStat(stat)} bathroomSpawnPos={bathroomSpawnPos} bathroomSpawnFacing={bathroomSpawnFacing} showerStat={showerStat} debug={debug} debugGo={go} currentOutfit={currentOutfit} onEquipItem={handleEquipItem} onFindPhone={()=>{setHasPhone(true);addItems(['phone']);}} firstEntry={prevScene.current==='opening'}/>}
       {(scene==='apartment'||scene==='safe'||scene==='waking')&&
         <AptScene heart={heart} mono={moState.text} money={money}
           onPickupMoney={()=>setMoney(12)}
@@ -4983,13 +5232,14 @@ function Root(){
           }
         });
       }
-      // build scene trigger map: sceneName → [{key, worldX}]
+      // build scene trigger map: sceneName → [{key, worldX, treeType}]
       if(d.scenes){
         const trigMap={};
         d.scenes.forEach(s=>{
           if(s.dialogueTrigger&&s.dialogueTrigger.key&&s.dialogueTrigger.worldX!=null){
             if(!trigMap[s.name])trigMap[s.name]=[];
-            trigMap[s.name].push({key:s.dialogueTrigger.key,worldX:s.dialogueTrigger.worldX});
+            const dlg=d.dialogue?d.dialogue[s.dialogueTrigger.key]:null;
+            trigMap[s.name].push({key:s.dialogueTrigger.key,worldX:s.dialogueTrigger.worldX,treeType:dlg?.treeType||'dialogue',playCount:dlg?.playCount||'always',playLimit:dlg?.playLimit||1,conditions:dlg?.conditions||[]});
           }
         });
         window.__beau_scene_triggers=trigMap;
@@ -5014,6 +5264,29 @@ function Root(){
     if(exact)return exact.nodes;
     const any=byKey.find(t=>!t.outfitCondition||t.outfitCondition==='any');
     return any?any.nodes:null;
+  };
+
+  // fire-count tracker — persists across scene navigations (keyed by dialogue key)
+  window.__beau_fire_counts=window.__beau_fire_counts||{};
+
+  // condition evaluator — used by scene trigger system
+  window.evalTriggerConditions=(trigger)=>{
+    const{conditions=[],playCount='always',playLimit=1,key}=trigger;
+    // check play count
+    const fired=window.__beau_fire_counts[key]||0;
+    if(playCount==='once'&&fired>0)return false;
+    if(playCount==='limit'&&fired>=playLimit)return false;
+    // evaluate each condition
+    const outfit=window.__beau_outfit||'';
+    const inv=window.__beau_inventory||[];
+    return conditions.every(c=>{
+      let result=false;
+      if(c.type==='outfit')     result=outfit===c.value;
+      else if(c.type==='item')  result=inv.includes(c.value);
+      else if(c.type==='trust') {const t=(window.__beau_trust||{})[c.charId]||0;result=c.op==='gte'?t>=c.value:t<c.value;}
+      else if(c.type==='scene') result=(window.__beau_visited_scenes||new Set()).has(c.value);
+      return c.negate?!result:result;
+    });
   };
 
   ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);

@@ -485,10 +485,11 @@ const SEED_CHARS=[
   mkChar({id:'c6',name:'Collette',   role:'missing person',tags:['mystery'],     handle:'// gone for years',      status:'missing', portrait:'collette_portrait.png',   info:'Community leader. Missing for years. The network was built around her disappearance.',discovered:true}),
   mkChar({id:'c7',name:'Charlie',    role:'archivist',     tags:['info'],        handle:'// keeper of records',   status:'contact', portrait:'',           info:'Archivist. Knows where to find things. Cautious.',                                   discovered:false}),
 ];
+const mkTree=(o)=>({treeType:'quest',outfitCondition:'any',playCount:'always',playLimit:1,conditions:[],subCanvas:mkC(),...o});
 const SEED_TREES=[
-  {id:'dt1',name:'Raymond — First Meeting', treeType:'quest', outfitCondition:'any', subCanvas:mkC()},
-  {id:'dt2',name:'Diego — Food Offer',      treeType:'quest', outfitCondition:'any', subCanvas:mkC()},
-  {id:'dt3',name:'Pharmacist — Safe Space', treeType:'quest', outfitCondition:'any', subCanvas:mkC()},
+  mkTree({id:'dt1',name:'Raymond — First Meeting'}),
+  mkTree({id:'dt2',name:'Diego — Food Offer'}),
+  mkTree({id:'dt3',name:'Pharmacist — Safe Space'}),
 ];
 const SEED_QUESTS=[
   {id:'q1',name:'The Signal',       major:true,  category:'mystery',status:'active',progress:'Following threads',    info:'The network was built around her disappearance. Years missing. Someone has answers.',subCanvas:mkC()},
@@ -498,14 +499,15 @@ const SEED_QUESTS=[
 
 /* ── STORAGE ─────────────────────────────────────────────────────── */
 const LS='beauregarde_kit_v4';
-const loadState=()=>{try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s&&s.chars)return{chars:s.chars,dtrees:s.dtrees,quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT};}catch(e){}return null;};
+const migrateTree=t=>({playCount:'always',playLimit:1,conditions:[],...t});
+const loadState=()=>{try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s&&s.chars)return{chars:s.chars,dtrees:(s.dtrees||[]).map(migrateTree),quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT};}catch(e){}return null;};
 const saveState=s=>{try{localStorage.setItem(LS,JSON.stringify(s));}catch(e){}};
 
 /* ── TREE TYPES ──────────────────────────────────────────────────── */
-const TREE_TYPES=['general','scene','dialogue','quest'];
-const TTC={general:'#7a7090',scene:'#5090d0',dialogue:'#c47a10',quest:'#d4a020'};
-const TTL={general:'G',scene:'S',dialogue:'D',quest:'Q'};
-const TTF={general:'GENERAL',scene:'SCENE',dialogue:'DIALOGUE',quest:'QUEST'};
+const TREE_TYPES=['general','scene','dialogue','quest','thoughts'];
+const TTC={general:'#7a7090',scene:'#5090d0',dialogue:'#c47a10',quest:'#d4a020',thoughts:'#40e090'};
+const TTL={general:'G',scene:'S',dialogue:'D',quest:'Q',thoughts:'T'};
+const TTF={general:'GENERAL',scene:'SCENE',dialogue:'DIALOGUE',quest:'QUEST',thoughts:'THOUGHTS'};
 
 /* ── OUTFIT CONDITIONS ───────────────────────────────────────────── */
 const OUTFITS_DEFAULT=[
@@ -520,6 +522,36 @@ const cycleOutfitId=(id,arr=OUTFITS_DEFAULT)=>{const i=arr.findIndex(o=>o.id===i
 
 /* ── KNOWN GAME SCENES ───────────────────────────────────────────── */
 const KNOWN_SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store'];
+
+/* ── KNOWN HARDCODED DIALOGUE KEYS ──────────────────────────────── */
+const KNOWN_CONV_KEYS=[
+  {key:'raymond_browse',       npc:'Raymond',     desc:'browsing the store'},
+  {key:'raymond_pay',          npc:'Raymond',     desc:'paying for items'},
+  {key:'raymond_caught',       npc:'Raymond',     desc:'caught stealing'},
+  {key:'raymond_broke',        npc:'Raymond',     desc:'no money'},
+  {key:'store_cant_pay',       npc:'Store',       desc:'cannot pay message'},
+  {key:'street_passerby',      npc:'Passerby',    desc:'street encounter'},
+  {key:'street_elder',         npc:'Elder',       desc:'street elder'},
+  {key:'guard_talk',           npc:'Guard',       desc:'guard dialogue'},
+  {key:'guard_blocked',        npc:'Guard',       desc:'path blocked'},
+  {key:'pharmacist_browse',    npc:'Pharmacist',  desc:'browsing pharmacy'},
+  {key:'diego_browse',         npc:'Diego',       desc:'restaurant / vendor'},
+  {key:'chef_browse',          npc:'Chef',        desc:'kitchen conversation'},
+  {key:'charlie_first_meeting',npc:'Charlie',     desc:'first meeting'},
+];
+
+/* ── KNOWN GAME ACTIONS (for dialogue choice opts) ───────────────── */
+const KNOWN_ACTS=[
+  {value:'',           label:'— none —'},
+  {value:'pay',        label:'PAY (deduct money)'},
+  {value:'leave',      label:'LEAVE scene'},
+  {value:'freeItems',  label:'FREE ITEMS (give without pay)'},
+  {value:'steal',      label:'STEAL item'},
+  {value:'stealFinal', label:'STEAL + leave'},
+  {value:'end',        label:'END conversation'},
+  {value:'wake',       label:'WAKE (opening sequence)'},
+  {value:'giveMoveVideo',label:'GIVE MOVE VIDEO'},
+];
 
 /* ── AUDIO LIBRARY ───────────────────────────────────────────────── */
 const AUDIO_DEFAULT=[
@@ -570,7 +602,15 @@ function NodeFields({node}){
   if(t==='CHARACTER')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ROLE</span><span className="nfv">{node.role||em}</span></div></>);
   if(t==='PLACE')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">TYPE</span><span className="nfv">{node.subtype||em}</span></div></>);
   if(t==='QUEST')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">TYPE</span><span className="nfv">{node.major?'◆ MAJOR':'◇ MINOR'}</span></div></>);
-  if(t==='DIALOGUE_TREE')return(<div className="nf"><span className="nfl">TREE</span><span className="nfv">{node.label}</span></div>);
+  if(t==='DIALOGUE_TREE'){
+    const pc=node._playCount||'always';
+    const cc=node._condCount||0;
+    return(<>
+      <div className="nf"><span className="nfl">TREE</span><span className="nfv">{node.label}</span></div>
+      {pc!=='always'&&<div className="nf"><span className="nfl">PLAY</span><span className="nfv" style={{color:'#e09030',fontWeight:700}}>{pc==='once'?'ONCE':`MAX ${node._playLimit||1}`}</span></div>}
+      {cc>0&&<div className="nf"><span className="nfl">COND</span><span className="nfv" style={{color:'#e09030'}}>{cc} rule{cc!==1?'s':''}</span></div>}
+    </>);
+  }
   if(t==='INVENTORY')return(<><div className="nf"><span className="nfl">ITEM</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ACTION</span><span className="nfv">{node.action||'give / take'}</span></div></>);
   if(t==='TRIGGER')return(<><div className="nf"><span className="nfl">TRIGGER</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ON</span><span className="nfv">{node.condition||'enter / interact'}</span></div></>);
   if(t==='SPAWN_POINT')return(<><div className="nf"><span className="nfl">CHAR</span><span className="nfv">{node.label||em}</span></div><div className="nf"><span className="nfl">WORLD X</span><span className="nfv" style={{color:'#4ab8d0',fontWeight:700}}>{node.worldX||0}</span></div></>);
@@ -1343,6 +1383,240 @@ function AudioTrackRow({track,onUpdate,onDelete}){
   );
 }
 
+/* ── AI REFERENCE LIBRARY (IndexedDB) ───────────────────────────── */
+const openRefDB=()=>new Promise((res,rej)=>{
+  const req=indexedDB.open('beau_ai_refs',1);
+  req.onupgradeneeded=e=>e.target.result.createObjectStore('refs',{keyPath:'id'});
+  req.onsuccess=e=>res(e.target.result);req.onerror=rej;
+});
+const loadRefs=async()=>{try{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('refs','readonly').objectStore('refs').getAll();r.onsuccess=e=>res(e.target.result);r.onerror=rej;});}catch(e){return[];}};
+const saveRef=async ref=>{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('refs','readwrite').objectStore('refs').put(ref);r.onsuccess=res;r.onerror=rej;});};
+const deleteRef=async id=>{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('refs','readwrite').objectStore('refs').delete(id);r.onsuccess=res;r.onerror=rej;});};
+
+/* ── AI ASSISTANT ────────────────────────────────────────────────── */
+const AI_MODEL='claude-sonnet-4-6';
+const QUICK_PROMPTS=[
+  {label:'Character dialogue',prompt:'Write 4–6 dialogue lines for one of my characters that feels authentic to The Veil. Ground it in the cyberpunk setting, the underground network, and the character\'s role.'},
+  {label:'Character backstory',prompt:'Develop a backstory for one of my characters that connects their past to the themes in my reference material and the Beauregarde world.'},
+  {label:'World detail',prompt:'Give me a small, specific world-building detail about The Veil neighborhood — something that would make the setting feel lived-in and real.'},
+  {label:'Quest idea',prompt:'Suggest a quest narrative that fits my existing characters and draws on themes in my reference material.'},
+  {label:'NPC bark lines',prompt:'Write 6–8 short ambient NPC bark lines that might be heard on The Veil streets. Keep them brief, atmospheric, grounded in survival and community.'},
+  {label:'Dialogue tree',prompt:'Write a branching dialogue tree for an NPC encounter. Include the NPC\'s opening line, 2–3 player response options, and a follow-up for each branch.'},
+];
+
+function AIAssistant({chars,dtrees,quests,onClose}){
+  const [tab,setTab]=useState('chat');
+  const [apiKey,setApiKey]=useState(()=>localStorage.getItem('beau_ai_key')||'');
+  const [keyDraft,setKeyDraft]=useState(()=>localStorage.getItem('beau_ai_key')||'');
+  const [refs,setRefs]=useState([]);
+  const [msgs,setMsgs]=useState([{role:'assistant',content:'Hello! I\'m your Beauregarde writing assistant. Upload reference material in the REFERENCES tab, then ask me anything — character dialogue, world-building, backstories, quest ideas. What are you working on?'}]);
+  const [input,setInput]=useState('');
+  const [loading,setLoading]=useState(false);
+  const [uploadStatus,setUploadStatus]=useState('');
+  const chatEndRef=useRef(null);
+  const fileRef=useRef(null);
+
+  useEffect(()=>{loadRefs().then(setRefs);},[]);
+  useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[msgs]);
+
+  const saveKey=()=>{localStorage.setItem('beau_ai_key',keyDraft);setApiKey(keyDraft);setUploadStatus('API key saved.');setTimeout(()=>setUploadStatus(''),2000);};
+
+  const buildSystem=()=>{
+    const charList=chars.map(c=>`${c.name} (${c.role}${c.tags?.length?' — '+c.tags.join(', '):''})`).join('\n  ');
+    const questList=quests.map(q=>`${q.major?'◆':'◇'} ${q.name}: ${q.info||''}`).join('\n  ');
+    const treeList=dtrees.map(t=>t.name).join(', ');
+    // reference content — first 6000 chars each, with cache marker
+    const refBlock=refs.length?'\n\nREFERENCE MATERIAL (use these for tone, themes, world detail):\n'+
+      refs.map(r=>`=== ${r.name} ===\n${r.content.slice(0,6000)}${r.content.length>6000?'\n[truncated — '+Math.round(r.content.length/1000)+'KB total]':''}`).join('\n\n'):'';
+    return `You are a creative writing assistant for BEAUREGARDE — a cyberpunk RPG set in The Veil, a dystopian urban neighborhood where body modification is common and an underground network operates in the shadows. The protagonist is Octavia: a modified survivor waking up after 7 missing days.
+
+GAME WORLD:
+- Tone: neo-noir, grounded, community-focused. Not neon-glamour cyberpunk — survival cyberpunk.
+- Themes: identity, modification, surveillance, loss, mutual aid, found family, memory.
+- Factions: The Network (community protection), The Bureau (state surveillance).
+- Key locations: The Veil street, Corner Store (Raymond), Pharmacy, Restaurant (Diego), Alley video store (Charlie).
+
+CURRENT CHARACTERS:
+  ${charList||'(none yet)'}
+
+ACTIVE QUESTS:
+  ${questList||'(none yet)'}
+
+DIALOGUE TREES: ${treeList||'(none yet)'}
+
+When writing dialogue: use short, clipped lines. Characters speak from lived experience, not exposition. NPCs are tired, careful, warm beneath the caution.${refBlock}`;
+  };
+
+  const send=async(text)=>{
+    if(!text.trim())return;
+    if(!apiKey){setTab('key');return;}
+    const userMsg={role:'user',content:text};
+    const history=[...msgs.filter(m=>m.role!=='assistant'||msgs.indexOf(m)>0),userMsg];
+    setMsgs(p=>[...p,userMsg]);setInput('');setLoading(true);
+    try{
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{
+          'x-api-key':apiKey,
+          'anthropic-version':'2023-06-01',
+          'anthropic-beta':'prompt-caching-2024-07-31',
+          'content-type':'application/json',
+          'anthropic-dangerous-allow-browser':'true',
+        },
+        body:JSON.stringify({
+          model:AI_MODEL,max_tokens:2048,
+          system:[{type:'text',text:buildSystem(),cache_control:{type:'ephemeral'}}],
+          messages:history,
+        }),
+      });
+      if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
+      const d=await res.json();
+      setMsgs(p=>[...p,{role:'assistant',content:d.content[0].text}]);
+    }catch(e){
+      setMsgs(p=>[...p,{role:'assistant',content:`⚠️ ${e.message}`,error:true}]);
+    }finally{setLoading(false);}
+  };
+
+  const uploadFile=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    setUploadStatus('Reading '+file.name+'...');
+    const reader=new FileReader();
+    reader.onload=async ev=>{
+      const ref={id:uid(),name:file.name,content:ev.target.result,size:file.size,addedAt:Date.now()};
+      await saveRef(ref);
+      setRefs(p=>[...p,ref]);
+      setUploadStatus('✓ '+file.name+' added ('+Math.round(file.size/1024)+'KB)');
+      setTimeout(()=>setUploadStatus(''),3000);
+    };
+    reader.onerror=()=>{setUploadStatus('✗ Could not read file.');setTimeout(()=>setUploadStatus(''),3000);};
+    reader.readAsText(file);
+    e.target.value='';
+  };
+
+  const removeRef=async id=>{await deleteRef(id);setRefs(p=>p.filter(r=>r.id!==id));};
+
+  const panelStyle={position:'fixed',top:0,right:0,bottom:0,width:420,zIndex:600,
+    display:'flex',flexDirection:'column',background:'var(--surface)',
+    borderLeft:'3px solid var(--brutal)',boxShadow:'-6px 0 0 var(--brutal)',
+    fontFamily:"'Space Mono',monospace",
+  };
+  const TABS=[['chat','CHAT'],['refs','REFERENCES'],['key','API KEY']];
+
+  return(
+    <div style={panelStyle}>
+      {/* header */}
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 14px',height:48,borderBottom:'3px solid var(--brutal)',background:'var(--raised)',flexShrink:0}}>
+        <span style={{color:'var(--accent)',fontSize:'var(--fxh)',fontWeight:700,letterSpacing:2,flex:1}}>✦ AI ASSISTANT</span>
+        {TABS.map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{background:tab===id?'var(--accent)':'none',color:tab===id?'var(--bg)':'var(--text2)',border:'2px solid '+(tab===id?'var(--accent)':'var(--brutal)'),fontFamily:"'Space Mono',monospace",fontSize:'var(--fxt)',padding:'3px 8px',cursor:'pointer',letterSpacing:'1px'}}>
+            {label}
+          </button>
+        ))}
+        <span style={{cursor:'pointer',fontSize:12,color:'var(--dim)',padding:'0 4px'}} onClick={onClose}>✕</span>
+      </div>
+
+      {/* CHAT tab */}
+      {tab==='chat'&&(<>
+        {/* quick prompts */}
+        <div style={{padding:'8px 10px',borderBottom:'2px solid var(--brutal)',display:'flex',flexWrap:'wrap',gap:5,flexShrink:0}}>
+          {QUICK_PROMPTS.map(q=>(
+            <button key={q.label} onClick={()=>send(q.prompt)}
+              style={{background:'var(--raised)',border:'2px solid var(--brutal)',color:'var(--text)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxt)',padding:'3px 8px',cursor:'pointer',letterSpacing:'0.5px',boxShadow:'2px 2px 0 var(--brutal)',transition:'all .06s'}}
+              onMouseEnter={e=>{e.target.style.transform='translate(2px,2px)';e.target.style.boxShadow='none';}}
+              onMouseLeave={e=>{e.target.style.transform='';e.target.style.boxShadow='2px 2px 0 var(--brutal)';}}>
+              {q.label}
+            </button>
+          ))}
+        </div>
+        {/* messages */}
+        <div style={{flex:1,overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:12,scrollbarWidth:'thin'}}>
+          {msgs.map((m,i)=>(
+            <div key={i} style={{
+              alignSelf:m.role==='user'?'flex-end':'flex-start',
+              maxWidth:'88%',padding:'10px 13px',
+              background:m.role==='user'?'var(--accent)':m.error?'#c4302822':'var(--raised)',
+              color:m.role==='user'?'var(--bg)':m.error?'var(--red)':'var(--text)',
+              border:'2px solid '+(m.role==='user'?'var(--accent)':m.error?'var(--red)':'var(--brutal)'),
+              fontSize:'var(--fxb)',lineHeight:1.7,whiteSpace:'pre-wrap',
+              boxShadow:m.role==='user'?'none':'3px 3px 0 var(--brutal)',
+            }}>{m.content}</div>
+          ))}
+          {loading&&<div style={{alignSelf:'flex-start',padding:'10px 14px',background:'var(--raised)',border:'2px solid var(--brutal)',fontSize:'var(--fxb)',color:'var(--accent)',letterSpacing:2,boxShadow:'3px 3px 0 var(--brutal)'}}>THINKING...</div>}
+          <div ref={chatEndRef}/>
+        </div>
+        {/* input */}
+        <div style={{borderTop:'3px solid var(--brutal)',padding:'10px 12px',display:'flex',gap:8,flexShrink:0,background:'var(--raised)'}}>
+          <textarea value={input} onChange={e=>setInput(e.target.value)}
+            onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input);}}}
+            placeholder="Ask anything... (Enter to send, Shift+Enter for new line)"
+            style={{flex:1,background:'var(--input-bg)',border:'2px solid var(--brutal)',color:'var(--text)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxb)',padding:'7px 9px',resize:'none',height:60,lineHeight:1.5}}/>
+          <button onClick={()=>send(input)} disabled={loading}
+            style={{background:'var(--accent)',border:'2px solid var(--brutal)',color:'var(--bg)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'0 12px',cursor:'pointer',boxShadow:'3px 3px 0 var(--brutal)',alignSelf:'stretch',letterSpacing:1}}>
+            SEND
+          </button>
+        </div>
+      </>)}
+
+      {/* REFERENCES tab */}
+      {tab==='refs'&&(
+        <div style={{flex:1,overflowY:'auto',padding:'14px 14px',display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.7,letterSpacing:'0.5px'}}>
+            Upload .txt or .md files — books, scripts, worldbuilding docs, reference articles. The AI will use them as context when writing for your game. Large files are truncated to 6,000 characters per document.
+          </div>
+          <input ref={fileRef} type="file" accept=".txt,.md,.csv" style={{display:'none'}} onChange={uploadFile}/>
+          <button onClick={()=>fileRef.current?.click()}
+            style={{background:'var(--raised)',border:'2px solid var(--accent2)',color:'var(--accent2)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'9px',cursor:'pointer',letterSpacing:1,boxShadow:'3px 3px 0 var(--accent2)',textAlign:'center'}}>
+            + UPLOAD FILE (.txt / .md)
+          </button>
+          {uploadStatus&&<div style={{fontSize:'var(--fxs)',color:'var(--accent)',letterSpacing:1}}>{uploadStatus}</div>}
+          {refs.length===0&&<div style={{color:'var(--muted)',fontSize:'var(--fxs)',letterSpacing:1}}>No reference files yet.</div>}
+          {refs.map(r=>(
+            <div key={r.id} style={{background:'var(--raised)',border:'2px solid var(--brutal)',padding:'10px 12px',display:'flex',alignItems:'flex-start',gap:8,boxShadow:'3px 3px 0 var(--brutal)'}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:'var(--fxb)',fontWeight:700,letterSpacing:1,marginBottom:3}}>{r.name}</div>
+                <div style={{fontSize:'var(--fxt)',color:'var(--text2)',letterSpacing:1}}>{Math.round(r.size/1024)}KB · {r.content.split(/\s+/).length.toLocaleString()} words</div>
+                {r.content.length>6000&&<div style={{fontSize:'var(--fxt)',color:'var(--accent2)',letterSpacing:1}}>⚠ truncated to 6KB in context</div>}
+              </div>
+              <span style={{cursor:'pointer',color:'var(--red)',fontSize:12,padding:'2px 4px',flexShrink:0}} onClick={()=>removeRef(r.id)}>✕</span>
+            </div>
+          ))}
+          {refs.length>0&&(
+            <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:1,marginTop:4}}>
+              {refs.length} file{refs.length!==1?'s':''} · ~{Math.round(refs.reduce((a,r)=>a+Math.min(r.content.length,6000),0)/1000)}KB in context
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* API KEY tab */}
+      {tab==='key'&&(
+        <div style={{flex:1,padding:'14px 14px',display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.7,letterSpacing:'0.5px'}}>
+            Your Anthropic API key is stored locally in your browser (localStorage). It is never sent anywhere except directly to the Anthropic API.
+          </div>
+          <div className="pf">
+            <label className="pfl">ANTHROPIC API KEY</label>
+            <input className="pfi" type="password" value={keyDraft} onChange={e=>setKeyDraft(e.target.value)}
+              placeholder="sk-ant-api03-..."
+              onKeyDown={e=>{if(e.key==='Enter')saveKey();}}/>
+          </div>
+          <button onClick={saveKey}
+            style={{background:'var(--accent)',border:'2px solid var(--accent)',color:'var(--bg)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'9px',cursor:'pointer',letterSpacing:1,boxShadow:'3px 3px 0 var(--accent)',textAlign:'center'}}>
+            SAVE KEY
+          </button>
+          {uploadStatus&&<div style={{fontSize:'var(--fxb)',color:'#40c080',letterSpacing:1}}>{uploadStatus}</div>}
+          <div style={{fontSize:'var(--fxt)',color:'var(--muted)',lineHeight:1.8,letterSpacing:'0.5px',marginTop:8}}>
+            Get your API key at console.anthropic.com<br/>
+            Model: {AI_MODEL}<br/>
+            Prompt caching is enabled — reference docs are cached between requests to reduce cost.
+          </div>
+          {apiKey&&<div style={{fontSize:'var(--fxs)',color:'#40c080',letterSpacing:1}}>✓ Key set ({apiKey.slice(0,12)}...)</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── DIALOGUE NODE POPOVER ───────────────────────────────────────── */
 const THOUGHT_EMOTIONS=['FEAR','GRIEF','ANGER','HOPE','DOUBT','RESOLVE','ANXIETY','LONGING','SHAME','PRIDE','LOVE','CALM','NUMBNESS','GUILT','WONDER'];
 const STATEMENT_EMOTIONS=['NEUTRAL','WARM','COLD','TENSE','TIRED','URGENT','SARCASTIC','AFRAID','AMUSED','SUSPICIOUS'];
@@ -1354,10 +1628,17 @@ function DialogueNodePopover({node,chars,onSave,onClose}){
   const [speaker,setSpeaker]=useState(node.speaker||'');
   const [speakerEmotion,setSpeakerEmotion]=useState(node.speakerEmotion||'NEUTRAL');
   const [optA,setOptA]=useState(node.optA||'');
+  const [actA,setActA]=useState(node.actA||'');
+  const [mutedA,setMutedA]=useState(node.mutedA||false);
   const [optB,setOptB]=useState(node.optB||'');
+  const [actB,setActB]=useState(node.actB||'');
+  const [mutedB,setMutedB]=useState(node.mutedB||false);
   const [optC,setOptC]=useState(node.optC||'');
+  const [actC,setActC]=useState(node.actC||'');
+  const [mutedC,setMutedC]=useState(node.mutedC||false);
   const [condition,setCondition]=useState(node.condition||'');
   const [relDelta,setRelDelta]=useState(node.relDelta||'+0');
+  const [endAct,setEndAct]=useState(node.act||'');
   const [action,setAction]=useState(node.action||'give');
   const [item,setItem]=useState(node.item||'');
 
@@ -1365,9 +1646,9 @@ function DialogueNodePopover({node,chars,onSave,onClose}){
     const base={...node,text};
     if(t==='THOUGHTS') onSave({...base,emotion,voice:emotion});
     else if(t==='STATEMENT') onSave({...base,speaker,speakerEmotion,emotion:speakerEmotion});
-    else if(t==='QUESTION') onSave({...base,optA,optB,optC});
+    else if(t==='QUESTION') onSave({...base,optA,actA,mutedA,optB,actB,mutedB,optC,actC,mutedC});
     else if(t==='DEAD_END') onSave(base);
-    else if(t==='END_CONVO') onSave({...base,relDelta});
+    else if(t==='END_CONVO') onSave({...base,relDelta,act:endAct});
     else if(t==='LOOP') onSave({...base,condition});
     else if(t==='ITEMS') onSave({...base,action,item});
     else onSave(base);
@@ -1424,12 +1705,25 @@ function DialogueNodePopover({node,chars,onSave,onClose}){
             <textarea className="pfi" rows={3} value={text} onChange={e=>setText(e.target.value)}
               style={{resize:'vertical',minHeight:60}}/>
           </div>
-          <div className="pf"><label className="pfl">OPTION A</label>
-            <input className="pfi" value={optA} placeholder="player choice A" onChange={e=>setOptA(e.target.value)}/></div>
-          <div className="pf"><label className="pfl">OPTION B</label>
-            <input className="pfi" value={optB} placeholder="player choice B" onChange={e=>setOptB(e.target.value)}/></div>
-          <div className="pf"><label className="pfl">OPTION C (optional)</label>
-            <input className="pfi" value={optC} placeholder="player choice C" onChange={e=>setOptC(e.target.value)}/></div>
+          {[
+            {label:'OPTION A',val:optA,setVal:setOptA,act:actA,setAct:setActA,muted:mutedA,setMuted:setMutedA,ph:'player choice A'},
+            {label:'OPTION B',val:optB,setVal:setOptB,act:actB,setAct:setActB,muted:mutedB,setMuted:setMutedB,ph:'player choice B'},
+            {label:'OPTION C (optional)',val:optC,setVal:setOptC,act:actC,setAct:setActC,muted:mutedC,setMuted:setMutedC,ph:'player choice C (leave blank to hide)'},
+          ].map(({label,val,setVal,act,setAct,muted,setMuted,ph})=>(
+            <div key={label} className="pf">
+              <label className="pfl">{label}</label>
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <input className="pfi" style={{flex:2}} value={val} placeholder={ph} onChange={e=>setVal(e.target.value)}/>
+                <select className="pfi" style={{flex:1}} value={act} onChange={e=>setAct(e.target.value)}>
+                  {KNOWN_ACTS.map(a=><option key={a.value} value={a.value}>{a.label}</option>)}
+                </select>
+                <label style={{display:'flex',alignItems:'center',gap:4,fontSize:'var(--fxs)',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
+                  <input type="checkbox" checked={muted} onChange={e=>setMuted(e.target.checked)}/>
+                  muted
+                </label>
+              </div>
+            </div>
+          ))}
         </>)}
 
         {t==='DEAD_END'&&(
@@ -1446,15 +1740,23 @@ function DialogueNodePopover({node,chars,onSave,onClose}){
             <textarea className="pfi" rows={3} value={text} onChange={e=>setText(e.target.value)}
               style={{resize:'vertical',minHeight:60}}/>
           </div>
-          <div className="pf">
-            <label className="pfl">RELATIONSHIP CHANGE</label>
-            <select className="pfi" value={relDelta} onChange={e=>setRelDelta(e.target.value)}>
-              <option value="+2">+2 (strong bond)</option>
-              <option value="+1">+1 (positive)</option>
-              <option value="+0">+0 (neutral)</option>
-              <option value="-1">-1 (friction)</option>
-              <option value="-2">-2 (broken)</option>
-            </select>
+          <div className="pf-row">
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">RELATIONSHIP CHANGE</label>
+              <select className="pfi" value={relDelta} onChange={e=>setRelDelta(e.target.value)}>
+                <option value="+2">+2 (strong bond)</option>
+                <option value="+1">+1 (positive)</option>
+                <option value="+0">+0 (neutral)</option>
+                <option value="-1">-1 (friction)</option>
+                <option value="-2">-2 (broken)</option>
+              </select>
+            </div>
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">GAME ACTION</label>
+              <select className="pfi" value={endAct} onChange={e=>setEndAct(e.target.value)}>
+                {KNOWN_ACTS.map(a=><option key={a.value} value={a.value}>{a.label}</option>)}
+              </select>
+            </div>
           </div>
         </>)}
 
@@ -1500,10 +1802,61 @@ function DialogueNodePopover({node,chars,onSave,onClose}){
   );
 }
 
+/* ── CONDITION ROW ───────────────────────────────────────────────── */
+function ConditionRow({cond,outfits,chars,onChange,onRemove}){
+  const btn={fontFamily:"'Space Mono',monospace",fontSize:'var(--fxt)',fontWeight:700,padding:'2px 6px',cursor:'pointer',letterSpacing:'1px',border:'2px solid',flexShrink:0};
+  return(
+    <div style={{display:'flex',gap:5,alignItems:'center',padding:'5px 0',borderBottom:'1px solid var(--dimmer)',flexWrap:'wrap'}}>
+      <button style={{...btn,background:cond.negate?'var(--red)':'var(--raised)',borderColor:cond.negate?'var(--red)':'var(--brutal)',color:cond.negate?'var(--bg)':'var(--text)'}}
+        onClick={()=>onChange({negate:!cond.negate})}>NOT</button>
+      <select className="pfi" style={{flex:'0 0 auto',width:88,fontSize:'var(--fxt)',padding:'2px 4px'}}
+        value={cond.type} onChange={e=>onChange({type:e.target.value,value:'',op:'is',charId:''})}>
+        <option value="outfit">OUTFIT</option>
+        <option value="item">ITEM</option>
+        <option value="trust">TRUST</option>
+        <option value="scene">SCENE</option>
+      </select>
+      {cond.type==='outfit'&&(
+        <select className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
+          value={cond.value||''} onChange={e=>onChange({value:e.target.value})}>
+          <option value="">— outfit —</option>
+          {(outfits||[]).filter(o=>o.id!=='any').map(o=><option key={o.id} value={o.id}>{o.label}</option>)}
+        </select>
+      )}
+      {cond.type==='item'&&(
+        <input className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
+          placeholder="item name" value={cond.value||''} onChange={e=>onChange({value:e.target.value})}/>
+      )}
+      {cond.type==='trust'&&(<>
+        <select className="pfi" style={{width:40,fontSize:'var(--fxt)',padding:'2px 3px'}}
+          value={cond.op||'gte'} onChange={e=>onChange({op:e.target.value})}>
+          <option value="gte">≥</option><option value="lt">&lt;</option>
+        </select>
+        <input className="pfi" type="number" min={0} max={4} style={{width:38,fontSize:'var(--fxt)',padding:'2px 4px'}}
+          value={cond.value||0} onChange={e=>onChange({value:parseInt(e.target.value)||0})}/>
+        <select className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
+          value={cond.charId||''} onChange={e=>onChange({charId:e.target.value})}>
+          <option value="">— char —</option>
+          {(chars||[]).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </>)}
+      {cond.type==='scene'&&(
+        <select className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
+          value={cond.value||''} onChange={e=>onChange({value:e.target.value})}>
+          <option value="">— scene —</option>
+          {KNOWN_SCENES.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+      )}
+      <span style={{color:'var(--red)',cursor:'pointer',fontSize:'11px',padding:'0 4px',flexShrink:0}} onClick={onRemove}>✕</span>
+    </div>
+  );
+}
+
 /* ── APP ─────────────────────────────────────────────────────────── */
 function App(){
   const [pal,setPal]=useState('void');
   const [textSize,setTextSize]=useState('sm');
+  const [showAI,setShowAI]=useState(false);
   useEffect(()=>{
     const cls=[];
     if(pal!=='void')cls.push(`pal-${pal}`);
@@ -1789,13 +2142,13 @@ function App(){
       const next=id=>id||null;
       if(n.type==='STATEMENT')return{id:n.id,speaker:n.speaker||null,npc:n.text||'',opts:[{t:'(continue)',next:next(outs.out)}]};
       if(n.type==='QUESTION')return{id:n.id,npc:n.text||'',opts:[
-        {t:n.optA||'Option A',next:next(outs.opt_a)},
-        {t:n.optB||'Option B',next:next(outs.opt_b)},
-        ...(n.optC?[{t:n.optC,next:next(outs.opt_c)}]:[]),
-      ].filter(o=>o.next)};
-      if(n.type==='THOUGHTS')return{id:n.id,internal:true,voice:n.voice||'FEAR',npc:n.text||'',opts:[{t:'',next:next(outs.out)}]};
+        {t:n.optA||'Option A',next:next(outs.opt_a),...(n.actA?{act:n.actA}:{}),...(n.mutedA?{muted:true}:{})},
+        {t:n.optB||'Option B',next:next(outs.opt_b),...(n.actB?{act:n.actB}:{}),...(n.mutedB?{muted:true}:{})},
+        ...(n.optC?[{t:n.optC,next:next(outs.opt_c),...(n.actC?{act:n.actC}:{}),...(n.mutedC?{muted:true}:{})}]:[]),
+      ]};
+      if(n.type==='THOUGHTS')return{id:n.id,internal:true,emotion:n.emotion||n.voice||'FEAR',voice:n.emotion||n.voice||'FEAR',npc:n.text||'',opts:[{t:'',next:next(outs.out)}]};
       if(n.type==='DEAD_END')return{id:n.id,npc:n.text||'',opts:[]};
-      if(n.type==='END_CONVO')return{id:n.id,npc:n.text||'',relDelta:n.relDelta||'+0',opts:[]};
+      if(n.type==='END_CONVO')return{id:n.id,npc:n.text||'',relDelta:n.relDelta||'+0',opts:[{t:'(continue)',next:null,...(n.act?{act:n.act}:{})}]};
       if(n.type==='LOOP')return{id:n.id,npc:n.text||'',condition:n.condition||'',opts:[{t:'(loop)',next:next(outs.returns_to)}]};
       if(n.type==='ITEMS')return{id:n.id,itemCheck:true,action:n.action||'give',item:n.item||'',opts:[
         {t:'if_met',next:next(outs.if_met)},
@@ -1848,7 +2201,7 @@ function App(){
     });
     await tryHandle(h);
     _fhHandle.current=h;
-    await dbPut('exportHandle',h);
+    try{await dbPut('exportHandle',h);}catch(idbErr){} // best-effort; real handles are cloneable, mocks may not be
     return h.name;
   },[dbGet,dbPut]);
 
@@ -1879,7 +2232,7 @@ function App(){
     const dialogueOut={};
     dtrees.forEach(t=>{
       const key=t.name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
-      dialogueOut[key]={id:t.id,name:t.name,treeType:t.treeType,outfitCondition:t.outfitCondition||'any',nodes:serializeDialogueTree(t)};
+      dialogueOut[key]={id:t.id,name:t.name,treeType:t.treeType,outfitCondition:t.outfitCondition||'any',nodes:serializeDialogueTree(t),playCount:t.playCount||'always',playLimit:t.playLimit||1,conditions:t.conditions||[]};
     });
     // 4. SCENES (from SCENE nodes in all master trees)
     const allMtConns=mt.flatMap(t=>(t.conns||[]));
@@ -2086,6 +2439,35 @@ function App(){
             })}
           </div>}
         </div>
+        {/* GAME DIALOGUE — override hardcoded CONV entries */}
+        <div className="acc-section" style={{borderLeft:'2px solid #c47a10'}}>
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='convs'?null:'convs')}>
+            <span className="acc-arrow" style={{transform:openAcc==='convs'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label" style={{color:'#c47a10'}}>GAME DIALOGUE</span>
+          </div>
+          {openAcc==='convs'&&<div className="acc-body">
+            <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px',padding:'2px 0 6px',lineHeight:1.7}}>
+              Click to open. ✓ = kit version exists and will override the hardcoded game dialogue on next export.
+            </div>
+            {KNOWN_CONV_KEYS.map(({key,npc,desc})=>{
+              const exists=dtrees.find(t=>t.name===key);
+              return(
+                <div key={key} className="sb-item" onClick={()=>{
+                  if(exists){pushView('dialogue',exists.id);}
+                  else{
+                    const id=uid();
+                    setDtrees(prev=>[...prev,mkTree({id,name:key,treeType:'dialogue'})]);
+                    setTimeout(()=>pushView('dialogue',id),50);
+                  }
+                }}>
+                  <span style={{fontSize:'var(--fxh)',color:exists?'#40c080':'var(--dimmer)',flexShrink:0}}>{exists?'✓':'○'}</span>
+                  <span className="sb-item-name" style={{color:'#c47a10'}}>{key}</span>
+                  <span className="sb-item-sub">{npc} — {desc}</span>
+                </div>
+              );
+            })}
+          </div>}
+        </div>
         {/* QUESTS */}
         <div className="acc-section">
           <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='quests'?null:'quests')}>
@@ -2196,9 +2578,60 @@ function App(){
       </>);
     }
 
-    /* sub-view sidebar — dialogue gets special Octavia thoughts section */
+    /* sub-view sidebar — dialogue conditions + node palette */
     if(view.type==='dialogue'){
+      const tree=dtrees.find(t=>t.id===view.id);
+      const updTree=f=>{
+        setDtrees(p=>p.map(t=>{
+          if(t.id!==view.id)return t;
+          const u={...t,...f};
+          const pc=u.playCount||'always';const cc=(u.conditions||[]).length;const pl=u.playLimit||1;
+          setMt(prev=>prev.map(mt=>({...mt,nodes:(mt.nodes||[]).map(n=>n.entityId===view.id?{...n,_playCount:pc,_condCount:cc,_playLimit:pl}:n)})));
+          return u;
+        }));
+      };
+      const conds=tree?.conditions||[];
+      const pc=tree?.playCount||'always';
+      const pl=tree?.playLimit||1;
       return(<>
+        {/* ── PLAY CONDITIONS ─────────────────────── */}
+        <div className="acc-section" style={{borderLeft:'3px solid #e09030'}}>
+          <div className="acc-header"><span className="acc-label" style={{color:'#e09030'}}>⚙ PLAY CONDITIONS</span></div>
+          <div className="acc-body">
+            <div className="pf">
+              <label className="pfl">PLAY COUNT</label>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:2}}>
+                {[['always','ALWAYS'],['once','ONCE'],['limit','LIMIT']].map(([v,l])=>(
+                  <label key={v} style={{display:'flex',alignItems:'center',gap:4,fontSize:'var(--fxs)',cursor:'pointer',letterSpacing:'1px'}}>
+                    <input type="radio" name={'pc_'+view.id} value={v} checked={pc===v} onChange={()=>updTree({playCount:v})}/>
+                    {l}
+                  </label>
+                ))}
+              </div>
+              {pc==='limit'&&(
+                <div style={{display:'flex',alignItems:'center',gap:6,marginTop:6}}>
+                  <input className="pfi" type="number" min={1} max={99} style={{width:52}}
+                    value={pl} onChange={e=>updTree({playLimit:parseInt(e.target.value)||1})}/>
+                  <span style={{fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'1px'}}>TIMES</span>
+                </div>
+              )}
+            </div>
+            <div className="pf" style={{marginTop:8}}>
+              <label className="pfl">CONDITIONS (all must pass)</label>
+              {conds.map(c=>(
+                <ConditionRow key={c.id} cond={c} outfits={outfits} chars={chars}
+                  onChange={f=>updTree({conditions:conds.map(x=>x.id===c.id?{...x,...f}:x)})}
+                  onRemove={()=>updTree({conditions:conds.filter(x=>x.id!==c.id)})}/>
+              ))}
+              {conds.length===0&&<div style={{fontSize:'var(--fxs)',color:'var(--muted)',letterSpacing:'1px',padding:'4px 0'}}>no conditions — always fires</div>}
+              <button className="acc-add" style={{marginTop:6,width:'100%',textAlign:'center'}}
+                onClick={()=>updTree({conditions:[...conds,{id:uid(),negate:false,type:'outfit',op:'is',value:''}]})}>
+                + ADD CONDITION
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* ── OCTAVIA'S VOICE ─────────────────────── */}
         <div className="acc-section" style={{borderLeft:'2px solid #40e090'}}>
           <div className="acc-header">
             <span className="acc-label" style={{color:'#40e090'}}>OCTAVIA'S VOICE</span>
@@ -2213,6 +2646,7 @@ function App(){
             </div>
           </div>
         </div>
+        {/* ── DIALOGUE NODES ──────────────────────── */}
         <div className="acc-section">
           <div className="acc-header"><span className="acc-label">DIALOGUE NODES</span></div>
           <div className="acc-body">
@@ -2292,6 +2726,7 @@ function App(){
           <option value="northside">NORTHSIDE</option>
           <option value="chromakopia">CHROMAKOPIA</option>
         </select>
+        <button className="nav-btn" style={{borderColor:'var(--accent)',color:'var(--accent)',boxShadow:'3px 3px 0 var(--accent)'}} onClick={()=>setShowAI(p=>!p)}>✦ AI</button>
         <button className="nav-btn save-btn" onClick={()=>{saveState({chars,dtrees,quests,mt,amid,outfits,audio});showToast('SAVED');}}>SAVE</button>
         <button className="nav-btn export-btn" onClick={exportGame}>EXPORT TO GAME</button>
         <button className="nav-btn back-btn" style={{fontSize:'var(--fxt)',padding:'4px 8px'}}
@@ -2455,6 +2890,7 @@ function App(){
       )}
 
       {toast&&<div className="toast">{toast}</div>}
+      {showAI&&<AIAssistant chars={chars} dtrees={dtrees} quests={quests} onClose={()=>setShowAI(false)}/>}
     </div>
   );
 }

@@ -947,7 +947,8 @@ function VoiceBox({seq,onChoose,onFinish}){
 function ChatBox({convKey,npcName,npcImg,total,onAct}){
   const [nodeId,setNodeId]=useState('s0');
   const [sel,setSel]=useState(0);
-  const tree=CONV[convKey]||[];
+  const outfit=window.__beau_outfit||'cyber_octavia';
+  const tree=CONV[convKey+'__'+outfit]||CONV[convKey]||[];
   const node=tree.find(n=>n.id===nodeId)||tree[0];
   const npcText=(node?.npc||'').replace('__TOTAL__',`That'll be $${total}.`);
 
@@ -1910,6 +1911,8 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
   const [facing,setFacing]=useState('left');
   const [walking,setWalking]=useState(false);
   const [doorMsg,setDoorMsg]=useState(null);
+  const [conv,setConv]=useState(null);
+  const firedTriggers=useRef(new Set());
   const raf=useRef(null);
   const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.5,stamina,onStaminaChange,currentOutfit,hudOpen);
   const atElevatorHall=px>=80&&px<=124;
@@ -1955,18 +1958,32 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
     raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
   },[]);
 
+  // worldX dialogue triggers from construction kit
+  useEffect(()=>{
+    if(conv)return;
+    const triggers=(window.__beau_scene_triggers||{})['fourth_floor_hallway']||[];
+    for(const t of triggers){
+      if(!firedTriggers.current.has(t.key)&&Math.abs(px-t.worldX)<40){
+        firedTriggers.current.add(t.key);
+        setConv(t.key);
+        break;
+      }
+    }
+  },[px,conv]);
+
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#08090a'}}>
       <video src={FOURTH_FLOOR_HALLWAY_VID} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}} autoPlay muted loop playsInline/>
-      {atElevatorHall&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR HALL"/></div>}
-      {atApt&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] APARTMENT"/></div>}
-      {nearBusyDoor&&!doorMsg&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
-      {nearNoAnswerDoor&&!doorMsg&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
+      {atElevatorHall&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR HALL"/></div>}
+      {atApt&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] APARTMENT"/></div>}
+      {nearBusyDoor&&!doorMsg&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
+      {nearNoAnswerDoor&&!doorMsg&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
       {doorMsg&&<div style={{position:'absolute',bottom:200,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:8,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace",whiteSpace:'nowrap'}}>{doorMsg}</div>}
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={102} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="fourth_floor_hallway" onSceneChange={debugGo}/>}
+      {conv&&<ChatBox convKey={conv} npcName="OCTAVIA" npcImg={''} total={0} onAct={act=>{if(act==='end'||!act)setConv(null);}}/>}
     </div>
   );
 }
@@ -4709,6 +4726,7 @@ function QuestApp(){
     return init;
   });
   const [currentOutfit,setCurrentOutfit]=useState('cyber_octavia');
+  useEffect(()=>{ window.__beau_outfit=currentOutfit; },[currentOutfit]);
   const [playerFacing,setPlayerFacing]=useState('right'); // 'left' or 'right'
   const [isPlayerMoving,setIsPlayerMoving]=useState(false);
   const handleChangeColor=useCallback((presetId)=>{
@@ -4920,7 +4938,86 @@ function Root(){
   if(!started)return <LoadingScreen onStart={()=>setStarted(true)}/>;
   return <QuestApp/>;
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+// ── GAME DATA LOADER ─────────────────────────────────────────────
+// Tries to load beauregarde_data.json exported from the Construction Kit.
+// If the file exists, it replaces the hardcoded PEOPLE_DB and QUESTS_DB arrays.
+// If not found, the hardcoded defaults above are used as-is.
+(async()=>{
+  try{
+    const r=await fetch('beauregarde_data.json');
+    if(r.ok){
+      const d=await r.json();
+      // store full payload on window so scene scripts can access dialogue/scenes/spawns
+      window.BEAUREGARDE_DATA=d;
+      // merge people → PEOPLE_DB (preserve format: id,name,role,handle,status,portrait,info,discovered,category)
+      if(d.people&&d.people.length){
+        PEOPLE_DB.splice(0,PEOPLE_DB.length,...d.people.map(p=>({
+          id:p.id, name:(p.name||'').toUpperCase(), role:p.role||'',
+          handle:p.handle||'', status:(p.status||'CONTACT').toUpperCase(),
+          portrait:p.portrait||'', info:p.info||'',
+          discovered:p.discovered!==false, category:p.category||null,
+        })));
+      }
+      // merge quests → QUESTS_DB buckets
+      if(d.quests){
+        ['major','minor','personal','opp'].forEach(bucket=>{
+          if(d.quests[bucket]&&d.quests[bucket].length){
+            QUESTS_DB[bucket].splice(0,QUESTS_DB[bucket].length,...d.quests[bucket].map(q=>({
+              id:q.id, name:(q.name||'').toUpperCase(),
+              status:(q.status||'ACTIVE').toUpperCase(),
+              progress:q.progress||'', info:q.info||'',
+            })));
+          }
+        });
+      }
+      // merge dialogue trees into CONV — kit trees override hardcoded ones by key
+      if(d.dialogue){
+        Object.entries(d.dialogue).forEach(([key,tree])=>{
+          if(!tree.nodes||!tree.nodes.length)return;
+          const oc=tree.outfitCondition||'any';
+          if(oc==='any'){
+            CONV[key]=tree.nodes;
+          } else {
+            CONV[key+'__'+oc]=tree.nodes;       // outfit-specific variant
+            if(!CONV[key]) CONV[key]=tree.nodes; // base fallback if none exists
+          }
+        });
+      }
+      // build scene trigger map: sceneName → [{key, worldX}]
+      if(d.scenes){
+        const trigMap={};
+        d.scenes.forEach(s=>{
+          if(s.dialogueTrigger&&s.dialogueTrigger.key&&s.dialogueTrigger.worldX!=null){
+            if(!trigMap[s.name])trigMap[s.name]=[];
+            trigMap[s.name].push({key:s.dialogueTrigger.key,worldX:s.dialogueTrigger.worldX});
+          }
+        });
+        window.__beau_scene_triggers=trigMap;
+      }
+      console.log('[Beauregarde] Loaded beauregarde_data.json — people:',d.people?.length||0,'quests:',Object.values(d.quests||{}).flat().length,'dialogue:',Object.keys(d.dialogue||{}).length,'triggers:',Object.keys(window.__beau_scene_triggers||{}).length);
+    }
+  }catch(e){
+    console.log('[Beauregarde] No beauregarde_data.json — using hardcoded defaults.');
+  }
+
+  // Helper: get the right dialogue tree for a given key + current outfit.
+  // Usage: getDialogueTree('raymond_first_meeting', currentOutfit)
+  // Returns the serialized node array, or null if not found.
+  // Outfit matching: prefers an exact outfit match; falls back to 'any'; returns null if nothing found.
+  window.getDialogueTree=(key, outfit='cyber_octavia')=>{
+    const data=window.BEAUREGARDE_DATA;
+    if(!data?.dialogue)return null;
+    const all=Object.values(data.dialogue);
+    const byKey=all.filter(t=>t.id===key||t.name?.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')=== key);
+    if(!byKey.length)return null;
+    const exact=byKey.find(t=>t.outfitCondition===outfit);
+    if(exact)return exact.nodes;
+    const any=byKey.find(t=>!t.outfitCondition||t.outfitCondition==='any');
+    return any?any.nodes:null;
+  };
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+})();
 </script>
 <script>
 (function(){

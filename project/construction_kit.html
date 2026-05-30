@@ -1,0 +1,2465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BEAUREGARDE — Construction Kit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --bg:#68bfb8; --surface:#f0ebe0; --raised:#e4ddd0;
+      --text:#0e0b08; --text2:#5a4838;
+      --dim:#9a9080; --dimmer:#d0cabb; --border:#c0b8a8;
+      --accent:#1a7870; --accent2:#b84818; --red:#c43028;
+      --muted:#887868; --tag-bg:#e8e2d3; --input-bg:#ffffff; --scroll:#9a9080;
+      --brutal:#0e0b08;
+      --fxt:6px; --fxs:7px; --fxb:8px; --fxh:9px;
+    }
+    body.fs-md { --fxt:8px; --fxs:9px; --fxb:10px; --fxh:11px; }
+    body.fs-lg { --fxt:10px; --fxs:11px; --fxb:13px; --fxh:14px; }
+    body.pal-chalk {
+      --bg:#f0ebe0; --surface:#ffffff; --raised:#e8e2d4;
+      --text:#1a1208; --text2:#6a5840; --dim:#b0988a; --dimmer:#d8d0c0; --border:#c8c0b0;
+      --accent:#d44414; --accent2:#a83210; --red:#c43028;
+      --muted:#8a7868; --tag-bg:#ede8dc; --input-bg:#ffffff; --scroll:#b0988a;
+      --brutal:#1a1208;
+    }
+    body.pal-northside {
+      --bg:#12082a; --surface:#1e1040; --raised:#281850;
+      --text:#c8f0dc; --text2:#7890a8; --dim:#5040a0; --dimmer:#2a1860; --border:#381e60;
+      --accent:#a030e0; --accent2:#28cc80; --red:#e03068;
+      --muted:#6050a0; --tag-bg:#201040; --input-bg:#1e1040; --scroll:#5040a0;
+      --brutal:#5040a0;
+    }
+    body.pal-chromakopia {
+      --bg:#090c07; --surface:#121810; --raised:#1a2018;
+      --text:#d8e0c0; --text2:#788058; --dim:#3a5030; --dimmer:#1e2a18; --border:#253020;
+      --accent:#4a9038; --accent2:#88c840; --red:#c43028;
+      --muted:#587048; --tag-bg:#151c12; --input-bg:#121810; --scroll:#3a5030;
+      --brutal:#3a5030;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html, body { height:100%; overflow:hidden; }
+    body { background:var(--bg); color:var(--text); font-family:'Space Mono',monospace; }
+
+    /* SHELL */
+    .shell { display:flex; flex-direction:column; height:100vh; }
+
+    /* NAV */
+    .nav { display:flex; align-items:center; gap:8px; background:var(--surface); border-bottom:3px solid var(--brutal); padding:0 14px; height:48px; flex-shrink:0; z-index:300; }
+    .nav-title { color:var(--accent); font-size:var(--fxh); font-weight:700; letter-spacing:3px; white-space:nowrap; }
+    .nav-spacer { flex:1; }
+    .nav-btn { background:var(--raised); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); font-weight:700; letter-spacing:1px; padding:5px 12px; cursor:pointer; white-space:nowrap; box-shadow:3px 3px 0 var(--brutal); transition:box-shadow .06s,transform .06s; }
+    .nav-btn:hover { border-color:var(--accent); color:var(--accent); box-shadow:none; transform:translate(3px,3px); }
+    .nav-btn.back-btn { border-color:var(--brutal); color:var(--text2); box-shadow:2px 2px 0 var(--brutal); }
+    .nav-btn.back-btn:hover { color:var(--text); box-shadow:none; transform:translate(2px,2px); }
+    .nav-btn.save-btn { border-color:var(--accent2); color:var(--accent2); box-shadow:3px 3px 0 var(--accent2); }
+    .nav-btn.save-btn:hover { background:var(--accent2); color:var(--bg); box-shadow:none; transform:translate(3px,3px); }
+    .nav-btn.export-btn { border-color:var(--accent); color:var(--accent); box-shadow:3px 3px 0 var(--accent); }
+    .nav-btn.export-btn:hover { background:var(--accent); color:var(--bg); box-shadow:none; transform:translate(3px,3px); }
+    .pal-sel { background:var(--raised); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:4px 6px; cursor:pointer; }
+
+    /* TREE / BREADCRUMB BAR */
+    .tree-bar { display:flex; align-items:center; background:var(--surface); border-bottom:2px solid var(--brutal); height:34px; overflow-x:auto; overflow-y:hidden; flex-shrink:0; }
+    .tree-bar::-webkit-scrollbar { height:0; }
+    .tree-tab { display:flex; align-items:center; gap:5px; padding:0 12px; height:100%; border-right:2px solid var(--brutal); cursor:pointer; flex-shrink:0; user-select:none; }
+    .tree-tab:hover { background:var(--raised); }
+    .tree-tab.active { background:var(--raised); border-bottom:3px solid var(--accent); }
+    .tree-tab-name { font-size:var(--fxb); color:var(--text2); letter-spacing:1px; }
+    .tree-tab.active .tree-tab-name { color:var(--accent); }
+    .tree-tab-rename { font-size:var(--fxb); background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; padding:1px 4px; width:90px; }
+    .tree-type-badge { font-size:var(--fxt); font-weight:700; letter-spacing:1px; padding:2px 4px; cursor:pointer; color:var(--bg); flex-shrink:0; user-select:none; }
+    .tree-type-badge:hover { opacity:0.75; }
+    .sb-item.sb-active { background:var(--raised); }
+    .tree-tab-del { font-size:var(--fxh); color:var(--dim); cursor:pointer; }
+    .tree-tab-del:hover { color:var(--red); }
+    .tree-new { display:flex; align-items:center; padding:0 14px; cursor:pointer; font-size:var(--fxb); color:var(--text2); letter-spacing:1px; flex-shrink:0; }
+    .tree-new:hover { color:var(--accent); }
+    /* breadcrumb */
+    .bc-item { display:flex; align-items:center; padding:0 12px; height:100%; cursor:pointer; font-size:var(--fxb); letter-spacing:1px; color:var(--text2); white-space:nowrap; }
+    .bc-item:hover { color:var(--text); }
+    .bc-item.active { color:var(--accent); font-weight:700; }
+    .bc-sep { color:var(--dim); font-size:10px; flex-shrink:0; }
+
+    /* BODY ROW */
+    .body-row { display:flex; flex:1; overflow:hidden; }
+
+    /* SIDEBAR */
+    .sidebar { width:280px; flex-shrink:0; background:var(--surface); border-right:3px solid var(--brutal); overflow-y:auto; display:flex; flex-direction:column; }
+    .sidebar::-webkit-scrollbar { width:4px; }
+    .sidebar::-webkit-scrollbar-thumb { background:var(--scroll); }
+    .acc-section { border-bottom:2px solid var(--brutal); }
+    .acc-header { display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; user-select:none; }
+    .acc-header:hover { background:var(--raised); }
+    .acc-arrow { font-size:var(--fxb); color:var(--text2); transition:transform .15s; }
+    .acc-label { font-size:var(--fxb); font-weight:700; letter-spacing:2px; color:var(--text); flex:1; }
+    .acc-add { font-size:var(--fxs); letter-spacing:1px; color:var(--accent2); background:none; border:2px solid var(--accent2); padding:3px 7px; cursor:pointer; font-family:'Space Mono',monospace; box-shadow:2px 2px 0 var(--accent2); transition:box-shadow .06s,transform .06s; }
+    .acc-add:hover { background:var(--accent2); color:var(--bg); box-shadow:none; transform:translate(2px,2px); }
+    .acc-body { background:var(--bg); }
+    .sb-item { display:flex; align-items:center; gap:7px; padding:6px 12px; cursor:pointer; user-select:none; }
+    .sb-item:hover { background:var(--raised); }
+    .sb-item-icon { font-size:10px; }
+    .sb-item-name { font-size:var(--fxb); color:var(--text); flex:1; }
+    .sb-item-sub { font-size:var(--fxs); color:var(--text2); }
+    .sb-sep { padding:5px 12px 3px; font-size:var(--fxs); letter-spacing:2px; color:var(--dim); font-weight:700; }
+
+    /* CANVAS AREA */
+    .canvas-area { flex:1; display:flex; overflow:hidden; position:relative; }
+    .canvas-wrap { flex:1; position:relative; overflow:hidden; background:var(--bg); }
+    .canvas-empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; pointer-events:none; }
+    .canvas-empty-label { font-size:11px; letter-spacing:4px; color:var(--dimmer); }
+    .canvas-empty-sub { font-size:var(--fxs); color:var(--dimmer); letter-spacing:1px; }
+
+    /* WIRES */
+    .wires-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+    .wire-path { fill:none; stroke-width:2; opacity:0.8; }
+    .wire-draft { fill:none; stroke:#ffffff; stroke-width:1.5; stroke-dasharray:6 4; opacity:0.5; }
+
+    /* CANVAS INNER */
+    .canvas-inner { position:absolute; transform-origin:0 0; }
+
+    /* NODES */
+    .node { position:absolute; min-width:210px; background:var(--surface); border:2px solid var(--brutal); border-top-width:3px; user-select:none; z-index:2; box-shadow:4px 4px 0 var(--brutal); }
+    .node.selected { border-color:var(--accent); box-shadow:4px 4px 0 var(--accent); z-index:3; }
+    .node-header { display:flex; align-items:center; gap:5px; padding:5px 8px; cursor:grab; border-bottom:2px solid var(--brutal); }
+    .node-header:active { cursor:grabbing; }
+    .node-icon { font-size:10px; flex-shrink:0; }
+    .node-type-lbl { font-size:var(--fxs); font-weight:700; letter-spacing:2px; flex-shrink:0; }
+    .node-title { font-size:var(--fxb); color:var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .node-edit-btn { font-size:var(--fxs); color:var(--accent2); border:2px solid var(--accent2); padding:1px 5px; cursor:pointer; letter-spacing:1px; flex-shrink:0; box-shadow:2px 2px 0 var(--accent2); transition:box-shadow .06s,transform .06s; }
+    .node-edit-btn:hover { background:var(--accent2); color:var(--bg); box-shadow:none; transform:translate(2px,2px); }
+    .node-open-btn { font-size:var(--fxh); color:var(--text2); cursor:pointer; flex-shrink:0; padding:0 2px; }
+    .node-open-btn:hover { color:var(--accent); }
+    .node-del { font-size:10px; color:var(--dim); cursor:pointer; flex-shrink:0; }
+    .node-del:hover { color:var(--red); }
+    .node-body { padding:4px 0; }
+    /* port rows */
+    .pr { display:flex; align-items:center; padding:3px 0; position:relative; min-height:20px; }
+    .pr.in { padding-left:16px; padding-right:8px; }
+    .pr.out { padding-left:8px; padding-right:16px; justify-content:flex-end; }
+    .pd { position:absolute; width:10px; height:10px; border-radius:50%; border:2px solid var(--bg); cursor:crosshair; z-index:5; top:50%; transform:translateY(-50%); }
+    .pr.in .pd { left:-5px; }
+    .pr.out .pd { right:-5px; }
+    .pl { font-size:var(--fxs); color:var(--text2); letter-spacing:1px; }
+    .pr.connected .pd { border-color:var(--surface); }
+    .pr.in.connected:hover .pd { background:var(--red) !important; cursor:pointer; }
+    .pr.in.connected:hover .pl { color:var(--red); }
+    /* node fields */
+    .nf { padding:2px 10px; display:flex; align-items:center; gap:6px; }
+    .nfl { font-size:var(--fxs); color:var(--text2); letter-spacing:1px; width:54px; flex-shrink:0; }
+    .nfv { font-size:var(--fxb); color:var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .nd { height:2px; background:var(--brutal); margin:3px 0; }
+
+    /* EDIT PANEL */
+    .edit-panel { width:280px; flex-shrink:0; background:var(--surface); border-left:2px solid var(--brutal); display:flex; flex-direction:column; z-index:10; }
+    .ep-header { display:flex; align-items:center; padding:10px 12px; border-bottom:2px solid var(--brutal); gap:8px; }
+    .ep-title { font-size:var(--fxh); font-weight:700; letter-spacing:2px; color:var(--accent); flex:1; }
+    .ep-close { background:none; border:2px solid var(--brutal); color:var(--text2); font-family:'Space Mono',monospace; font-size:var(--fxs); padding:3px 8px; cursor:pointer; }
+    .ep-close:hover { border-color:var(--red); color:var(--red); }
+    .ep-body { flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:10px; }
+    .ep-body::-webkit-scrollbar { width:4px; }
+    .ep-body::-webkit-scrollbar-thumb { background:var(--scroll); }
+    .ep-field { display:flex; flex-direction:column; gap:4px; }
+    .ep-label { font-size:var(--fxs); letter-spacing:2px; color:var(--text2); font-weight:700; }
+    .ep-input { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; }
+    .ep-input:focus { border-color:var(--accent); outline:none; }
+    .ep-textarea { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; height:70px; resize:vertical; }
+    .ep-textarea:focus { border-color:var(--accent); outline:none; }
+    .ep-sep { font-size:var(--fxs); letter-spacing:2px; color:var(--dim); font-weight:700; border-top:2px solid var(--brutal); padding-top:6px; }
+    .ep-open-btn { background:var(--raised); border:2px solid var(--accent2); color:var(--accent2); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:6px; cursor:pointer; letter-spacing:1px; text-align:center; box-shadow:2px 2px 0 var(--accent2); transition:box-shadow .06s,transform .06s; }
+    .ep-open-btn:hover { background:var(--accent2); color:var(--bg); box-shadow:none; transform:translate(2px,2px); }
+
+    /* POPOVER */
+    .popover-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:600; display:flex; align-items:center; justify-content:center; }
+    .popover-box { background:var(--surface); border:3px solid var(--brutal); box-shadow:8px 8px 0 var(--brutal); width:600px; max-width:96vw; max-height:85vh; display:flex; flex-direction:column; }
+    .popover-header { display:flex; align-items:center; padding:12px 16px; border-bottom:2px solid var(--brutal); gap:10px; flex-shrink:0; }
+    .popover-title { font-size:10px; font-weight:700; letter-spacing:3px; flex:1; }
+    .popover-close { background:none; border:2px solid var(--brutal); color:var(--text2); font-family:'Space Mono',monospace; font-size:var(--fxs); padding:4px 10px; cursor:pointer; box-shadow:2px 2px 0 var(--brutal); transition:box-shadow .06s,transform .06s; }
+    .popover-close:hover { border-color:var(--red); color:var(--red); box-shadow:none; transform:translate(2px,2px); }
+    .popover-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+    .popover-body::-webkit-scrollbar { width:4px; }
+    .popover-body::-webkit-scrollbar-thumb { background:var(--scroll); }
+    /* tabs inside popover */
+    .pop-tabs { display:flex; border-bottom:2px solid var(--brutal); flex-shrink:0; }
+    .pop-tab { padding:8px 16px; font-size:var(--fxb); letter-spacing:1px; cursor:pointer; color:var(--text2); border-bottom:3px solid transparent; margin-bottom:-2px; }
+    .pop-tab:hover { color:var(--text); }
+    .pop-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .pop-tab-body { flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+    .pop-tab-body::-webkit-scrollbar { width:4px; }
+    .pop-tab-body::-webkit-scrollbar-thumb { background:var(--scroll); }
+    /* fields */
+    .pf { display:flex; flex-direction:column; gap:4px; }
+    .pfl { font-size:var(--fxs); letter-spacing:2px; color:var(--text2); font-weight:700; }
+    .pfi { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; }
+    .pfi:focus { border-color:var(--accent); outline:none; box-shadow:2px 2px 0 var(--accent); }
+    .pf-row { display:flex; gap:10px; }
+    /* item table */
+    .itbl { display:flex; flex-direction:column; gap:4px; }
+    .itbl-hdr { display:flex; gap:6px; padding:2px 8px; opacity:0.45; }
+    .itbl-hdr span { font-size:var(--fxs); letter-spacing:1px; }
+    .irow { display:flex; gap:6px; align-items:center; padding:5px 8px; background:var(--raised); border:2px solid var(--brutal); }
+    .ifield { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'Space Mono',monospace; }
+    .ifield:focus { border-color:var(--accent); outline:none; }
+    .ifield.fn { flex:2; }
+    .ifield.fp { width:60px; }
+    .ifield.ft { width:86px; }
+    .ifield.fq { width:50px; }
+    .isel { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 4px; font-family:'Space Mono',monospace; width:86px; }
+    .idel { background:none; border:none; color:var(--dim); cursor:pointer; font-size:10px; padding:0 2px; flex-shrink:0; }
+    .idel:hover { color:var(--red); }
+    .iadd { background:var(--raised); border:2px dashed var(--brutal); color:var(--text2); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:7px; cursor:pointer; letter-spacing:1px; text-align:center; }
+    .iadd:hover { border-color:var(--accent2); color:var(--accent2); }
+    .isave { background:var(--raised); border:2px solid var(--accent); color:var(--accent); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:8px; cursor:pointer; letter-spacing:1px; text-align:center; margin-top:4px; box-shadow:3px 3px 0 var(--accent); transition:box-shadow .06s,transform .06s; }
+    .isave:hover { background:var(--accent); color:var(--bg); box-shadow:none; transform:translate(3px,3px); }
+    /* list rows (scenes, spawn) */
+    .lrow { display:flex; gap:6px; align-items:center; padding:5px 8px; background:var(--raised); border:2px solid var(--brutal); }
+    .lfield-a { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'Space Mono',monospace; flex:1; min-width:0; }
+    .lfield-a:focus { border-color:var(--accent); outline:none; }
+    .lfield-b { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'Space Mono',monospace; flex:2; min-width:0; }
+    .lfield-b:focus { border-color:var(--accent); outline:none; }
+    .psec { font-size:var(--fxs); letter-spacing:2px; color:var(--dim); font-weight:700; margin-top:6px; }
+
+    /* CONTEXT MENU */
+    .ctx-menu { position:fixed; background:var(--surface); border:2px solid var(--brutal); box-shadow:4px 4px 0 var(--brutal); z-index:1000; min-width:140px; }
+    .ctx-item { padding:7px 14px; font-size:var(--fxb); cursor:pointer; letter-spacing:1px; }
+    .ctx-item:hover { background:var(--raised); color:var(--accent); }
+    .ctx-item.danger:hover { color:var(--red); }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:20px; right:20px; background:var(--raised); border:2px solid var(--accent); box-shadow:4px 4px 0 var(--accent); color:var(--accent); font-size:var(--fxb); letter-spacing:2px; padding:8px 16px; z-index:9999; pointer-events:none; }
+
+    /* SEARCH */
+    .nav-search { display:flex; align-items:center; background:var(--raised); border:2px solid var(--brutal); padding:0 8px; gap:5px; flex:1; max-width:260px; }
+    .nav-search-input { background:none; border:none; color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); letter-spacing:1px; width:100%; padding:5px 0; outline:none; }
+    .nav-search-input::placeholder { color:var(--muted); }
+    .nav-search-clear { color:var(--dim); cursor:pointer; font-size:10px; flex-shrink:0; }
+    .nav-search-clear:hover { color:var(--red); }
+    .search-header { padding:6px 12px; font-size:var(--fxs); letter-spacing:2px; color:var(--dim); font-weight:700; border-bottom:2px solid var(--brutal); }
+    .search-cat { padding:4px 12px 2px; font-size:var(--fxs); letter-spacing:2px; color:var(--accent2); font-weight:700; }
+
+    /* LIBRARY COUNT */
+    .acc-count { font-size:var(--fxs); color:var(--muted); background:var(--dimmer); padding:1px 5px; border:1px solid var(--brutal); flex-shrink:0; }
+
+    /* OUTFIT SUB-ACCORDION */
+    .outfit-acc-hdr { display:flex; align-items:center; gap:7px; padding:7px 12px; cursor:pointer; user-select:none; border-top:2px solid var(--brutal); }
+    .outfit-acc-hdr:hover { background:var(--raised); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useEffect,useLayoutEffect,useCallback,useMemo}=React;
+
+/* ── PORT COLORS ─────────────────────────────────────────────────── */
+const PC={
+  character:{color:'#40c080'},
+  dialogue: {color:'#c47a10'},
+  quest:    {color:'#d4a020'},
+  place:    {color:'#4080c0'},
+  flow:     {color:'#7a7090'},
+  item:     {color:'#a06890'},
+  trigger:  {color:'#e05030'},
+  exit:     {color:'#e0a020'},
+};
+const wc=pt=>PC[pt]?.color||'#888';
+
+/* ── PORT DEFINITIONS ────────────────────────────────────────────── */
+const NP={
+  /* MASTER GRAPH */
+  OCTAVIA:{
+    inputs:[],
+    outputs:[
+      {id:'to_scene',   label:'TO SCENE',    pt:'character'},
+      {id:'to_dialogue',label:'THOUGHTS',    pt:'dialogue'},
+    ]
+  },
+  CHARACTER:{
+    inputs:[],
+    outputs:[
+      {id:'to_scene',   label:'TO SCENE',    pt:'character'},
+      {id:'to_dialogue',label:'TO DIALOGUE', pt:'dialogue'},
+      {id:'to_quest',   label:'TO QUEST',    pt:'quest'},
+    ]
+  },
+  QUEST:{
+    inputs:[
+      {id:'from_octavia',label:'OCTAVIA',    pt:'character'},
+      {id:'from_char',  label:'ASSIGNED BY', pt:'character'},
+    ],
+    outputs:[
+      {id:'to_dialogue',label:'DIALOGUE',    pt:'dialogue'},
+      {id:'to_char',    label:'CHARACTER',   pt:'character'},
+      {id:'to_scene',   label:'SCENE',       pt:'place'},
+      {id:'next_quest', label:'NEXT QUEST',  pt:'quest'},
+    ]
+  },
+  DIALOGUE_TREE:{
+    inputs:[
+      {id:'from_char',  label:'SPEAKER',     pt:'character'},
+      {id:'from_quest', label:'FOR QUEST',   pt:'quest'},
+      {id:'from_scene', label:'FROM SCENE',  pt:'dialogue'},
+    ],
+    outputs:[]
+  },
+  /* MASTER — INVENTORY node */
+  INVENTORY:{
+    inputs:[
+      {id:'from_scene', label:'FROM SCENE',  pt:'place'},
+      {id:'from_char',  label:'CHARACTER',   pt:'character'},
+    ],
+    outputs:[
+      {id:'on_give',    label:'ON GIVE',     pt:'flow'},
+      {id:'on_take',    label:'ON TAKE',     pt:'flow'},
+      {id:'to_dialogue',label:'DIALOGUE',    pt:'dialogue'},
+    ]
+  },
+  /* MASTER — TRIGGER node */
+  TRIGGER:{
+    inputs:[
+      {id:'from_scene', label:'FROM SCENE',  pt:'place'},
+      {id:'from_quest', label:'FROM QUEST',  pt:'quest'},
+    ],
+    outputs:[
+      {id:'fires_dialogue',label:'DIALOGUE', pt:'dialogue'},
+      {id:'fires_quest',label:'QUEST',       pt:'quest'},
+    ]
+  },
+  /* MASTER — SPAWN POINT node (character→scene bridge with worldX) */
+  SPAWN_POINT:{
+    inputs:[{id:'from_char',  label:'CHARACTER',  pt:'character'}],
+    outputs:[{id:'to_scene',  label:'TO SCENE',   pt:'character'}],
+  },
+  /* MASTER — SCENE node (location/moment) */
+  SCENE:{
+    inputs:[
+      {id:'from_octavia',label:'OCTAVIA',    pt:'character'},
+      {id:'from_char',  label:'CHARACTER',   pt:'character', multi:true},
+      {id:'from_quest', label:'FROM QUEST',  pt:'quest'},
+      {id:'from_exit',  label:'FROM SCENE',  pt:'exit'},
+    ],
+    outputs:[
+      {id:'exits_to',   label:'EXITS TO',   pt:'exit'},
+      {id:'to_dialogue',label:'DIALOGUE',    pt:'dialogue'},
+      {id:'to_trigger', label:'TRIGGER',     pt:'trigger'},
+      {id:'to_inventory',label:'INVENTORY',  pt:'item'},
+    ]
+  },
+  /* DIALOGUE SUB-CANVAS */
+  STATEMENT:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[{id:'out', label:'NEXT',        pt:'flow'}]
+  },
+  QUESTION:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[
+      {id:'opt_a',      label:'OPTION A',    pt:'flow'},
+      {id:'opt_b',      label:'OPTION B',    pt:'flow'},
+      {id:'opt_c',      label:'OPTION C',    pt:'flow'},
+    ]
+  },
+  ITEMS:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[
+      {id:'if_met',     label:'IF MET',      pt:'flow'},
+      {id:'if_not',     label:'IF NOT MET',  pt:'flow'},
+    ]
+  },
+  DEAD_END:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[]
+  },
+  LOOP:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[{id:'returns_to',label:'RETURNS TO',pt:'flow'}]
+  },
+  END_CONVO:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[]
+  },
+  THOUGHTS:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[{id:'out', label:'CONTINUES',   pt:'flow'}]
+  },
+  OUTFIT_CHECK:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[
+      {id:'hoodie',  label:'HOODIE',         pt:'flow'},
+      {id:'regular', label:'REGULAR',        pt:'flow'},
+      {id:'other',   label:'OTHER OUTFIT',   pt:'flow'},
+    ]
+  },
+  /* CHARACTER SUB-CANVAS */
+  CHAR_DETAIL:{
+    inputs:[],
+    outputs:[
+      {id:'to_dialogue',label:'DIALOGUE',    pt:'dialogue'},
+      {id:'to_quest',   label:'QUEST',       pt:'quest'},
+    ]
+  },
+  CHAR_DIALOGUE_REF:{
+    inputs: [{id:'from_char',label:'FROM CHAR',pt:'character'}],
+    outputs:[{id:'out',      label:'CONTINUES', pt:'flow'}]
+  },
+  CHAR_QUEST_REF:{
+    inputs: [{id:'from_char',label:'FROM CHAR',pt:'character'}],
+    outputs:[]
+  },
+  /* QUEST SUB-CANVAS */
+  QUEST_INFO:{
+    inputs:[],
+    outputs:[{id:'first_step',label:'FIRST STEP',pt:'flow'}]
+  },
+  QUEST_STEP:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[
+      {id:'out',        label:'NEXT STEP',   pt:'flow'},
+      {id:'dialogue',   label:'DIALOGUE',    pt:'dialogue'},
+      {id:'at_place',   label:'AT PLACE',    pt:'place'},
+    ]
+  },
+  QUEST_COLLECTABLE:{
+    inputs: [{id:'in',  label:'FROM STEP',   pt:'flow'}],
+    outputs:[{id:'out', label:'COLLECTED',   pt:'flow'}]
+  },
+  QUEST_CONDITION:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[
+      {id:'if_met',     label:'IF MET',      pt:'flow'},
+      {id:'if_not',     label:'IF NOT MET',  pt:'flow'},
+    ]
+  },
+  QUEST_END:{
+    inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
+    outputs:[]
+  },
+};
+
+/* ── NODE META ───────────────────────────────────────────────────── */
+const NM={
+  OCTAVIA:          {icon:'⊙', lbl:'OCTAVIA',        color:'#40e090'},
+  SPAWN_POINT:      {icon:'⊕', lbl:'SPAWN POINT',   color:'#4ab8d0'},
+  CHARACTER:        {icon:'◉', lbl:'CHARACTER',     color:'#40c080', canOpen:true,  ot:'character'},
+  QUEST:            {icon:'◆', lbl:'QUEST',          color:'#d4a020', canOpen:true,  ot:'quest'},
+  DIALOGUE_TREE:    {icon:'💬',lbl:'DIALOGUE TREE',  color:'#c47a10', canOpen:true,  ot:'dialogue'},
+  INVENTORY:        {icon:'🎒',lbl:'INVENTORY',      color:'#a06890'},
+  TRIGGER:          {icon:'⚡',lbl:'TRIGGER',        color:'#e05030'},
+  SCENE:            {icon:'🎬',lbl:'SCENE',          color:'#5090d0'},
+  STATEMENT:        {icon:'💬',lbl:'STATEMENT',      color:'#7a7090'},
+  QUESTION:         {icon:'?', lbl:'QUESTION',       color:'#c4a040'},
+  ITEMS:            {icon:'🎒',lbl:'ITEMS',          color:'#a06890'},
+  DEAD_END:         {icon:'✕', lbl:'DEAD END',       color:'#c43028'},
+  LOOP:             {icon:'↺', lbl:'LOOP',           color:'#7a7090'},
+  END_CONVO:        {icon:'◼', lbl:'END CONVO',      color:'#c43028'},
+  THOUGHTS:         {icon:'〰',lbl:'THOUGHTS',        color:'#40e090'},
+  OUTFIT_CHECK:     {icon:'◈', lbl:'OUTFIT CHECK',    color:'#a060c0'},
+  CHAR_DETAIL:      {icon:'◉', lbl:'CHAR DETAIL',    color:'#40c080'},
+  CHAR_DIALOGUE_REF:{icon:'💬',lbl:'DIALOGUE REF',   color:'#c47a10'},
+  CHAR_QUEST_REF:   {icon:'◆', lbl:'QUEST REF',      color:'#d4a020'},
+  QUEST_INFO:       {icon:'◆', lbl:'QUEST INFO',     color:'#d4a020'},
+  QUEST_STEP:       {icon:'▶', lbl:'STEP',           color:'#7a7090'},
+  QUEST_COLLECTABLE:{icon:'📦',lbl:'COLLECTABLE',    color:'#a06890'},
+  QUEST_CONDITION:  {icon:'?', lbl:'CONDITION',      color:'#c4a040'},
+  QUEST_END:        {icon:'◼', lbl:'QUEST END',      color:'#c43028'},
+};
+
+/* node types available per view context */
+const VIEW_NODES={
+  master:    ['OCTAVIA','SPAWN_POINT','DIALOGUE_TREE','QUEST','SCENE','INVENTORY','TRIGGER'],
+  character: ['CHAR_DETAIL','CHAR_DIALOGUE_REF','CHAR_QUEST_REF'],
+  dialogue:  ['THOUGHTS','STATEMENT','QUESTION','ITEMS','DEAD_END','LOOP','END_CONVO','OUTFIT_CHECK'],
+  quest:     ['QUEST_INFO','QUEST_STEP','QUEST_COLLECTABLE','QUEST_CONDITION','QUEST_END'],
+};
+
+/* ── SEED DATA ───────────────────────────────────────────────────── */
+const mkC=()=>({nodes:[],conns:[]});
+const mkChar=(o)=>({trust:0,tags:[],notes:'',handle:'',status:'contact',portrait:'',info:'',discovered:true,category:null,alignment:'neutral',enemyType:'weak',hitPoints:10,lootable:false,lootItems:[],pickpocketable:false,pickpocketDifficulty:'medium',pickpocketItems:[],caughtConsequence:'',subCanvas:mkC(),...o});
+const SEED_CHARS=[
+  mkChar({id:'c1',name:'Octavia',    role:'protagonist',   tags:['main'],        handle:'// protagonist',         status:'self',    portrait:'',           info:'You. Modified. Survivor.',                                              discovered:true}),
+  mkChar({id:'c2',name:'Raymond',    role:'store clerk',   tags:['network'],     handle:'// network contact',     status:'contact', portrait:'raymond_portrait.png',    info:'Runs the convenience store. Network operative. Gives food, information, warnings.',discovered:true}),
+  mkChar({id:'c3',name:'Diego',      role:'street vendor', tags:['food'],        handle:'// 20 years in Veil',    status:'contact', portrait:'diego_portrait.png',      info:'Street vendor, restaurant owner. Warm. Holds the computer password.',              discovered:true}),
+  mkChar({id:'c4',name:'Pharmacist', role:'network medic', tags:['safe space'],  handle:'// always open',         status:'contact', portrait:'pharmacist_portrait.png', info:'Safe space. No questions asked. Card for Dr. Chen.',                               discovered:true}),
+  mkChar({id:'c5',name:'Dr. Chen',   role:'mod medic',     tags:['medical'],     handle:'// network clinic',      status:'contact', portrait:'',           info:'Treats modifications. Network protected. Midnight clinic.',                         discovered:false}),
+  mkChar({id:'c6',name:'Collette',   role:'missing person',tags:['mystery'],     handle:'// gone for years',      status:'missing', portrait:'collette_portrait.png',   info:'Community leader. Missing for years. The network was built around her disappearance.',discovered:true}),
+  mkChar({id:'c7',name:'Charlie',    role:'archivist',     tags:['info'],        handle:'// keeper of records',   status:'contact', portrait:'',           info:'Archivist. Knows where to find things. Cautious.',                                   discovered:false}),
+];
+const SEED_TREES=[
+  {id:'dt1',name:'Raymond — First Meeting', treeType:'quest', outfitCondition:'any', subCanvas:mkC()},
+  {id:'dt2',name:'Diego — Food Offer',      treeType:'quest', outfitCondition:'any', subCanvas:mkC()},
+  {id:'dt3',name:'Pharmacist — Safe Space', treeType:'quest', outfitCondition:'any', subCanvas:mkC()},
+];
+const SEED_QUESTS=[
+  {id:'q1',name:'The Signal',       major:true,  category:'mystery',status:'active',progress:'Following threads',    info:'The network was built around her disappearance. Years missing. Someone has answers.',subCanvas:mkC()},
+  {id:'q2',name:'Find the Password',major:false, category:'task',   status:'active',progress:'Asking around',       info:'Desktop PC in the apartment is locked. Someone trusted with the password.',            subCanvas:mkC()},
+  {id:'q3',name:"Collette's Trail", major:true,  category:'mystery',status:'active',progress:'Intelligence gathering',info:'Follow every thread. Who built this network. Who is Collette.',                       subCanvas:mkC()},
+];
+
+/* ── STORAGE ─────────────────────────────────────────────────────── */
+const LS='beauregarde_kit_v4';
+const loadState=()=>{try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s&&s.chars)return{chars:s.chars,dtrees:s.dtrees,quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT};}catch(e){}return null;};
+const saveState=s=>{try{localStorage.setItem(LS,JSON.stringify(s));}catch(e){}};
+
+/* ── TREE TYPES ──────────────────────────────────────────────────── */
+const TREE_TYPES=['general','scene','dialogue','quest'];
+const TTC={general:'#7a7090',scene:'#5090d0',dialogue:'#c47a10',quest:'#d4a020'};
+const TTL={general:'G',scene:'S',dialogue:'D',quest:'Q'};
+const TTF={general:'GENERAL',scene:'SCENE',dialogue:'DIALOGUE',quest:'QUEST'};
+
+/* ── OUTFIT CONDITIONS ───────────────────────────────────────────── */
+const OUTFITS_DEFAULT=[
+  {id:'any',          label:'ANY OUTFIT',    badge:'*', color:'#7a7090', locked:true},
+  {id:'cyber_octavia',label:'REGULAR',       badge:'R', color:'#40c080', locked:true},
+  {id:'hoodie',       label:'HOODIE',        badge:'H', color:'#4ab8d0', locked:true},
+];
+const outfitColor=(id,arr=OUTFITS_DEFAULT)=>(arr.find(o=>o.id===id)||arr[0]).color;
+const outfitBadge=(id,arr=OUTFITS_DEFAULT)=>(arr.find(o=>o.id===id)||arr[0]).badge;
+const outfitLabel=(id,arr=OUTFITS_DEFAULT)=>(arr.find(o=>o.id===id)||arr[0]).label;
+const cycleOutfitId=(id,arr=OUTFITS_DEFAULT)=>{const i=arr.findIndex(o=>o.id===id);return arr[(i+1)%arr.length].id;};
+
+/* ── KNOWN GAME SCENES ───────────────────────────────────────────── */
+const KNOWN_SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store'];
+
+/* ── AUDIO LIBRARY ───────────────────────────────────────────────── */
+const AUDIO_DEFAULT=[
+  {id:'au1',label:'The Veil — Daytime',   file:'veil_day.mp3',     type:'music',   loop:true},
+  {id:'au2',label:'The Veil — Night',     file:'veil_night.mp3',   type:'music',   loop:true},
+  {id:'au3',label:'Corner Store Ambient', file:'corner_store.mp3', type:'ambient', loop:true},
+  {id:'au4',label:'Tense Underscore',     file:'tense.mp3',        type:'music',   loop:true},
+  {id:'au5',label:'Notification Ping',    file:'notification.wav', type:'sfx',     loop:false},
+  {id:'au6',label:'Door',                 file:'door.wav',         type:'sfx',     loop:false},
+];
+const audioTypeColor=t=>t==='music'?'#a030e0':t==='ambient'?'#4ab8d0':'#e05030';
+const audioTypeBadge=t=>t==='music'?'M':t==='ambient'?'A':'S';
+const audioLabel=(id,arr)=>{const a=(arr||AUDIO_DEFAULT).find(x=>x.id===id);return a?a.label:'';};
+const cycleMusicId=(id,arr)=>{
+  const tracks=(arr||AUDIO_DEFAULT).filter(a=>a.type!=='sfx');
+  if(!tracks.length)return'';
+  if(!id)return tracks[0].id;
+  const i=tracks.findIndex(a=>a.id===id);
+  return i<0?tracks[0].id:i+1>=tracks.length?'':tracks[i+1].id;
+};
+
+/* ── HELPERS ─────────────────────────────────────────────────────── */
+let _n=0;
+const uid=()=>'id_'+Date.now()+'_'+(_n++);
+const em='—';
+const trunc=(s,n)=>{if(!s)return em;const t=s.slice(0,n);return'"'+t+(s.length>n?'…':'')+'"';};
+
+/* ── PORT ROW ────────────────────────────────────────────────────── */
+function PortRow({nodeId,port,side,onPortMouseDown,cPorts}){
+  const key=nodeId+'::'+port.id;
+  const isConn=cPorts&&cPorts.has(key);
+  return(
+    <div className={'pr '+side+(isConn?' connected':'')} data-port={key} data-side={side}>
+      <div className="pd" data-port={key} data-side={side}
+        style={{background:wc(port.pt)}}
+        onMouseDown={e=>{e.stopPropagation();onPortMouseDown&&onPortMouseDown(nodeId,port,side,e);}}
+        title={port.label}
+      />
+      <span className="pl">{port.label}</span>
+    </div>
+  );
+}
+
+/* ── NODE FIELDS ─────────────────────────────────────────────────── */
+function NodeFields({node}){
+  const t=node.type;
+  if(t==='OCTAVIA')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv" style={{color:'#40e090'}}>{node.label}</span></div><div className="nf"><span className="nfl">ROLE</span><span className="nfv">protagonist</span></div></>);
+  if(t==='CHARACTER')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ROLE</span><span className="nfv">{node.role||em}</span></div></>);
+  if(t==='PLACE')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">TYPE</span><span className="nfv">{node.subtype||em}</span></div></>);
+  if(t==='QUEST')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">TYPE</span><span className="nfv">{node.major?'◆ MAJOR':'◇ MINOR'}</span></div></>);
+  if(t==='DIALOGUE_TREE')return(<div className="nf"><span className="nfl">TREE</span><span className="nfv">{node.label}</span></div>);
+  if(t==='INVENTORY')return(<><div className="nf"><span className="nfl">ITEM</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ACTION</span><span className="nfv">{node.action||'give / take'}</span></div></>);
+  if(t==='TRIGGER')return(<><div className="nf"><span className="nfl">TRIGGER</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ON</span><span className="nfv">{node.condition||'enter / interact'}</span></div></>);
+  if(t==='SPAWN_POINT')return(<><div className="nf"><span className="nfl">CHAR</span><span className="nfv">{node.label||em}</span></div><div className="nf"><span className="nfl">WORLD X</span><span className="nfv" style={{color:'#4ab8d0',fontWeight:700}}>{node.worldX||0}</span></div></>);
+  if(t==='SCENE')return(<>
+    <div className="nf"><span className="nfl">SCENE</span><span className="nfv">{node.label||'—'}</span></div>
+    <div className="nf"><span className="nfl">TYPE</span><span className="nfv">{(node.sceneType||'neutral').toUpperCase()}</span></div>
+    <div className="nf"><span className="nfl">OCT X</span><span className="nfv" style={{color:'#40e090',fontWeight:700}}>{node.octaviaWorldX!==undefined?node.octaviaWorldX:'—'}</span></div>
+    {node.triggerWorldX!==undefined&&<div className="nf"><span className="nfl">TRIG X</span><span className="nfv" style={{color:'#e09030',fontWeight:700}}>{node.triggerWorldX}</span></div>}
+    {(node.sceneChars||[]).length>0&&<div className="nf"><span className="nfl">CHARS</span><span className="nfv">{node.sceneChars.length}</span></div>}
+    {node.musicCueLabel&&<div className="nf"><span className="nfl">&#9834; MUSIC</span><span className="nfv" style={{color:'#a030e0'}}>{node.musicCueLabel}</span></div>}
+  </>);
+  if(t==='STATEMENT')return(<><div className="nf"><span className="nfl">SPEAKER</span><span className="nfv">{node.speaker||em}</span></div><div className="nf"><span className="nfl">TEXT</span><span className="nfv">{trunc(node.text,26)}</span></div></>);
+  if(t==='QUESTION')return(<div className="nf"><span className="nfl">PROMPT</span><span className="nfv">{node.text||em}</span></div>);
+  if(t==='THOUGHTS')return(<><div className="nf"><span className="nfl">EMOTION</span><span className="nfv" style={{color:'#40e090'}}>{node.emotion||node.voice||'FEAR'}</span></div><div className="nf"><span className="nfl">TEXT</span><span className="nfv">{trunc(node.text,26)}</span></div></>);
+  if(t==='DEAD_END')return(<div className="nf"><span className="nfl">LINE</span><span className="nfv">{node.text||em}</span></div>);
+  if(t==='END_CONVO')return(<><div className="nf"><span className="nfl">CLOSING</span><span className="nfv">{node.text||em}</span></div><div className="nf"><span className="nfl">REL</span><span className="nfv">{node.relDelta||'+0'}</span></div></>);
+  if(t==='LOOP')return(<><div className="nf"><span className="nfl">TEXT</span><span className="nfv">{node.text||em}</span></div><div className="nf"><span className="nfl">COND</span><span className="nfv">{node.condition||em}</span></div></>);
+  if(t==='ITEMS')return(<><div className="nf"><span className="nfl">ACTION</span><span className="nfv">{node.action||'give'}</span></div><div className="nf"><span className="nfl">ITEM</span><span className="nfv">{node.item||em}</span></div></>);
+  if(t==='OUTFIT_CHECK')return(<div className="nf"><span className="nfl">BRANCHES</span><span className="nfv" style={{color:'#a060c0'}}>hoodie / regular / other</span></div>);
+  if(t==='CHAR_DETAIL')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ROLE</span><span className="nfv">{node.role||em}</span></div><div className="nf"><span className="nfl">TRUST</span><span className="nfv">{node.trust||0} / 4</span></div></>);
+  if(t==='PLACE_SCENE')return(<><div className="nf"><span className="nfl">SCENE</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ATMO</span><span className="nfv">{node.atmosphere||em}</span></div></>);
+  if(t==='QUEST_INFO')return(<><div className="nf"><span className="nfl">QUEST</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">TYPE</span><span className="nfv">{node.major?'◆ MAJOR':'◇ MINOR'}</span></div></>);
+  if(t==='QUEST_STEP')return(<div className="nf"><span className="nfl">STEP</span><span className="nfv">{node.label||em}</span></div>);
+  return null;
+}
+
+/* ── CANVAS NODE ─────────────────────────────────────────────────── */
+function CanvasNode({node,selected,onHdr,onDelete,onPortMouseDown,onOpen,onEdit,onDblClick,cPorts,conns}){
+  const meta=NM[node.type]||{icon:'?',lbl:node.type,color:'#888'};
+  const base=NP[node.type]||{inputs:[],outputs:[]};
+  /* expand multi-ports: each occupied slot gets a new empty slot below it */
+  const expandedInputs=base.inputs.flatMap(p=>{
+    if(!p.multi)return[p];
+    const used=(conns||[]).filter(c=>c.dst===node.id&&c.dstPort.startsWith(p.id+'_')).length;
+    return Array.from({length:used+1},(_,i)=>({...p,id:`${p.id}_${i}`,label:i===0?p.label:p.label}));
+  });
+  const ports={inputs:expandedInputs,outputs:base.outputs};
+  return(
+    <div className={'node'+(selected?' selected':'')}
+      style={{left:node.x,top:node.y,borderTopColor:meta.color}}>
+      <div className="node-header" onMouseDown={e=>onHdr(node.id,e)}
+        onDoubleClick={e=>{e.stopPropagation();onDblClick&&onDblClick(node.type,node.id,node.entityId);}}>
+        <span className="node-icon">{meta.icon}</span>
+        <span className="node-type-lbl" style={{color:meta.color}}>{meta.lbl}</span>
+        <span className="node-title">{node.label||''}</span>
+        {(node.type==='CHARACTER'||node.type==='OCTAVIA')&&onEdit&&(
+          <span className="node-edit-btn" onClick={e=>{e.stopPropagation();onEdit(node.entityId||node.id);}}>EDIT</span>
+        )}
+        {meta.canOpen&&onOpen&&(
+          <span className="node-open-btn" onClick={e=>{e.stopPropagation();onOpen(meta.ot,node.entityId||node.id);}} title="Open sub-canvas">&#x2197;</span>
+        )}
+        <span className="node-del" onClick={e=>{e.stopPropagation();onDelete(node.id);}}>&#x2715;</span>
+      </div>
+      <div className="node-body">
+        {ports.inputs.map(p=>(
+          <PortRow key={p.id} nodeId={node.id} port={p} side="in"
+            onPortMouseDown={onPortMouseDown} cPorts={cPorts}/>
+        ))}
+        <NodeFields node={node}/>
+        {ports.outputs.length>0&&<div className="nd"/>}
+        {ports.outputs.map(p=>(
+          <PortRow key={p.id} nodeId={node.id} port={p} side="out"
+            onPortMouseDown={onPortMouseDown} cPorts={cPorts}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── WIRE LAYER ──────────────────────────────────────────────────── */
+function WireLayer({conns,nodes,portPositions,draft,zoom,offset}){
+  const cp=80*(zoom||1); // bezier control point offset scales with zoom
+  const getPos=(nodeId,portId,side)=>{
+    const key=nodeId+'::'+portId;
+    const p=portPositions.current.get(key);
+    if(p)return p;
+    // fallback: compute from node's canvas position → convert to viewport coords
+    const n=nodes.find(x=>x.id===nodeId);
+    if(!n)return{x:0,y:0};
+    const ox=offset||{x:0,y:0};
+    const z=zoom||1;
+    return{x:(ox.x+n.x+(side==='out'?220:0))*z,y:(ox.y+n.y+40)*z};
+  };
+  const paths=conns.map(c=>{
+    const sp=(NP[c.srcType]||{outputs:[]}).outputs;
+    const baseId=c.srcPort.replace(/_\d+$/,'');
+    const spt=sp.find(p=>p.id===c.srcPort||p.id===baseId);
+    const color=spt?wc(spt.pt):'#888';
+    const a=getPos(c.src,c.srcPort,'out');
+    const b=getPos(c.dst,c.dstPort,'in');
+    return(<path key={c.id} className="wire-path" stroke={color}
+      d={'M'+a.x+','+a.y+' C'+(a.x+cp)+','+a.y+' '+(b.x-cp)+','+b.y+' '+b.x+','+b.y}/>);
+  });
+  let dp=null;
+  if(draft&&draft.fromPos&&draft.toPos){
+    const a=draft.fromPos,b=draft.toPos;
+    dp=<path className="wire-draft" d={'M'+a.x+','+a.y+' C'+(a.x+cp)+','+a.y+' '+(b.x-cp)+','+b.y+' '+b.x+','+b.y}/>;
+  }
+  return(<svg className="wires-svg">{paths}{dp}</svg>);
+}
+
+/* ── CHAR EDIT PANEL ─────────────────────────────────────────────── */
+/* ── POPOVER MODAL SHELL ─────────────────────────────────────────── */
+function PopoverModal({title,color,onClose,children}){
+  useEffect(()=>{
+    const h=e=>{if(e.key==='Escape')onClose();};
+    window.addEventListener('keydown',h);
+    return()=>window.removeEventListener('keydown',h);
+  },[onClose]);
+  return(
+    <div className="popover-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="popover-box" onMouseDown={e=>e.stopPropagation()}>
+        <div className="popover-header">
+          <span className="popover-title" style={{color:color||'var(--accent)'}}>{title}</span>
+          <button className="popover-close" onClick={onClose}>&#x2715; CLOSE</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ── CHARACTER POPOVER ───────────────────────────────────────────── */
+function CharPopover({char,onSave,onOpen,onClose}){
+  const [tab,setTab]=useState('info');
+  const [d,setD]=useState({
+    alignment:'neutral',enemyType:'weak',hitPoints:10,lootable:false,lootItems:[],
+    pickpocketable:false,pickpocketDifficulty:'medium',pickpocketItems:[],
+    caughtConsequence:'',handle:'',status:'contact',portrait:'',info:'',discovered:true,category:null,...char
+  });
+  const u=f=>setD(p=>({...p,...f}));
+  const addLoot=()=>u({lootItems:[...d.lootItems,{id:uid(),name:''}]});
+  const uLoot=(id,f)=>u({lootItems:d.lootItems.map(x=>x.id===id?{...x,...f}:x)});
+  const dLoot=id=>u({lootItems:d.lootItems.filter(x=>x.id!==id)});
+  const addPP=()=>u({pickpocketItems:[...d.pickpocketItems,{id:uid(),name:''}]});
+  const uPP=(id,f)=>u({pickpocketItems:d.pickpocketItems.map(x=>x.id===id?{...x,...f}:x)});
+  const dPP=id=>u({pickpocketItems:d.pickpocketItems.filter(x=>x.id!==id)});
+  const alignColor=a=>a==='foe'?'#c43028':a==='friend'?'#40c080':'#7a7090';
+  return(
+    <PopoverModal title={'&#9673; '+(d.name||char.name)} color="#40c080" onClose={onClose}>
+      <div className="pop-tabs">
+        {['INFO','BEHAVIOR'].map(t=>(
+          <div key={t} className={'pop-tab'+(tab===t?' active':'')} onClick={()=>setTab(t)}>{t}</div>
+        ))}
+      </div>
+      {tab==='INFO'&&(
+        <div className="pop-tab-body">
+          <div className="pf-row">
+            <div className="pf" style={{flex:2}}><label className="pfl">NAME</label>
+              <input className="pfi" value={d.name} onChange={e=>u({name:e.target.value})}/></div>
+            <div className="pf" style={{flex:2}}><label className="pfl">ROLE</label>
+              <input className="pfi" value={d.role||''} onChange={e=>u({role:e.target.value})}/></div>
+            <div className="pf" style={{width:70}}><label className="pfl">TRUST 0&#8211;4</label>
+              <input className="pfi" type="number" min="0" max="4" value={d.trust||0} onChange={e=>u({trust:parseInt(e.target.value)||0})}/></div>
+          </div>
+          <div className="pf-row">
+            <div className="pf" style={{flex:3}}><label className="pfl">HANDLE (HUD tagline)</label>
+              <input className="pfi" placeholder="// network contact" value={d.handle||''} onChange={e=>u({handle:e.target.value})}/></div>
+            <div className="pf" style={{flex:2}}><label className="pfl">STATUS</label>
+              <select className="pfi" value={d.status||'contact'} onChange={e=>u({status:e.target.value})}>
+                <option value="contact">CONTACT</option>
+                <option value="missing">MISSING</option>
+                <option value="unknown">UNKNOWN</option>
+                <option value="hostile">HOSTILE</option>
+                <option value="ally">ALLY</option>
+                <option value="self">SELF</option>
+              </select>
+            </div>
+          </div>
+          <div className="pf-row">
+            <div className="pf" style={{flex:3}}><label className="pfl">PORTRAIT FILENAME</label>
+              <input className="pfi" placeholder="raymond_portrait.png" value={d.portrait||''} onChange={e=>u({portrait:e.target.value})}/></div>
+            <div className="pf" style={{flex:1}}><label className="pfl">TRUST 0&#8211;4</label>
+              <input className="pfi" type="number" min="0" max="4" value={d.trust||0} onChange={e=>u({trust:parseInt(e.target.value)||0})}/></div>
+          </div>
+          <div className="pf"><label className="pfl">HUD INFO (lore paragraph)</label>
+            <textarea className="pfi" style={{height:54,resize:'vertical'}} placeholder="Shown in PEOPLE tab of the game HUD." value={d.info||''} onChange={e=>u({info:e.target.value})}/></div>
+          <div className="pf"><label className="pfl">TAGS (comma separated)</label>
+            <input className="pfi" value={(d.tags||[]).join(', ')} onChange={e=>u({tags:e.target.value.split(',').map(t=>t.trim()).filter(Boolean)})}/></div>
+          <div className="pf"><label className="pfl">NOTES (internal)</label>
+            <textarea className="pfi" style={{height:44,resize:'vertical'}} value={d.notes||''} onChange={e=>u({notes:e.target.value})}/></div>
+          <div style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0 8px'}}>
+            <input type="checkbox" id="discCk" checked={d.discovered!==false} onChange={e=>u({discovered:e.target.checked})}/>
+            <label className="pfl" htmlFor="discCk" style={{cursor:'pointer',margin:0}}>DISCOVERED (visible in game HUD)</label>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button className="isave" style={{flex:1}} onClick={()=>{onSave(d);onClose();}}>SAVE</button>
+            {onOpen&&<button className="isave" style={{flex:1,borderColor:'var(--accent2)',color:'var(--accent2)'}}
+              onClick={()=>{onSave(d);onOpen('character',char.id);onClose();}}>CANVAS &#x2197;</button>}
+          </div>
+        </div>
+      )}
+      {tab==='BEHAVIOR'&&(
+        <div className="pop-tab-body">
+          <div className="pf"><label className="pfl">ALIGNMENT</label>
+            <div style={{display:'flex',gap:6,marginTop:4}}>
+              {['friend','neutral','foe'].map(a=>(
+                <button key={a} style={{flex:1,padding:'7px',fontSize:'7px',letterSpacing:'1px',fontFamily:'inherit',cursor:'pointer',
+                  background:d.alignment===a?alignColor(a):'var(--raised)',
+                  border:'1px solid '+(d.alignment===a?'transparent':'var(--dim)'),
+                  color:d.alignment===a?'#fff':'var(--text2)'}}
+                  onClick={()=>u({alignment:a})}>{a.toUpperCase()}</button>
+              ))}
+            </div>
+          </div>
+          {d.alignment==='foe'&&<>
+            <div className="pf-row">
+              <div className="pf" style={{flex:2}}><label className="pfl">ENEMY TYPE</label>
+                <select className="pfi" value={d.enemyType} onChange={e=>u({enemyType:e.target.value})}>
+                  <option value="weak">WEAK</option>
+                  <option value="strong">STRONG</option>
+                  <option value="boss">BOSS</option>
+                </select>
+              </div>
+              <div className="pf" style={{flex:1}}><label className="pfl">HIT POINTS</label>
+                <input className="pfi" type="number" min="1" value={d.hitPoints} onChange={e=>u({hitPoints:parseInt(e.target.value)||1})}/></div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0'}}>
+              <input type="checkbox" id="lootCk" checked={d.lootable} onChange={e=>u({lootable:e.target.checked})}/>
+              <label className="pfl" htmlFor="lootCk" style={{cursor:'pointer',margin:0}}>LOOTABLE</label>
+            </div>
+            {d.lootable&&<>
+              <div className="pfl">LOOT ITEMS</div>
+              {d.lootItems.map(x=>(
+                <div key={x.id} className="irow">
+                  <input className="ifield fn" value={x.name} placeholder="Item name" onChange={e=>uLoot(x.id,{name:e.target.value})}/>
+                  <button className="idel" onClick={()=>dLoot(x.id)}>&#x2715;</button>
+                </div>
+              ))}
+              <button className="iadd" onClick={addLoot}>+ ADD LOOT ITEM</button>
+            </>}
+          </>}
+          {d.alignment!=='foe'&&<>
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0'}}>
+              <input type="checkbox" id="ppCk" checked={d.pickpocketable} onChange={e=>u({pickpocketable:e.target.checked})}/>
+              <label className="pfl" htmlFor="ppCk" style={{cursor:'pointer',margin:0}}>PICKPOCKETABLE</label>
+            </div>
+            {d.pickpocketable&&<>
+              <div className="pf"><label className="pfl">DIFFICULTY (dice roll)</label>
+                <select className="pfi" value={d.pickpocketDifficulty} onChange={e=>u({pickpocketDifficulty:e.target.value})}>
+                  <option value="easy">EASY</option>
+                  <option value="medium">MEDIUM</option>
+                  <option value="hard">HARD</option>
+                </select>
+              </div>
+              <div className="pfl">ITEMS TO PICKPOCKET</div>
+              {d.pickpocketItems.map(x=>(
+                <div key={x.id} className="irow">
+                  <input className="ifield fn" value={x.name} placeholder="Item name" onChange={e=>uPP(x.id,{name:e.target.value})}/>
+                  <button className="idel" onClick={()=>dPP(x.id)}>&#x2715;</button>
+                </div>
+              ))}
+              <button className="iadd" onClick={addPP}>+ ADD ITEM</button>
+              <div className="pf"><label className="pfl">IF CAUGHT — CONSEQUENCE</label>
+                <textarea className="pfi" style={{height:50,resize:'vertical'}} value={d.caughtConsequence}
+                  onChange={e=>u({caughtConsequence:e.target.value})}/></div>
+            </>}
+          </>}
+          <button className="isave" style={{marginTop:8}} onClick={()=>{onSave(d);onClose();}}>SAVE CHARACTER</button>
+        </div>
+      )}
+    </PopoverModal>
+  );
+}
+
+/* ── INVENTORY POPOVER ───────────────────────────────────────────── */
+function InventoryPopover({node,onSave,onClose}){
+  const [label,setLabel]=useState(node.label||'');
+  const [items,setItems]=useState(node.items||[]);
+  const add=()=>setItems(p=>[...p,{id:uid(),name:'',price:0,type:'buy',stock:''}]);
+  const upd=(id,f)=>setItems(p=>p.map(x=>x.id===id?{...x,...f}:x));
+  const del=id=>setItems(p=>p.filter(x=>x.id!==id));
+  return(
+    <PopoverModal title="🎒 INVENTORY" color="#a06890" onClose={onClose}>
+      <div className="popover-body">
+        <div className="pf"><label className="pfl">INVENTORY NAME</label>
+          <input className="pfi" value={label} onChange={e=>setLabel(e.target.value)}/></div>
+        <div className="pfl">ITEMS</div>
+        <div className="itbl">
+          <div className="itbl-hdr">
+            <span style={{flex:2}}>ITEM NAME</span>
+            <span style={{width:60}}>PRICE</span>
+            <span style={{width:86}}>TYPE</span>
+            <span style={{width:50}}>STOCK</span>
+            <span style={{width:20}}></span>
+          </div>
+          {items.map(item=>(
+            <div key={item.id} className="irow">
+              <input className="ifield fn" value={item.name} placeholder="Item name"
+                onChange={e=>upd(item.id,{name:e.target.value})}/>
+              <input className="ifield fp" value={item.price} type="number" min="0"
+                onChange={e=>upd(item.id,{price:parseInt(e.target.value)||0})}/>
+              <select className="isel" value={item.type} onChange={e=>upd(item.id,{type:e.target.value})}>
+                <option value="buy">BUY</option>
+                <option value="sell">SELL</option>
+                <option value="gift">GIFT</option>
+                <option value="quest">QUEST</option>
+                <option value="trade">TRADE</option>
+              </select>
+              <input className="ifield fq" value={item.stock} placeholder="&#8734;"
+                onChange={e=>upd(item.id,{stock:e.target.value})}/>
+              <button className="idel" onClick={()=>del(item.id)}>&#x2715;</button>
+            </div>
+          ))}
+          <button className="iadd" onClick={add}>+ ADD ITEM</button>
+        </div>
+        <button className="isave" onClick={()=>{onSave({...node,label,items});onClose();}}>SAVE INVENTORY</button>
+      </div>
+    </PopoverModal>
+  );
+}
+
+/* ── SPAWN POINT POPOVER ─────────────────────────────────────────── */
+function SpawnPopover({node,chars,onSave,onClose}){
+  const [charId,setCharId]=useState(node.charId||'');
+  const [worldX,setWorldX]=useState(node.worldX||0);
+  return(
+    <PopoverModal title="&#8853; SPAWN POINT" color="#4ab8d0" onClose={onClose}>
+      <div className="popover-body">
+        <div className="pf-row">
+          <div className="pf" style={{flex:2}}><label className="pfl">CHARACTER</label>
+            <select className="pfi" value={charId} onChange={e=>setCharId(e.target.value)}>
+              <option value="">&#8212; select &#8212;</option>
+              {(chars||[]).map(c=><option key={c.id} value={c.id}>{c.name} — {c.role||'NPC'}</option>)}
+            </select>
+          </div>
+          <div className="pf" style={{flex:1}}><label className="pfl">WORLD X</label>
+            <input className="pfi" type="number" value={worldX}
+              onChange={e=>setWorldX(parseInt(e.target.value)||0)}/></div>
+        </div>
+        <div style={{fontSize:'7px',color:'var(--text2)',letterSpacing:'1px',padding:'2px 0 8px'}}>
+          worldX matches the game&#39;s character spawn position (debug overlay). Range: 200&#8211;3000. Octavia default = 400.
+        </div>
+        <button className="isave" onClick={()=>{
+          const ch=(chars||[]).find(c=>c.id===charId);
+          onSave({...node,charId,label:ch?ch.name:'SPAWN',worldX});
+          onClose();
+        }}>SAVE SPAWN POINT</button>
+      </div>
+    </PopoverModal>
+  );
+}
+
+/* ── QUEST POPOVER ───────────────────────────────────────────────── */
+function QuestPopover({quest,onSave,onOpen,onClose}){
+  const [d,setD]=useState({status:'active',progress:'',info:'',category:'',major:false,...quest});
+  const u=f=>setD(p=>({...p,...f}));
+  const statusColor=s=>s==='complete'?'#40c080':s==='locked'?'#7a6040':'#d4a020';
+  return(
+    <PopoverModal title={'&#9670; '+(d.name||'Quest')} color={d.major?'#d4a020':'#a08060'} onClose={onClose}>
+      <div className="popover-body">
+        <div className="pf-row">
+          <div className="pf" style={{flex:3}}><label className="pfl">QUEST NAME</label>
+            <input className="pfi" value={d.name||''} onChange={e=>u({name:e.target.value})}/></div>
+          <div className="pf" style={{flex:2}}><label className="pfl">CATEGORY</label>
+            <input className="pfi" value={d.category||''} placeholder="mystery, task, personal..." onChange={e=>u({category:e.target.value})}/></div>
+        </div>
+        <div className="pf-row">
+          <div className="pf" style={{flex:2}}><label className="pfl">TYPE</label>
+            <div style={{display:'flex',gap:6,marginTop:4}}>
+              {[{v:true,lbl:'◆ MAJOR'},{v:false,lbl:'◇ MINOR'}].map(({v,lbl})=>(
+                <button key={String(v)} style={{flex:1,padding:'6px',fontSize:'7px',letterSpacing:'1px',fontFamily:'inherit',cursor:'pointer',
+                  background:d.major===v?(v?'#d4a020':'#a08060'):'var(--raised)',
+                  border:'1px solid '+(d.major===v?'transparent':'var(--dim)'),color:d.major===v?'var(--bg)':'var(--text2)'}}
+                  onClick={()=>u({major:v})}>{lbl}</button>
+              ))}
+            </div>
+          </div>
+          <div className="pf" style={{flex:2}}><label className="pfl">STATUS</label>
+            <div style={{display:'flex',gap:6,marginTop:4}}>
+              {['active','complete','locked'].map(s=>(
+                <button key={s} style={{flex:1,padding:'6px',fontSize:'7px',letterSpacing:'1px',fontFamily:'inherit',cursor:'pointer',
+                  background:d.status===s?statusColor(s):'var(--raised)',
+                  border:'1px solid '+(d.status===s?'transparent':'var(--dim)'),color:d.status===s?'var(--bg)':'var(--text2)'}}
+                  onClick={()=>u({status:s})}>{s.toUpperCase()}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="pf"><label className="pfl">PROGRESS (HUD status line)</label>
+          <input className="pfi" placeholder="3 key contacts found..." value={d.progress||''} onChange={e=>u({progress:e.target.value})}/></div>
+        <div className="pf"><label className="pfl">DESCRIPTION (HUD info paragraph)</label>
+          <textarea className="pfi" style={{height:70,resize:'vertical'}} placeholder="Full quest description shown in the game HUD." value={d.info||''} onChange={e=>u({info:e.target.value})}/></div>
+        <div style={{display:'flex',gap:8,marginTop:4}}>
+          <button className="isave" style={{flex:1}} onClick={()=>{onSave(d);onClose();}}>SAVE QUEST</button>
+          {onOpen&&<button className="isave" style={{flex:1,borderColor:'var(--accent2)',color:'var(--accent2)'}}
+            onClick={()=>{onSave(d);onOpen('quest',quest.id);onClose();}}>CANVAS &#x2197;</button>}
+        </div>
+      </div>
+    </PopoverModal>
+  );
+}
+
+/* ── SCENE POPOVER ───────────────────────────────────────────────── */
+function ScenePopover({node,chars,audio,onSave,onClose}){
+  const [tab,setTab]=useState('info');
+  const [name,setName]=useState(node.label||'');
+  const [atmo,setAtmo]=useState(node.atmosphere||'');
+  const [triggerWorldX,setTriggerWorldX]=useState(node.triggerWorldX!==undefined?node.triggerWorldX:'');
+  const [octaviaWorldX,setOctaviaWorldX]=useState(node.octaviaWorldX!==undefined?node.octaviaWorldX:400);
+  const [sceneType,setSceneType]=useState(node.sceneType||'neutral');
+  const [elevatorFloor,setElevatorFloor]=useState(node.elevatorFloor||'');
+  const [sceneChars,setSceneChars]=useState(node.sceneChars||[]);
+  const [storeItems,setStoreItems]=useState(node.storeItems||[]);
+  const [musicCue,setMusicCue]=useState(node.musicCue||'');
+
+  const addChar=()=>setSceneChars(p=>[...p,{id:uid(),charId:'',worldX:0}]);
+  const uChar=(id,f)=>setSceneChars(p=>p.map(x=>x.id===id?{...x,...f}:x));
+  const dChar=id=>setSceneChars(p=>p.filter(x=>x.id!==id));
+
+  const addItem=()=>setStoreItems(p=>[...p,{id:uid(),name:'',worldX:0,location:'counter'}]);
+  const uItem=(id,f)=>setStoreItems(p=>p.map(x=>x.id===id?{...x,...f}:x));
+  const dItem=id=>setStoreItems(p=>p.filter(x=>x.id!==id));
+
+  const getChar=cid=>chars.find(c=>c.id===cid);
+  const alignColor=a=>a==='foe'?'#c43028':a==='friend'?'#40c080':'#7a7090';
+  const TABS=['INFO','CHARACTERS',...(sceneType==='store'?['STORE']:[])];
+
+  const save=()=>{
+    const tr=(audio||[]).find(a=>a.id===musicCue);
+    onSave({...node,label:name,atmosphere:atmo,octaviaWorldX,sceneType,elevatorFloor,sceneChars,storeItems,musicCue,musicCueLabel:tr?tr.label:'',triggerWorldX:triggerWorldX!==''?parseInt(triggerWorldX):undefined});
+    onClose();
+  };
+
+  return(
+    <PopoverModal title={'&#127910; SCENE'} color="#5090d0" onClose={onClose}>
+      <div className="pop-tabs">
+        {TABS.map(t=><div key={t} className={'pop-tab'+(tab===t?' active':'')} onClick={()=>setTab(t)}>{t}</div>)}
+      </div>
+
+      {tab==='INFO'&&(
+        <div className="pop-tab-body">
+          <div className="pf-row">
+            <div className="pf" style={{flex:2}}>
+              <label className="pfl">SCENE ID</label>
+              <select className="pfi" value={name} onChange={e=>setName(e.target.value)}>
+                <option value="">— select scene —</option>
+                {KNOWN_SCENES.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="pf" style={{flex:3}}><label className="pfl">ATMOSPHERE / FOG</label>
+              <input className="pfi" value={atmo} onChange={e=>setAtmo(e.target.value)}/></div>
+          </div>
+          <div className="pf-row">
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl" style={{color:'#40e090'}}>OCTAVIA SPAWN worldX <span style={{color:'var(--red)'}}>*</span></label>
+              <input className="pfi" type="number" value={octaviaWorldX} onChange={e=>setOctaviaWorldX(parseInt(e.target.value)||0)}/>
+            </div>
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl" style={{color:'#e09030'}}>TRIGGER worldX</label>
+              <input className="pfi" type="number" value={triggerWorldX} placeholder="— none —" onChange={e=>setTriggerWorldX(e.target.value)}/>
+            </div>
+            <div className="pf" style={{flex:2}}>
+              <label className="pfl">SCENE TYPE</label>
+              <select className="pfi" value={sceneType} onChange={e=>{setSceneType(e.target.value);if(e.target.value==='store')setTab('STORE');}}>
+                <option value="neutral">NEUTRAL</option>
+                <option value="store">STORE</option>
+                <option value="combat">COMBAT ZONE</option>
+                <option value="elevator">ELEVATOR</option>
+              </select>
+            </div>
+            {sceneType==='elevator'&&(
+              <div className="pf" style={{flex:1}}>
+                <label className="pfl">FLOOR</label>
+                <input className="pfi" value={elevatorFloor} placeholder="e.g. 3F" onChange={e=>setElevatorFloor(e.target.value)}/>
+              </div>
+            )}
+          </div>
+          {sceneType==='combat'&&(
+            <div style={{fontSize:'var(--fxs)',color:'#c43028',letterSpacing:'1px',padding:'4px 0'}}>
+              &#9888; COMBAT ZONE &#8212; add enemy characters in the CHARACTERS tab (set alignment to FOE in their profile)
+            </div>
+          )}
+          <div className="pf">
+            <label className="pfl" style={{color:'#a030e0'}}>&#9834; MUSIC CUE</label>
+            <select className="pfi" value={musicCue} onChange={e=>setMusicCue(e.target.value)}
+              style={{borderColor:musicCue?'#a030e0':'var(--brutal)'}}>
+              <option value="">— none —</option>
+              {(audio||[]).filter(a=>a.type!=='sfx').map(a=>(
+                <option key={a.id} value={a.id}>[{a.type.toUpperCase()}] {a.label}</option>
+              ))}
+              {(audio||[]).filter(a=>a.type==='sfx').length>0&&(
+                (audio||[]).filter(a=>a.type==='sfx').map(a=>(
+                  <option key={a.id} value={a.id}>[SFX] {a.label}</option>
+                ))
+              )}
+            </select>
+          </div>
+          <button className="isave" onClick={save}>SAVE SCENE</button>
+        </div>
+      )}
+
+      {tab==='CHARACTERS'&&(
+        <div className="pop-tab-body">
+          <div style={{fontSize:'7px',color:'var(--text2)',letterSpacing:'1px',marginBottom:8}}>
+            Set each character&#39;s worldX spawn position. FOE characters will engage in combat if scene type is COMBAT ZONE.
+          </div>
+          <div className="itbl-hdr" style={{display:'flex',gap:6,padding:'2px 8px'}}>
+            <span style={{flex:2}}>CHARACTER</span>
+            <span style={{width:80}}>WORLD X</span>
+            <span style={{width:58}}>ALIGN</span>
+            <span style={{width:20}}></span>
+          </div>
+          {sceneChars.map(sc=>{
+            const cd=getChar(sc.charId);
+            return(
+              <div key={sc.id} className="irow">
+                <select className="isel" style={{flex:2,width:'auto'}} value={sc.charId}
+                  onChange={e=>uChar(sc.id,{charId:e.target.value})}>
+                  <option value="">&#8212; select &#8212;</option>
+                  {chars.map(c=><option key={c.id} value={c.id}>{c.name}{c.alignment==='foe'?' [FOE]':''}</option>)}
+                </select>
+                <input className="ifield" style={{width:80}} type="number" value={sc.worldX}
+                  onChange={e=>uChar(sc.id,{worldX:parseInt(e.target.value)||0})}/>
+                <span style={{width:58,fontSize:'7px',letterSpacing:'1px',flexShrink:0,
+                  color:cd?alignColor(cd.alignment||'neutral'):'var(--dim)'}}>
+                  {cd?(cd.alignment||'NEUTRAL').toUpperCase():'—'}
+                </span>
+                <button className="idel" onClick={()=>dChar(sc.id)}>&#x2715;</button>
+              </div>
+            );
+          })}
+          <button className="iadd" onClick={addChar}>+ ADD CHARACTER TO SCENE</button>
+          <button className="isave" style={{marginTop:4}} onClick={save}>SAVE</button>
+        </div>
+      )}
+
+      {tab==='STORE'&&(
+        <div className="pop-tab-body">
+          <div style={{fontSize:'7px',color:'var(--text2)',letterSpacing:'1px',marginBottom:8}}>
+            <strong style={{color:'var(--text)'}}>COUNTER</strong> = stealable (item is visible, in the open) &nbsp;&#124;&nbsp;
+            <strong style={{color:'var(--text)'}}>CLERK</strong> = non-stealable (NPC is carrying it)
+          </div>
+          <div className="itbl-hdr" style={{display:'flex',gap:6,padding:'2px 8px'}}>
+            <span style={{flex:2}}>ITEM NAME</span>
+            <span style={{width:90}}>LOCATION</span>
+            <span style={{width:80}}>WORLD X</span>
+            <span style={{width:20}}></span>
+          </div>
+          {storeItems.map(item=>(
+            <div key={item.id} className="irow">
+              <input className="ifield fn" value={item.name} placeholder="Item name"
+                onChange={e=>uItem(item.id,{name:e.target.value})}/>
+              <select className="isel" style={{width:90}} value={item.location||'counter'}
+                onChange={e=>uItem(item.id,{location:e.target.value})}>
+                <option value="counter">COUNTER</option>
+                <option value="clerk">CLERK</option>
+              </select>
+              <input className="ifield" style={{width:80}} type="number" value={item.worldX||0}
+                placeholder="worldX" onChange={e=>uItem(item.id,{worldX:parseInt(e.target.value)||0})}/>
+              <button className="idel" onClick={()=>dItem(item.id)}>&#x2715;</button>
+            </div>
+          ))}
+          <button className="iadd" onClick={addItem}>+ ADD STORE ITEM</button>
+          <button className="isave" style={{marginTop:4}} onClick={save}>SAVE</button>
+        </div>
+      )}
+    </PopoverModal>
+  );
+}
+
+/* ── PLACE POPOVER (removed — scenes replace places) ─────────────── */
+function PlacePopover_UNUSED({place,onSave,onClose}){
+  const [tab,setTab]=useState('info');
+  const [d,setD]=useState({
+    ...place,
+    scenes:place.scenes||[],
+    spawnPoints:place.spawnPoints||[],
+    exitPoints:place.exitPoints||[],
+    storeItems:place.storeItems||[],
+  });
+  const u=f=>setD(p=>({...p,...f}));
+  /* scenes */
+  const addScene=()=>u({scenes:[...d.scenes,{id:uid(),name:'',atmosphere:''}]});
+  const uScene=(id,f)=>u({scenes:d.scenes.map(s=>s.id===id?{...s,...f}:s)});
+  const dScene=id=>u({scenes:d.scenes.filter(s=>s.id!==id)});
+  /* spawn */
+  const addSpawn=()=>u({spawnPoints:[...d.spawnPoints,{id:uid(),name:'',dir:''}]});
+  const uSpawn=(id,f)=>u({spawnPoints:d.spawnPoints.map(s=>s.id===id?{...s,...f}:s)});
+  const dSpawn=id=>u({spawnPoints:d.spawnPoints.filter(s=>s.id!==id)});
+  /* exit */
+  const addExit=()=>u({exitPoints:[...d.exitPoints,{id:uid(),name:'',linksTo:''}]});
+  const uExit=(id,f)=>u({exitPoints:d.exitPoints.map(s=>s.id===id?{...s,...f}:s)});
+  const dExit=id=>u({exitPoints:d.exitPoints.filter(s=>s.id!==id)});
+  /* store items */
+  const addItem=()=>u({storeItems:[...d.storeItems,{id:uid(),name:'',price:0,type:'buy',stock:''}]});
+  const uItem=(id,f)=>u({storeItems:d.storeItems.map(s=>s.id===id?{...s,...f}:s)});
+  const dItem=id=>u({storeItems:d.storeItems.filter(s=>s.id!==id)});
+
+  const TABS=['INFO','SCENES','SPAWN','ITEMS'];
+  return(
+    <PopoverModal title={'◈ '+place.name} color="#4080c0" onClose={onClose}>
+      <div className="pop-tabs">
+        {TABS.map(t=>(
+          <div key={t} className={'pop-tab'+(tab===t?' active':'')} onClick={()=>setTab(t)}>{t}</div>
+        ))}
+      </div>
+      {tab==='INFO'&&(
+        <div className="pop-tab-body">
+          <div className="pf-row">
+            <div className="pf" style={{flex:2}}><label className="pfl">PLACE NAME</label>
+              <input className="pfi" value={d.name} onChange={e=>u({name:e.target.value})}/></div>
+            <div className="pf" style={{flex:1}}><label className="pfl">TYPE</label>
+              <input className="pfi" value={d.type||''} onChange={e=>u({type:e.target.value})}/></div>
+          </div>
+          <div className="pf"><label className="pfl">DISTRICT</label>
+            <input className="pfi" value={d.district||''} onChange={e=>u({district:e.target.value})}/></div>
+          <button className="isave" onClick={()=>{onSave(d);onClose();}}>SAVE PLACE</button>
+        </div>
+      )}
+      {tab==='SCENES'&&(
+        <div className="pop-tab-body">
+          <div className="pfl">SCENES IN {d.name.toUpperCase()}</div>
+          {d.scenes.map(s=>(
+            <div key={s.id} className="lrow">
+              <input className="lfield-a" value={s.name} placeholder="Scene name"
+                onChange={e=>uScene(s.id,{name:e.target.value})}/>
+              <input className="lfield-b" value={s.atmosphere||''} placeholder="Atmosphere / fog description"
+                onChange={e=>uScene(s.id,{atmosphere:e.target.value})}/>
+              <button className="idel" onClick={()=>dScene(s.id)}>&#x2715;</button>
+            </div>
+          ))}
+          <button className="iadd" onClick={addScene}>+ ADD SCENE</button>
+          <button className="isave" onClick={()=>{onSave(d);onClose();}}>SAVE</button>
+        </div>
+      )}
+      {tab==='SPAWN'&&(
+        <div className="pop-tab-body">
+          <div className="pfl">SPAWN POINTS</div>
+          {d.spawnPoints.map(s=>(
+            <div key={s.id} className="lrow">
+              <input className="lfield-a" value={s.name} placeholder="Spawn name"
+                onChange={e=>uSpawn(s.id,{name:e.target.value})}/>
+              <input className="lfield-b" value={s.dir||''} placeholder="Direction / entrance description"
+                onChange={e=>uSpawn(s.id,{dir:e.target.value})}/>
+              <button className="idel" onClick={()=>dSpawn(s.id)}>&#x2715;</button>
+            </div>
+          ))}
+          <button className="iadd" onClick={addSpawn}>+ ADD SPAWN POINT</button>
+          <div className="psec">EXIT POINTS</div>
+          {d.exitPoints.map(s=>(
+            <div key={s.id} className="lrow">
+              <input className="lfield-a" value={s.name} placeholder="Exit name"
+                onChange={e=>uExit(s.id,{name:e.target.value})}/>
+              <input className="lfield-b" value={s.linksTo||''} placeholder="Links to place (name)"
+                onChange={e=>uExit(s.id,{linksTo:e.target.value})}/>
+              <button className="idel" onClick={()=>dExit(s.id)}>&#x2715;</button>
+            </div>
+          ))}
+          <button className="iadd" onClick={addExit}>+ ADD EXIT POINT</button>
+          <button className="isave" onClick={()=>{onSave(d);onClose();}}>SAVE</button>
+        </div>
+      )}
+      {tab==='ITEMS'&&(
+        <div className="pop-tab-body">
+          <div className="pfl">ITEMS AT {d.name.toUpperCase()}</div>
+          <div className="itbl-hdr">
+            <span style={{flex:2}}>ITEM NAME</span>
+            <span style={{width:60}}>PRICE</span>
+            <span style={{width:86}}>TYPE</span>
+            <span style={{width:50}}>STOCK</span>
+            <span style={{width:20}}></span>
+          </div>
+          <div className="itbl">
+            {d.storeItems.map(item=>(
+              <div key={item.id} className="irow">
+                <input className="ifield fn" value={item.name} placeholder="Item name"
+                  onChange={e=>uItem(item.id,{name:e.target.value})}/>
+                <input className="ifield fp" value={item.price} type="number" min="0"
+                  onChange={e=>uItem(item.id,{price:parseInt(e.target.value)||0})}/>
+                <select className="isel" value={item.type} onChange={e=>uItem(item.id,{type:e.target.value})}>
+                  <option value="buy">BUY</option>
+                  <option value="sell">SELL</option>
+                  <option value="gift">GIFT</option>
+                  <option value="quest">QUEST</option>
+                  <option value="trade">TRADE</option>
+                </select>
+                <input className="ifield fq" value={item.stock} placeholder="&#8734;"
+                  onChange={e=>uItem(item.id,{stock:e.target.value})}/>
+                <button className="idel" onClick={()=>dItem(item.id)}>&#x2715;</button>
+              </div>
+            ))}
+            <button className="iadd" onClick={addItem}>+ ADD ITEM</button>
+          </div>
+          <button className="isave" onClick={()=>{onSave(d);onClose();}}>SAVE ITEMS</button>
+        </div>
+      )}
+    </PopoverModal>
+  );
+}
+
+/* ── OUTFIT ROW ──────────────────────────────────────────────────── */
+function OutfitRow({outfit,onUpdate,onDelete}){
+  const [expanded,setExpanded]=useState(false);
+  return(
+    <div style={{borderBottom:'1px solid var(--border)'}}>
+      <div className="sb-item" onClick={()=>setExpanded(e=>!e)}>
+        <span style={{width:18,height:18,background:outfit.color,borderRadius:2,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'8px',fontWeight:700,color:'var(--bg)'}}>{outfit.badge}</span>
+        <span className="sb-item-name">{outfit.label}</span>
+        {outfit.locked&&<span className="sb-item-sub">BUILT-IN</span>}
+        <span style={{fontSize:'8px',color:'var(--dim)',marginLeft:'auto'}}>{expanded?'▲':'▼'}</span>
+      </div>
+      {expanded&&(
+        <div style={{padding:'6px 12px 10px',background:'var(--dimmer)',display:'flex',flexDirection:'column',gap:5}}>
+          <div className="pf-row" style={{gap:6}}>
+            <div className="pf" style={{flex:3}}><label className="pfl">LABEL</label>
+              <input className="pfi" value={outfit.label} onChange={e=>onUpdate({label:e.target.value})}/></div>
+            <div className="pf" style={{flex:1}}><label className="pfl">BADGE</label>
+              <input className="pfi" maxLength={2} value={outfit.badge} onChange={e=>onUpdate({badge:e.target.value||'?'})} style={{textAlign:'center'}}/></div>
+          </div>
+          <div className="pf-row" style={{gap:6,alignItems:'center'}}>
+            <div className="pf" style={{flex:3}}><label className="pfl">COLOUR (hex)</label>
+              <input className="pfi" value={outfit.color} onChange={e=>onUpdate({color:e.target.value})}/></div>
+            <div style={{width:28,height:28,background:outfit.color,borderRadius:2,flexShrink:0,marginTop:14,border:'1px solid var(--dim)'}}/>
+            {!outfit.locked&&(
+              <div className="pf" style={{flex:1,marginTop:14}}>
+                <button style={{width:'100%',padding:'5px',fontSize:'7px',letterSpacing:'1px',fontFamily:'inherit',cursor:'pointer',background:'none',border:'1px solid var(--red)',color:'var(--red)'}}
+                  onClick={onDelete}>DELETE</button>
+              </div>
+            )}
+          </div>
+          <div style={{fontSize:'6px',color:'var(--muted)',letterSpacing:'1px'}}>
+            ID: {outfit.id}{outfit.locked?' — built-in, cannot be removed':''}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── AUDIO TRACK ROW ─────────────────────────────────────────────── */
+function AudioTrackRow({track,onUpdate,onDelete}){
+  const [expanded,setExpanded]=useState(false);
+  const tc=audioTypeColor(track.type);
+  return(
+    <div style={{borderBottom:'1px solid var(--border)'}}>
+      <div className="sb-item" onClick={()=>setExpanded(e=>!e)}>
+        <span style={{width:18,height:18,background:tc,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'var(--fxs)',fontWeight:700,color:'var(--bg)'}}>{audioTypeBadge(track.type)}</span>
+        <span className="sb-item-name">{track.label}</span>
+        <span className="sb-item-sub" style={{fontStyle:'italic'}}>{track.file||'no file'}</span>
+        <span style={{fontSize:'var(--fxb)',color:'var(--dim)',marginLeft:'auto'}}>{expanded?'▲':'▼'}</span>
+      </div>
+      {expanded&&(
+        <div style={{padding:'6px 12px 10px',background:'var(--dimmer)',display:'flex',flexDirection:'column',gap:5}}>
+          <div className="pf-row" style={{gap:6}}>
+            <div className="pf" style={{flex:3}}><label className="pfl">LABEL</label>
+              <input className="pfi" value={track.label} onChange={e=>onUpdate({label:e.target.value})}/></div>
+            <div className="pf" style={{flex:2}}><label className="pfl">TYPE</label>
+              <select className="pfi" value={track.type} onChange={e=>onUpdate({type:e.target.value})}>
+                <option value="music">MUSIC</option>
+                <option value="ambient">AMBIENT</option>
+                <option value="sfx">SFX</option>
+              </select>
+            </div>
+          </div>
+          <div className="pf"><label className="pfl">FILENAME</label>
+            <input className="pfi" value={track.file||''} placeholder="track.mp3" onChange={e=>onUpdate({file:e.target.value})}/></div>
+          <div style={{display:'flex',alignItems:'center',gap:8,padding:'2px 0'}}>
+            <input type="checkbox" id={'loop_'+track.id} checked={track.loop||false} onChange={e=>onUpdate({loop:e.target.checked})}/>
+            <label className="pfl" htmlFor={'loop_'+track.id} style={{cursor:'pointer',margin:0}}>LOOP</label>
+          </div>
+          <div style={{display:'flex',gap:6,alignItems:'center',marginTop:2}}>
+            <span style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px',flex:1}}>ID: {track.id}</span>
+            {onDelete&&<button style={{padding:'4px 8px',fontSize:'var(--fxt)',letterSpacing:'1px',fontFamily:'inherit',cursor:'pointer',background:'none',border:'1px solid var(--red)',color:'var(--red)'}}
+              onClick={onDelete}>DELETE</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── DIALOGUE NODE POPOVER ───────────────────────────────────────── */
+const THOUGHT_EMOTIONS=['FEAR','GRIEF','ANGER','HOPE','DOUBT','RESOLVE','ANXIETY','LONGING','SHAME','PRIDE','LOVE','CALM','NUMBNESS','GUILT','WONDER'];
+const STATEMENT_EMOTIONS=['NEUTRAL','WARM','COLD','TENSE','TIRED','URGENT','SARCASTIC','AFRAID','AMUSED','SUSPICIOUS'];
+
+function DialogueNodePopover({node,chars,onSave,onClose}){
+  const t=node.type;
+  const [emotion,setEmotion]=useState(node.emotion||node.voice||'FEAR');
+  const [text,setText]=useState(node.text||'');
+  const [speaker,setSpeaker]=useState(node.speaker||'');
+  const [speakerEmotion,setSpeakerEmotion]=useState(node.speakerEmotion||'NEUTRAL');
+  const [optA,setOptA]=useState(node.optA||'');
+  const [optB,setOptB]=useState(node.optB||'');
+  const [optC,setOptC]=useState(node.optC||'');
+  const [condition,setCondition]=useState(node.condition||'');
+  const [relDelta,setRelDelta]=useState(node.relDelta||'+0');
+  const [action,setAction]=useState(node.action||'give');
+  const [item,setItem]=useState(node.item||'');
+
+  const save=()=>{
+    const base={...node,text};
+    if(t==='THOUGHTS') onSave({...base,emotion,voice:emotion});
+    else if(t==='STATEMENT') onSave({...base,speaker,speakerEmotion,emotion:speakerEmotion});
+    else if(t==='QUESTION') onSave({...base,optA,optB,optC});
+    else if(t==='DEAD_END') onSave(base);
+    else if(t==='END_CONVO') onSave({...base,relDelta});
+    else if(t==='LOOP') onSave({...base,condition});
+    else if(t==='ITEMS') onSave({...base,action,item});
+    else onSave(base);
+    onClose();
+  };
+
+  const meta=NM[t]||{icon:'?',lbl:t,color:'#888'};
+  const title=meta.icon+' '+meta.lbl;
+
+  return(
+    <PopoverModal title={title} color={meta.color} onClose={onClose}>
+      <div className="pop-tab-body">
+        {t==='THOUGHTS'&&(<>
+          <div className="pf">
+            <label className="pfl">EMOTION</label>
+            <select className="pfi" value={emotion} onChange={e=>setEmotion(e.target.value)}>
+              {THOUGHT_EMOTIONS.map(em=><option key={em} value={em}>{em}</option>)}
+            </select>
+          </div>
+          <div className="pf">
+            <label className="pfl">OCTAVIA'S THOUGHT</label>
+            <textarea className="pfi" rows={4} value={text} onChange={e=>setText(e.target.value)}
+              style={{resize:'vertical',minHeight:80}}/>
+          </div>
+        </>)}
+
+        {t==='STATEMENT'&&(<>
+          <div className="pf-row">
+            <div className="pf" style={{flex:2}}>
+              <label className="pfl">SPEAKER</label>
+              <select className="pfi" value={speaker} onChange={e=>setSpeaker(e.target.value)}>
+                <option value="">— select —</option>
+                <option value="OCTAVIA">OCTAVIA</option>
+                {(chars||[]).map(c=><option key={c.id} value={c.name.toUpperCase()}>{c.name.toUpperCase()}</option>)}
+              </select>
+            </div>
+            <div className="pf" style={{flex:2}}>
+              <label className="pfl">EMOTION</label>
+              <select className="pfi" value={speakerEmotion} onChange={e=>setSpeakerEmotion(e.target.value)}>
+                {STATEMENT_EMOTIONS.map(em=><option key={em} value={em}>{em}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">DIALOGUE TEXT</label>
+            <textarea className="pfi" rows={4} value={text} onChange={e=>setText(e.target.value)}
+              style={{resize:'vertical',minHeight:80}}/>
+          </div>
+        </>)}
+
+        {t==='QUESTION'&&(<>
+          <div className="pf">
+            <label className="pfl">PROMPT / NPC LINE</label>
+            <textarea className="pfi" rows={3} value={text} onChange={e=>setText(e.target.value)}
+              style={{resize:'vertical',minHeight:60}}/>
+          </div>
+          <div className="pf"><label className="pfl">OPTION A</label>
+            <input className="pfi" value={optA} placeholder="player choice A" onChange={e=>setOptA(e.target.value)}/></div>
+          <div className="pf"><label className="pfl">OPTION B</label>
+            <input className="pfi" value={optB} placeholder="player choice B" onChange={e=>setOptB(e.target.value)}/></div>
+          <div className="pf"><label className="pfl">OPTION C (optional)</label>
+            <input className="pfi" value={optC} placeholder="player choice C" onChange={e=>setOptC(e.target.value)}/></div>
+        </>)}
+
+        {t==='DEAD_END'&&(
+          <div className="pf">
+            <label className="pfl">NPC'S DEAD-END LINE</label>
+            <textarea className="pfi" rows={3} value={text} onChange={e=>setText(e.target.value)}
+              style={{resize:'vertical',minHeight:60}}/>
+          </div>
+        )}
+
+        {t==='END_CONVO'&&(<>
+          <div className="pf">
+            <label className="pfl">CLOSING LINE</label>
+            <textarea className="pfi" rows={3} value={text} onChange={e=>setText(e.target.value)}
+              style={{resize:'vertical',minHeight:60}}/>
+          </div>
+          <div className="pf">
+            <label className="pfl">RELATIONSHIP CHANGE</label>
+            <select className="pfi" value={relDelta} onChange={e=>setRelDelta(e.target.value)}>
+              <option value="+2">+2 (strong bond)</option>
+              <option value="+1">+1 (positive)</option>
+              <option value="+0">+0 (neutral)</option>
+              <option value="-1">-1 (friction)</option>
+              <option value="-2">-2 (broken)</option>
+            </select>
+          </div>
+        </>)}
+
+        {t==='LOOP'&&(<>
+          <div className="pf">
+            <label className="pfl">LOOP LINE (repeated when condition met)</label>
+            <textarea className="pfi" rows={3} value={text} onChange={e=>setText(e.target.value)}
+              style={{resize:'vertical',minHeight:60}}/>
+          </div>
+          <div className="pf">
+            <label className="pfl">CONDITION</label>
+            <input className="pfi" value={condition} placeholder="e.g. trust &lt; 2" onChange={e=>setCondition(e.target.value)}/>
+          </div>
+        </>)}
+
+        {t==='ITEMS'&&(<>
+          <div className="pf-row">
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">ACTION</label>
+              <select className="pfi" value={action} onChange={e=>setAction(e.target.value)}>
+                <option value="give">GIVE</option>
+                <option value="need">NEED</option>
+                <option value="check">CHECK</option>
+                <option value="take">TAKE</option>
+              </select>
+            </div>
+            <div className="pf" style={{flex:2}}>
+              <label className="pfl">ITEM NAME</label>
+              <input className="pfi" value={item} placeholder="item name" onChange={e=>setItem(e.target.value)}/>
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">CONTEXT / NOTE</label>
+            <input className="pfi" value={text} placeholder="optional note" onChange={e=>setText(e.target.value)}/>
+          </div>
+        </>)}
+
+        <div style={{display:'flex',justifyContent:'flex-end',paddingTop:4}}>
+          <button className="nav-btn isave" onClick={save}>SAVE NODE</button>
+        </div>
+      </div>
+    </PopoverModal>
+  );
+}
+
+/* ── APP ─────────────────────────────────────────────────────────── */
+function App(){
+  const [pal,setPal]=useState('void');
+  const [textSize,setTextSize]=useState('sm');
+  useEffect(()=>{
+    const cls=[];
+    if(pal!=='void')cls.push(`pal-${pal}`);
+    if(textSize!=='sm')cls.push(`fs-${textSize}`);
+    document.body.className=cls.join(' ');
+  },[pal,textSize]);
+
+  /* entity state */
+  const init=useMemo(()=>{
+    const s=loadState();
+    if(s)return{chars:s.chars,dtrees:s.dtrees,quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT};
+    return{chars:SEED_CHARS,dtrees:SEED_TREES,quests:SEED_QUESTS,
+      mt:[{id:'m1',name:'Main Graph',treeType:'general',nodes:[],conns:[]}],amid:'m1',outfits:OUTFITS_DEFAULT,audio:AUDIO_DEFAULT};
+  },[]);
+  const [chars,setChars]=useState(init.chars);
+  const [dtrees,setDtrees]=useState(init.dtrees);
+  const [quests,setQuests]=useState(init.quests);
+  const [mt,setMt]=useState(init.mt); /* master trees */
+  const [amid,setAmid]=useState(init.amid); /* active master tree id */
+  const [outfits,setOutfits]=useState(init.outfits||OUTFITS_DEFAULT);
+  const [audio,setAudio]=useState(init.audio||AUDIO_DEFAULT);
+
+  useEffect(()=>{ saveState({chars,dtrees,quests,mt,amid,outfits,audio}); },[chars,dtrees,quests,mt,amid,outfits,audio]);
+
+  /* view stack */
+  const [vStack,setVStack]=useState([{type:'master',id:null}]);
+  const view=vStack[vStack.length-1];
+  const pushView=(type,id)=>setVStack(p=>[...p,{type,id}]);
+  const popView=()=>setVStack(p=>p.length>1?p.slice(0,-1):p);
+
+  /* accordion */
+  const [openAcc,setOpenAcc]=useState('chars');
+  const [openOutfits,setOpenOutfits]=useState(false);
+  const [openAudio,setOpenAudio]=useState(false);
+
+  /* popover */
+  const [popover,setPopover]=useState(null);
+
+  /* search */
+  const [search,setSearch]=useState('');
+
+  /* all nodes across all master trees (for library) */
+  const allLibNodes=useMemo(()=>mt.flatMap(t=>t.nodes||[]),[mt]);
+
+  /* rename tree tab */
+  const [renamingTab,setRenamingTab]=useState(null);
+  const [renamingTree,setRenamingTree]=useState(null);
+  const renameTree=(id,newName)=>{
+    const name=newName.trim()||'Untitled';
+    setDtrees(p=>p.map(x=>x.id===id?{...x,name}:x));
+    setMt(p=>p.map(mt=>({...mt,nodes:(mt.nodes||[]).map(n=>n.entityId===id?{...n,label:name}:n)})));
+  };
+
+  /* reset view state on navigation */
+  useEffect(()=>{ setOffset({x:80,y:40}); setZoom(1); setSelectedId(null); setPopover(null); },[view]);
+
+  /* ── ACTIVE CANVAS ─────────────────────────────────────────────── */
+  const activeCanvas=useMemo(()=>{
+    if(view.type==='master'){
+      const t=mt.find(t=>t.id===amid)||mt[0]||{nodes:[],conns:[]};
+      return{nodes:t.nodes||[],conns:t.conns||[]};
+    }
+    const map={character:chars,dialogue:dtrees,quest:quests};
+    const ent=(map[view.type]||[]).find(e=>e.id===view.id);
+    return{nodes:ent?.subCanvas?.nodes||[],conns:ent?.subCanvas?.conns||[]};
+  },[view,mt,amid,chars,dtrees,quests]);
+
+  const setNodes=useCallback(fn=>{
+    if(view.type==='master'){
+      setMt(prev=>prev.map(t=>t.id===amid?{...t,nodes:typeof fn==='function'?fn(t.nodes):fn}:t));
+    }else{
+      const setter={character:setChars,dialogue:setDtrees,quest:setQuests}[view.type];
+      if(setter)setter(prev=>prev.map(e=>e.id===view.id?{...e,subCanvas:{...e.subCanvas,nodes:typeof fn==='function'?fn(e.subCanvas.nodes||[]):fn}}:e));
+    }
+  },[view,amid]);
+
+  const setConns=useCallback(fn=>{
+    if(view.type==='master'){
+      setMt(prev=>prev.map(t=>t.id===amid?{...t,conns:typeof fn==='function'?fn(t.conns):fn}:t));
+    }else{
+      const setter={character:setChars,dialogue:setDtrees,quest:setQuests}[view.type];
+      if(setter)setter(prev=>prev.map(e=>e.id===view.id?{...e,subCanvas:{...e.subCanvas,conns:typeof fn==='function'?fn(e.subCanvas.conns||[]):fn}}:e));
+    }
+  },[view,amid]);
+
+  const nodes=activeCanvas.nodes;
+  const conns=activeCanvas.conns;
+
+  /* master tree management */
+  const newMT=()=>{const id=uid();setMt(p=>[...p,{id,name:'New Graph',treeType:'general',nodes:[],conns:[]}]);setAmid(id);setRenamingTab(id);};
+  const delMT=id=>{if(mt.length<=1)return;setMt(p=>p.filter(t=>t.id!==id));if(amid===id)setAmid(mt.find(t=>t.id!==id)?.id||null);};
+  const renMT=(id,name)=>setMt(p=>p.map(t=>t.id===id?{...t,name:name||t.name}:t));
+  const cycleMT=id=>setMt(p=>p.map(t=>{if(t.id!==id)return t;const types=TREE_TYPES;const next=types[(types.indexOf(t.treeType||'general')+1)%types.length];return{...t,treeType:next};}));
+
+  /* canvas pan/zoom */
+  const [offset,setOffset]=useState({x:80,y:40});
+  const [zoom,setZoom]=useState(1);
+  const canvasRef=useRef();
+  const isPanning=useRef(false);
+  const panStart=useRef({x:0,y:0,ox:0,oy:0});
+
+  /* port positions */
+  const portPos=useRef(new Map());
+  const [,rerender]=useState(0);
+  useLayoutEffect(()=>{
+    const wrap=canvasRef.current;
+    if(!wrap)return;
+    const nm=new Map();
+    const wR=wrap.getBoundingClientRect();
+    wrap.querySelectorAll('.pd[data-port]').forEach(el=>{
+      const r=el.getBoundingClientRect();
+      // store in viewport-relative coords (canvas-wrap space) — SVG draws in the same space
+      nm.set(el.getAttribute('data-port'),{
+        x:r.left+r.width/2-wR.left,
+        y:r.top+r.height/2-wR.top,
+      });
+    });
+    let changed=nm.size!==portPos.current.size;
+    if(!changed)nm.forEach((v,k)=>{const o=portPos.current.get(k);if(!o||Math.abs(o.x-v.x)>0.5||Math.abs(o.y-v.y)>0.5)changed=true;});
+    portPos.current=nm;
+    if(changed)rerender(n=>n+1);
+  });
+
+  /* wire draft */
+  const [draft,setDraft]=useState(null);
+  const draftRef=useRef(null);
+
+  /* selected */
+  const [selectedId,setSelectedId]=useState(null);
+
+  /* context menu */
+  const [ctx,setCtx]=useState(null);
+
+  /* toast */
+  const [toast,setToast]=useState(null);
+  const showToast=useCallback(msg=>{setToast(msg);setTimeout(()=>setToast(null),2200);},[]);
+
+  /* place node on canvas */
+  const placeNode=useCallback((type,label,extra,atPos)=>{
+    const wrap=canvasRef.current;
+    let x=80+nodes.length*28,y=80+nodes.length*18;
+    if(atPos&&wrap){const r=wrap.getBoundingClientRect();x=(atPos.x-r.left)/zoom-offset.x;y=(atPos.y-r.top)/zoom-offset.y;}
+    const id=uid();
+    setNodes(prev=>[...prev,{id,type,label,x,y,...extra}]);
+    setSelectedId(id);
+  },[zoom,offset,nodes.length,setNodes]);
+
+  /* node drag */
+  const dragNode=useRef(null);
+  const onHdr=(nodeId,e)=>{
+    if(e.button!==0)return;
+    e.stopPropagation();
+    setSelectedId(nodeId);
+    const nd=nodes.find(n=>n.id===nodeId);
+    if(!nd)return;
+    dragNode.current={id:nodeId,sx:e.clientX,sy:e.clientY,ox:nd.x,oy:nd.y};
+    window.addEventListener('mousemove',onNodeMove);
+    window.addEventListener('mouseup',onNodeUp);
+  };
+  const onNodeMove=useCallback(e=>{
+    if(!dragNode.current)return;
+    const dx=(e.clientX-dragNode.current.sx)/zoom;
+    const dy=(e.clientY-dragNode.current.sy)/zoom;
+    setNodes(prev=>prev.map(n=>n.id===dragNode.current.id?{...n,x:Math.max(0,dragNode.current.ox+dx),y:Math.max(0,dragNode.current.oy+dy)}:n));
+  },[zoom,setNodes]);
+  const onNodeUp=useCallback(()=>{
+    dragNode.current=null;
+    window.removeEventListener('mousemove',onNodeMove);
+    window.removeEventListener('mouseup',onNodeUp);
+  },[onNodeMove]);
+
+  /* canvas events */
+  const onCMD=e=>{
+    if(e.button===1||(e.button===0&&e.altKey)){
+      isPanning.current=true;
+      panStart.current={x:e.clientX,y:e.clientY,ox:offset.x,oy:offset.y};
+      e.preventDefault();
+    }else if(e.button===0){setSelectedId(null);setCtx(null);}
+  };
+  const onCMM=e=>{
+    if(isPanning.current)setOffset({x:panStart.current.ox+(e.clientX-panStart.current.x)/zoom,y:panStart.current.oy+(e.clientY-panStart.current.y)/zoom});
+    if(draftRef.current){
+      const r=canvasRef.current?.getBoundingClientRect();
+      if(r)setDraft(p=>p?{...p,toPos:{x:e.clientX-r.left,y:e.clientY-r.top}}:null);
+    }
+  };
+  const onCMU=e=>{
+    isPanning.current=false;
+    if(draftRef.current){
+      let el=document.elementFromPoint(e.clientX,e.clientY);
+      while(el&&!el.dataset.port)el=el.parentElement;
+      if(el&&el.dataset.port&&el.dataset.side==='in'){
+        const[dstNode,dstPort]=el.dataset.port.split('::');
+        const d=draftRef.current;
+        if(dstNode!==d.srcNodeId&&!conns.some(c=>c.src===d.srcNodeId&&c.srcPort===d.srcPortId&&c.dst===dstNode&&c.dstPort===dstPort)){
+          const sn=nodes.find(n=>n.id===d.srcNodeId);
+          setConns(p=>[...p,{id:uid(),src:d.srcNodeId,srcPort:d.srcPortId,srcType:sn?.type,dst:dstNode,dstPort}]);
+        }
+      }
+      draftRef.current=null;
+      setDraft(null);
+    }
+  };
+  const onCW=e=>{e.preventDefault();setZoom(z=>Math.min(3,Math.max(0.2,z*(e.deltaY<0?1.1:0.9))));};
+
+  /* port drag start / disconnect */
+  const onPortMD=(nodeId,port,side,e)=>{
+    if(side==='in'){
+      /* click connected input port → disconnect */
+      const key=nodeId+'::'+port.id;
+      if(cPorts.has(key)){
+        setConns(p=>p.filter(c=>!(c.dst===nodeId&&c.dstPort===port.id)));
+      }
+      return;
+    }
+    const pos=portPos.current.get(nodeId+'::'+port.id);
+    if(!pos)return;
+    draftRef.current={srcNodeId:nodeId,srcPortId:port.id,fromPos:pos};
+    setDraft({fromPos:pos,toPos:pos});
+  };
+
+  /* delete node */
+  const delNode=id=>{setNodes(p=>p.filter(n=>n.id!==id));setConns(p=>p.filter(c=>c.src!==id&&c.dst!==id));if(selectedId===id)setSelectedId(null);};
+
+  /* connected ports set */
+  const cPorts=useMemo(()=>{const s=new Set();conns.forEach(c=>{s.add(c.src+'::'+c.srcPort);s.add(c.dst+'::'+c.dstPort);});return s;},[conns]);
+
+  /* sidebar drag */
+  const dragItem=useRef(null);
+  const sbDragStart=(type,label,extra)=>e=>{dragItem.current={type,label,extra};e.dataTransfer.effectAllowed='copy';};
+  const onDrop=e=>{e.preventDefault();if(!dragItem.current)return;const{type,label,extra}=dragItem.current;placeNode(type,label,extra,{x:e.clientX,y:e.clientY});dragItem.current=null;};
+  const onDragOver=e=>e.preventDefault();
+
+  /* context menu */
+  const onCCM=e=>{
+    e.preventDefault();
+    const ne=e.target.closest('.node');
+    if(ne){const pe=ne.querySelector('[data-port]');if(pe)setCtx({x:e.clientX,y:e.clientY,nodeId:pe.getAttribute('data-port').split('::')[0]});}
+  };
+
+  /* double-click node → open popover or navigate into subcanvas */
+  const onNodeDblClick=useCallback((nodeType,nodeId,entityId)=>{
+    if(nodeType==='CHARACTER'||nodeType==='OCTAVIA') setPopover({type:'character',nodeId,entityId:entityId||nodeId});
+    else if(nodeType==='INVENTORY') setPopover({type:'inventory',nodeId});
+    else if(nodeType==='SCENE') setPopover({type:'scene',nodeId});
+    else if(nodeType==='SPAWN_POINT') setPopover({type:'spawn',nodeId});
+    else if(nodeType==='QUEST') setPopover({type:'quest',nodeId,entityId});
+    else if(nodeType==='DIALOGUE_TREE') setVStack(p=>[...p,{type:'dialogue',id:entityId}]);
+    else if(['THOUGHTS','STATEMENT','QUESTION','DEAD_END','END_CONVO','LOOP','ITEMS'].includes(nodeType))
+      setPopover({type:'dialoguenode',nodeId});
+  },[]);
+
+  /* ── DIALOGUE SERIALIZER ── converts kit node graph → game flat format */
+  const serializeDialogueTree=useCallback(tree=>{
+    const {nodes:ns,conns:cs}=(tree.subCanvas||{nodes:[],conns:[]});
+    if(!ns.length)return[];
+    // build adjacency: nodeId → {portId → targetNodeId}
+    const adj={};
+    ns.forEach(n=>{adj[n.id]={};});
+    cs.forEach(c=>{if(adj[c.src])adj[c.src][c.srcPort]=c.dst;});
+    // find root: node with no incoming flow connections
+    const hasPredecessor=new Set(cs.map(c=>c.dst));
+    const roots=ns.filter(n=>!hasPredecessor.has(n.id));
+    const start=roots[0]||ns[0];
+    // walk in order, BFS to collect all nodes reachable
+    const visited=new Set();
+    const ordered=[];
+    const queue=[start];
+    while(queue.length){
+      const n=queue.shift();
+      if(!n||visited.has(n.id))continue;
+      visited.add(n.id);
+      ordered.push(n);
+      const outs=adj[n.id]||{};
+      // push out ports in a stable order
+      ['out','opt_a','opt_b','opt_c','returns_to','if_met','if_not'].forEach(p=>{
+        if(outs[p]){const next=ns.find(x=>x.id===outs[p]);if(next&&!visited.has(next.id))queue.push(next);}
+      });
+    }
+    // map each node to game format
+    return ordered.map(n=>{
+      const outs=adj[n.id]||{};
+      const next=id=>id||null;
+      if(n.type==='STATEMENT')return{id:n.id,speaker:n.speaker||null,npc:n.text||'',opts:[{t:'(continue)',next:next(outs.out)}]};
+      if(n.type==='QUESTION')return{id:n.id,npc:n.text||'',opts:[
+        {t:n.optA||'Option A',next:next(outs.opt_a)},
+        {t:n.optB||'Option B',next:next(outs.opt_b)},
+        ...(n.optC?[{t:n.optC,next:next(outs.opt_c)}]:[]),
+      ].filter(o=>o.next)};
+      if(n.type==='THOUGHTS')return{id:n.id,internal:true,voice:n.voice||'FEAR',npc:n.text||'',opts:[{t:'',next:next(outs.out)}]};
+      if(n.type==='DEAD_END')return{id:n.id,npc:n.text||'',opts:[]};
+      if(n.type==='END_CONVO')return{id:n.id,npc:n.text||'',relDelta:n.relDelta||'+0',opts:[]};
+      if(n.type==='LOOP')return{id:n.id,npc:n.text||'',condition:n.condition||'',opts:[{t:'(loop)',next:next(outs.returns_to)}]};
+      if(n.type==='ITEMS')return{id:n.id,itemCheck:true,action:n.action||'give',item:n.item||'',opts:[
+        {t:'if_met',next:next(outs.if_met)},
+        {t:'if_not',next:next(outs.if_not)},
+      ]};
+      if(n.type==='OUTFIT_CHECK')return{id:n.id,outfitCheck:true,opts:[
+        {t:'hoodie',next:next(outs.hoodie)},
+        {t:'regular',next:next(outs.regular)},
+        {t:'other',next:next(outs.other)},
+      ]};
+      return{id:n.id,npc:n.text||n.label||'',opts:[]};
+    });
+  },[]);
+
+  /* ── FILE HANDLE PERSISTENCE (IndexedDB) ─────────────────────── */
+  const _fhDB=useRef(null);
+  const _fhHandle=useRef(null);
+  const getDB=useCallback(()=>new Promise((res,rej)=>{
+    if(_fhDB.current)return res(_fhDB.current);
+    const req=indexedDB.open('beau_kit_fs',1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore('h');
+    req.onsuccess=e=>{_fhDB.current=e.target.result;res(e.target.result);};
+    req.onerror=e=>rej(e);
+  }),[]);
+  const dbGet=useCallback(async k=>{const db=await getDB();return new Promise((res,rej)=>{const r=db.transaction('h','readonly').objectStore('h').get(k);r.onsuccess=e=>res(e.target.result);r.onerror=rej;});},[getDB]);
+  const dbPut=useCallback(async(k,v)=>{const db=await getDB();return new Promise((res,rej)=>{const r=db.transaction('h','readwrite').objectStore('h').put(v,k);r.onsuccess=res;r.onerror=rej;});},[getDB]);
+
+  const writePayload=useCallback(async(json)=>{
+    const tryHandle=async h=>{
+      const perm=await h.queryPermission({mode:'readwrite'});
+      if(perm!=='granted'){const r=await h.requestPermission({mode:'readwrite'});if(r!=='granted')throw new Error('denied');}
+      const w=await h.createWritable();await w.write(json);await w.close();
+      return h.name||'beauregarde_data.json';
+    };
+    // try in-memory handle first (same session)
+    if(_fhHandle.current){
+      try{const name=await tryHandle(_fhHandle.current);return name;}
+      catch(e){_fhHandle.current=null;}
+    }
+    // try persisted handle (IndexedDB)
+    try{
+      const stored=await dbGet('exportHandle');
+      if(stored){const name=await tryHandle(stored);_fhHandle.current=stored;return name;}
+    }catch(e){}
+    // first time: show picker
+    if(!window.showSaveFilePicker)throw new Error('no-api');
+    const h=await window.showSaveFilePicker({
+      suggestedName:'beauregarde_data.json',
+      types:[{description:'JSON',accept:{'application/json':['.json']}}],
+    });
+    await tryHandle(h);
+    _fhHandle.current=h;
+    await dbPut('exportHandle',h);
+    return h.name;
+  },[dbGet,dbPut]);
+
+  /* export — outputs game-compatible beauregarde_data.json */
+  const exportGame=async()=>{
+    // 1. PEOPLE (mapped to game's PEOPLE_DB format)
+    const people=chars.filter(c=>c.id!=='c1').map(c=>({
+      id:c.id, name:(c.name||'').toUpperCase(), role:c.role||'',
+      handle:c.handle||'', status:(c.status||'contact').toUpperCase(),
+      portrait:c.portrait?('../graphics/portraits/npc/'+c.portrait):'',
+      info:c.info||'', discovered:c.discovered!==false,
+      category:c.category||null,
+      // gameplay-only fields (not in PEOPLE_DB but used by game logic)
+      trust:c.trust||0, tags:c.tags||[], alignment:c.alignment||'neutral',
+      enemyType:c.enemyType||'weak', hitPoints:c.hitPoints||10,
+      lootable:c.lootable||false, lootItems:c.lootItems||[],
+      pickpocketable:c.pickpocketable||false,
+      pickpocketDifficulty:c.pickpocketDifficulty||'medium',
+      pickpocketItems:c.pickpocketItems||[],
+      caughtConsequence:c.caughtConsequence||'',
+    }));
+    // 2. QUESTS (mapped to game's QUESTS_DB format)
+    const questsOut={
+      major:quests.filter(q=>q.major).map(q=>({id:q.id,name:q.name,status:(q.status||'active').toUpperCase(),progress:q.progress||'',info:q.info||'',category:q.category||''})),
+      minor:quests.filter(q=>!q.major).map(q=>({id:q.id,name:q.name,status:(q.status||'active').toUpperCase(),progress:q.progress||'',info:q.info||'',category:q.category||''})),
+    };
+    // 3. DIALOGUE (serialized node graphs)
+    const dialogueOut={};
+    dtrees.forEach(t=>{
+      const key=t.name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+      dialogueOut[key]={id:t.id,name:t.name,treeType:t.treeType,outfitCondition:t.outfitCondition||'any',nodes:serializeDialogueTree(t)};
+    });
+    // 4. SCENES (from SCENE nodes in all master trees)
+    const allMtConns=mt.flatMap(t=>(t.conns||[]));
+    const sceneNodes=mt.flatMap(t=>(t.nodes||[]).filter(n=>n.type==='SCENE'));
+    const allMtNodes=mt.flatMap(t=>(t.nodes||[]));
+    const scenesOut=sceneNodes.map(n=>{
+      // find any DIALOGUE_TREE wired from this scene's to_dialogue output
+      const dlgConn=allMtConns.find(c=>c.src===n.id&&c.srcPort==='to_dialogue');
+      let dialogueTrigger=null;
+      if(dlgConn){
+        const dlgNode=allMtNodes.find(x=>x.id===dlgConn.dst);
+        if(dlgNode&&dlgNode.type==='DIALOGUE_TREE'){
+          const key=(dlgNode.label||'').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+          dialogueTrigger={key,worldX:n.triggerWorldX!==undefined?n.triggerWorldX:null};
+        }
+      }
+      return{
+        id:n.id, name:n.label||'Scene', atmosphere:n.atmosphere||'',
+        sceneType:n.sceneType||'neutral', octaviaWorldX:n.octaviaWorldX||400,
+        elevatorFloor:n.elevatorFloor||null,
+        chars:(n.sceneChars||[]).map(sc=>({charId:sc.charId,worldX:sc.worldX,alignment:sc.alignment})),
+        storeItems:(n.storeItems||[]),
+        dialogueTrigger,
+      };
+    });
+    // 5. SPAWN POINTS
+    const spawnNodes=mt.flatMap(t=>(t.nodes||[]).filter(n=>n.type==='SPAWN_POINT'));
+    const spawnsOut=spawnNodes.map(n=>({id:n.id,charId:n.charId||null,worldX:n.worldX||400}));
+    // assemble
+    const payload={people,quests:questsOut,dialogue:dialogueOut,scenes:scenesOut,spawns:spawnsOut,outfits:outfits.filter(o=>o.id!=='any'),audio};
+    const json=JSON.stringify(payload,null,2);
+    try{
+      const name=await writePayload(json);
+      showToast('WRITTEN → '+name);
+    }catch(e){
+      if(e.name==='AbortError')return; // user cancelled picker
+      if(e.message==='no-api'){
+        // browser doesn't support File System Access API — fall back to download
+        const blob=new Blob([json],{type:'application/json'});
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='beauregarde_data.json';a.click();
+        showToast('EXPORTED (download)');
+      } else {
+        showToast('EXPORT FAILED — check console');
+        console.error('[Kit] export error',e);
+      }
+    }
+  };
+
+  /* ── VIEW LABEL (for breadcrumb) ─────────────────────────────── */
+  const viewName=v=>{
+    if(v.type==='master')return'MASTER';
+    const map={character:chars,dialogue:dtrees,quest:quests};
+    const ent=(map[v.type]||[]).find(e=>e.id===v.id);
+    return v.type.toUpperCase()+': '+(ent?.name||v.id);
+  };
+
+  /* ── SIDEBAR CONTENT ─────────────────────────────────────────── */
+  const LIB_GROUPS=[
+    {key:'SCENE',       label:'SCENES'},
+    {key:'DIALOGUE_TREE',label:'DIALOGUES'},
+    {key:'QUEST',       label:'QUESTS'},
+    {key:'SPAWN_POINT', label:'SPAWN POINTS'},
+    {key:'INVENTORY',   label:'INVENTORY'},
+    {key:'TRIGGER',     label:'TRIGGERS'},
+    {key:'OCTAVIA',     label:'OCTAVIA'},
+  ];
+  const libNodeExtra=n=>{const{id,x,y,type,label,...rest}=n;return rest;};
+
+  const renderSidebar=()=>{
+    /* ── SEARCH RESULTS ─────────────────────────────────────────── */
+    if(search.trim()&&view.type==='master'){
+      const q=search.trim().toLowerCase();
+      const matchChars=chars.filter(c=>c.name?.toLowerCase().includes(q)||c.role?.toLowerCase().includes(q));
+      const matchTrees=dtrees.filter(t=>t.name?.toLowerCase().includes(q));
+      const matchQuests=quests.filter(q2=>q2.name?.toLowerCase().includes(q));
+      const matchNodes=allLibNodes.filter(n=>n.label?.toLowerCase().includes(q)||n.type?.toLowerCase().includes(q));
+      const total=matchChars.length+matchTrees.length+matchQuests.length+matchNodes.length;
+      return(
+        <div>
+          <div className="search-header">&#128269; {total} RESULT{total!==1?'S':''} FOR &ldquo;{search.trim().toUpperCase()}&rdquo;</div>
+          {matchChars.length>0&&<><div className="search-cat">CHARACTERS</div>
+            {matchChars.map(c=>(<div key={c.id} className="sb-item" onClick={()=>setPopover({type:'character',nodeId:null,entityId:c.id})}>
+              <span className="sb-item-icon" style={{color:c.id==='c1'?'#40e090':'#40c080'}}>&#9673;</span>
+              <span className="sb-item-name">{c.name}</span>
+              <span className="sb-item-sub">{c.role}</span>
+            </div>))}</>}
+          {matchTrees.length>0&&<><div className="search-cat">DIALOGUE TREES</div>
+            {matchTrees.map(t=>(<div key={t.id} className="sb-item" onClick={()=>placeNode('DIALOGUE_TREE',t.name,{entityId:t.id})}>
+              <span className="sb-item-icon">&#128172;</span>
+              <span className="sb-item-name">{t.name}</span>
+            </div>))}</>}
+          {matchQuests.length>0&&<><div className="search-cat">QUESTS</div>
+            {matchQuests.map(q2=>(<div key={q2.id} className="sb-item" onClick={()=>placeNode('QUEST',q2.name,{entityId:q2.id,major:q2.major})}>
+              <span className="sb-item-icon" style={{color:q2.major?'#d4a020':'#a08060'}}>{q2.major?'◆':'◇'}</span>
+              <span className="sb-item-name">{q2.name}</span>
+            </div>))}</>}
+          {matchNodes.length>0&&<><div className="search-cat">CANVAS NODES</div>
+            {matchNodes.map(n=>{const m=NM[n.type]||{icon:'?',color:'#888',lbl:n.type};return(
+              <div key={n.id} className="sb-item" draggable
+                onDragStart={sbDragStart(n.type,n.label,libNodeExtra(n))}
+                onClick={()=>placeNode(n.type,n.label,libNodeExtra(n))}>
+                <span className="sb-item-icon" style={{color:m.color}}>{m.icon}</span>
+                <span className="sb-item-name">{n.label||m.lbl}</span>
+                <span className="sb-item-sub">{m.lbl}</span>
+              </div>
+            );})}</>}
+          {total===0&&<div style={{padding:'20px 12px',fontSize:'8px',color:'var(--muted)',textAlign:'center'}}>NO RESULTS</div>}
+        </div>
+      );
+    }
+
+    if(view.type==='master'){
+      const npcs=chars.filter(c=>c.id!=='c1');
+      const octavia=chars.find(c=>c.id==='c1');
+      return(<>
+        {/* GRAPHS — browse all node trees */}
+        <div className="acc-section">
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='graphs'?null:'graphs')}>
+            <span className="acc-arrow" style={{transform:openAcc==='graphs'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label">NODE GRAPHS</span>
+            <button className="acc-add" onClick={e=>{e.stopPropagation();newMT();}}>+ NEW</button>
+          </div>
+          {openAcc==='graphs'&&<div className="acc-body">
+            {mt.map(t=>{
+              const tc=TTC[t.treeType||'general'];
+              return(
+                <div key={t.id} className={'sb-item'+(t.id===amid?' sb-active':'')}
+                  style={{borderLeft:`3px solid ${tc}`}}
+                  onClick={()=>setAmid(t.id)}>
+                  <span className="sb-item-icon" style={{color:tc,fontSize:'8px',fontWeight:700}}>{TTL[t.treeType||'general']}</span>
+                  <span className="sb-item-name">{t.name}</span>
+                  <span className="sb-item-sub">{(t.nodes||[]).length} nodes</span>
+                </div>
+              );
+            })}
+          </div>}
+        </div>
+        {/* OCTAVIA — protagonist node */}
+        <div className="acc-section" style={{borderLeft:'2px solid #40e090'}}>
+          <div className="acc-header">
+            <span className="acc-label" style={{color:'#40e090'}}>OCTAVIA</span>
+            <span className="sb-item-sub" style={{fontSize:'7px',letterSpacing:'1px'}}>PROTAGONIST</span>
+          </div>
+          <div className="acc-body">
+            {octavia&&(<div className="sb-item" draggable
+              onDragStart={sbDragStart('OCTAVIA',octavia.name,{entityId:octavia.id})}
+              onClick={()=>placeNode('OCTAVIA',octavia.name,{entityId:octavia.id})}>
+              <span className="sb-item-icon" style={{color:'#40e090'}}>&#9675;</span>
+              <span className="sb-item-name">{octavia.name}</span>
+              <span className="sb-item-sub">to scene / thoughts</span>
+            </div>)}
+          </div>
+        </div>
+        {/* CHARACTERS (NPCs) */}
+        <div className="acc-section">
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='chars'?null:'chars')}>
+            <span className="acc-arrow" style={{transform:openAcc==='chars'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label">CHARACTERS</span>
+            <button className="acc-add" onClick={e=>{e.stopPropagation();const id=uid();const c={id,name:'New Character',role:'',trust:0,tags:[],notes:'',subCanvas:mkC()};setChars(p=>[...p,c]);placeNode('CHARACTER','New Character',{entityId:id,role:''});}}>+ ADD</button>
+          </div>
+          {openAcc==='chars'&&<div className="acc-body">
+            {npcs.map(c=>(<div key={c.id} className="sb-item" onClick={()=>setPopover({type:'character',nodeId:null,entityId:c.id})}>
+              <span className="sb-item-icon" style={{color:'#40c080'}}>&#9673;</span>
+              <span className="sb-item-name">{c.name}</span>
+              <span className="sb-item-sub">{c.role||'click to edit'}</span>
+            </div>))}
+          </div>}
+        </div>
+        {/* DIALOGUE TREES */}
+        <div className="acc-section">
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='trees'?null:'trees')}>
+            <span className="acc-arrow" style={{transform:openAcc==='trees'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label">DIALOGUE TREES</span>
+            <button className="acc-add" onClick={e=>{e.stopPropagation();const id=uid();setDtrees(prev=>[...prev,{id,name:'New Tree',treeType:'quest',outfitCondition:'any',subCanvas:mkC()}]);placeNode('DIALOGUE_TREE','New Tree',{entityId:id});}}>+ ADD</button>
+          </div>
+          {openAcc==='trees'&&<div className="acc-body">
+            {dtrees.map(t=>{
+              const oc=t.outfitCondition||'any';
+              const mc=t.musicCue||'';
+              const mcTrack=(audio||[]).find(a=>a.id===mc);
+              return(<div key={t.id} className="sb-item" draggable onDragStart={sbDragStart('DIALOGUE_TREE',t.name,{entityId:t.id})}
+                onClick={()=>pushView('dialogue',t.id)}>
+                <span className="sb-item-icon">&#128172;</span>
+                {renamingTree===t.id
+                  ?<input autoFocus className="tree-tab-rename" style={{flex:1,fontSize:'var(--fxb)'}}
+                      defaultValue={t.name}
+                      onBlur={e=>{renameTree(t.id,e.target.value);setRenamingTree(null);}}
+                      onKeyDown={e=>{if(e.key==='Enter'){renameTree(t.id,e.target.value);setRenamingTree(null);}e.stopPropagation();}}
+                      onClick={e=>e.stopPropagation()}/>
+                  :<><span className="sb-item-name">{t.name}</span>
+                    <span title="rename" style={{fontSize:'var(--fxb)',color:'var(--dim)',cursor:'pointer',flexShrink:0,padding:'0 3px'}}
+                      onClick={e=>{e.stopPropagation();setRenamingTree(t.id);}}>✎</span>
+                  </>
+                }
+                {mc&&<span title={'Music: '+(mcTrack?.label||mc)+' — click to clear'}
+                  style={{fontSize:'7px',fontWeight:700,padding:'1px 5px',background:audioTypeColor(mcTrack?.type||'music'),color:'var(--bg)',cursor:'pointer',flexShrink:0}}
+                  onClick={e=>{e.stopPropagation();setDtrees(p=>p.map(x=>x.id===t.id?{...x,musicCue:'',musicCueLabel:''}:x));}}>&#9834;</span>}
+                <span title={'Outfit: '+outfitLabel(oc,outfits)+' — click to cycle'}
+                  style={{fontSize:'7px',fontWeight:700,padding:'1px 4px',background:outfitColor(oc,outfits),color:'var(--bg)',cursor:'pointer',flexShrink:0,letterSpacing:'0.5px'}}
+                  onClick={e=>{e.stopPropagation();setDtrees(p=>p.map(x=>x.id===t.id?{...x,outfitCondition:cycleOutfitId(x.outfitCondition||'any',outfits)}:x));}}>
+                  {outfitBadge(oc,outfits)}
+                </span>
+              </div>);
+            })}
+          </div>}
+        </div>
+        {/* QUESTS */}
+        <div className="acc-section">
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='quests'?null:'quests')}>
+            <span className="acc-arrow" style={{transform:openAcc==='quests'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label">QUESTS</span>
+            <button className="acc-add" onClick={e=>{e.stopPropagation();const id=uid();setQuests(prev=>[...prev,{id,name:'New Quest',major:false,category:'',subCanvas:mkC()}]);placeNode('QUEST','New Quest',{entityId:id,major:false});}}>+ ADD</button>
+          </div>
+          {openAcc==='quests'&&<div className="acc-body">
+            {quests.map(q=>(<div key={q.id} className="sb-item" draggable onDragStart={sbDragStart('QUEST',q.name,{entityId:q.id,major:q.major})} onClick={()=>placeNode('QUEST',q.name,{entityId:q.id,major:q.major})}>
+              <span className="sb-item-icon" style={{color:q.major?'#d4a020':'#a08060'}}>{q.major?'◆':'◇'}</span>
+              <span className="sb-item-name">{q.name}</span>
+              <span className="sb-item-sub" style={{color:q.status==='complete'?'#40c080':q.status==='locked'?'#7a6040':'var(--text2)'}}>{(q.status||'active').toUpperCase()}</span>
+              <span className="node-edit-btn" style={{marginLeft:'auto',fontSize:'6px'}} onClick={e=>{e.stopPropagation();setPopover({type:'quest',nodeId:null,entityId:q.id});}}>EDIT</span>
+            </div>))}
+          </div>}
+        </div>
+        {/* TOOLS — SCENE / INVENTORY / TRIGGER */}
+        <div className="acc-section">
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='tools'?null:'tools')}>
+            <span className="acc-arrow" style={{transform:openAcc==='tools'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label">TOOLS</span>
+          </div>
+          {openAcc==='tools'&&<div className="acc-body">
+            {[{type:'SPAWN_POINT',label:'Spawn Point',extra:{worldX:0}},{type:'SCENE',label:'Scene',extra:{atmosphere:''}},{type:'INVENTORY',label:'Inventory',extra:{action:''}},{type:'TRIGGER',label:'Trigger',extra:{condition:''}}].map(({type,label,extra})=>{
+              const m=NM[type];
+              return(<div key={type} className="sb-item" draggable
+                onDragStart={sbDragStart(type,label,extra)}
+                onClick={()=>placeNode(type,label,extra)}>
+                <span className="sb-item-icon" style={{color:m.color}}>{m.icon}</span>
+                <span className="sb-item-name">{m.lbl}</span>
+              </div>);
+            })}
+            {/* OUTFITS MANAGER — collapsible sub-accordion */}
+            <div className="outfit-acc-hdr" onClick={()=>setOpenOutfits(o=>!o)}>
+              <span style={{fontSize:'7px',color:'var(--text2)',transition:'transform .15s',display:'inline-block',transform:openOutfits?'rotate(90deg)':'rotate(0deg)'}}>&#9658;</span>
+              <span style={{fontSize:'7px',fontWeight:700,letterSpacing:'2px',color:'var(--text)',flex:1}}>OUTFITS</span>
+              <span style={{fontSize:'6px',color:'var(--muted)',letterSpacing:'1px'}}>{outfits.length} TOTAL</span>
+            </div>
+            {openOutfits&&<>
+              {outfits.map(o=>(
+                <OutfitRow key={o.id} outfit={o}
+                  onUpdate={upd=>setOutfits(p=>p.map(x=>x.id===o.id?{...x,...upd}:x))}
+                  onDelete={o.locked?null:()=>setOutfits(p=>p.filter(x=>x.id!==o.id))}/>
+              ))}
+              <div className="sb-item" style={{cursor:'pointer',color:'var(--accent2)',fontSize:'var(--fxs)',letterSpacing:'1px',padding:'6px 12px'}}
+                onClick={()=>{
+                  const id='outfit_'+uid().slice(0,6);
+                  setOutfits(p=>[...p,{id,label:'New Outfit',badge:'?',color:'#888888',locked:false}]);
+                }}>+ ADD OUTFIT</div>
+            </>}
+            {/* AUDIO — MUSIC & SFX */}
+            <div className="outfit-acc-hdr" onClick={()=>setOpenAudio(o=>!o)}>
+              <span style={{fontSize:'var(--fxs)',color:'var(--text2)',display:'inline-block',transform:openAudio?'rotate(90deg)':'rotate(0deg)',transition:'transform .15s'}}>&#9658;</span>
+              <span style={{fontSize:'var(--fxs)',fontWeight:700,letterSpacing:'2px',color:'var(--text)',flex:1,marginLeft:7}}>AUDIO</span>
+              <span style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px'}}>
+                {audio.filter(a=>a.type!=='sfx').length}&#9834; · {audio.filter(a=>a.type==='sfx').length} SFX
+              </span>
+            </div>
+            {openAudio&&<>
+              {audio.map(a=>(
+                <AudioTrackRow key={a.id} track={a}
+                  onUpdate={upd=>setAudio(p=>p.map(x=>x.id===a.id?{...x,...upd}:x))}
+                  onDelete={()=>setAudio(p=>p.filter(x=>x.id!==a.id))}/>
+              ))}
+              <div className="sb-item" style={{cursor:'pointer',color:'var(--accent2)',fontSize:'var(--fxs)',letterSpacing:'1px',padding:'6px 12px'}}
+                onClick={()=>{
+                  const id='au_'+uid().slice(0,6);
+                  setAudio(p=>[...p,{id,label:'New Track',file:'',type:'music',loop:true}]);
+                }}>+ ADD TRACK</div>
+            </>}
+          </div>}
+        </div>
+        {/* NODE LIBRARY — all placed nodes across all graphs */}
+        <div className="acc-section">
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='library'?null:'library')}>
+            <span className="acc-arrow" style={{transform:openAcc==='library'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label">NODE LIBRARY</span>
+            <span className="acc-count">{allLibNodes.length}</span>
+          </div>
+          {openAcc==='library'&&<div className="acc-body">
+            {LIB_GROUPS.map(g=>{
+              const gn=allLibNodes.filter(n=>n.type===g.key);
+              if(!gn.length)return null;
+              const m=NM[g.key]||{icon:'?',color:'#888'};
+              return(
+                <React.Fragment key={g.key}>
+                  <div className="sb-sep" style={{color:m.color}}>{g.label} ({gn.length})</div>
+                  {gn.map(n=>(
+                    <div key={n.id} className="sb-item" draggable
+                      onDragStart={sbDragStart(n.type,n.label||m.lbl,libNodeExtra(n))}
+                      onClick={()=>placeNode(n.type,n.label||m.lbl,libNodeExtra(n))}>
+                      <span className="sb-item-icon" style={{color:m.color}}>{m.icon}</span>
+                      <span className="sb-item-name">{n.label||m.lbl}</span>
+                      {n.sceneType&&<span className="sb-item-sub">{n.sceneType}</span>}
+                      {n.worldX!==undefined&&!n.sceneType&&<span className="sb-item-sub">x:{n.worldX}</span>}
+                    </div>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+            {allLibNodes.length===0&&(
+              <div style={{padding:'16px 12px',fontSize:'7px',color:'var(--muted)',letterSpacing:'1px'}}>
+                No nodes yet. Place nodes on any graph to build the library.
+              </div>
+            )}
+          </div>}
+        </div>
+      </>);
+    }
+
+    /* sub-view sidebar — dialogue gets special Octavia thoughts section */
+    if(view.type==='dialogue'){
+      return(<>
+        <div className="acc-section" style={{borderLeft:'2px solid #40e090'}}>
+          <div className="acc-header">
+            <span className="acc-label" style={{color:'#40e090'}}>OCTAVIA'S VOICE</span>
+          </div>
+          <div className="acc-body">
+            <div className="sb-item" draggable
+              onDragStart={sbDragStart('THOUGHTS','THOUGHTS',{})}
+              onClick={()=>placeNode('THOUGHTS','THOUGHTS',{})}>
+              <span className="sb-item-icon" style={{color:'#40e090'}}>〰</span>
+              <span className="sb-item-name">THOUGHTS</span>
+              <span className="sb-item-sub">internal voice</span>
+            </div>
+          </div>
+        </div>
+        <div className="acc-section">
+          <div className="acc-header"><span className="acc-label">DIALOGUE NODES</span></div>
+          <div className="acc-body">
+            {['STATEMENT','QUESTION','ITEMS','DEAD_END','LOOP','END_CONVO','OUTFIT_CHECK'].map(type=>{
+              const m=NM[type];
+              return(<div key={type} className="sb-item" draggable
+                onDragStart={sbDragStart(type,m.lbl,{})}
+                onClick={()=>placeNode(type,m.lbl,{})}>
+                <span className="sb-item-icon" style={{color:m.color}}>{m.icon}</span>
+                <span className="sb-item-name">{m.lbl}</span>
+              </div>);
+            })}
+          </div>
+        </div>
+      </>);
+    }
+
+    const vtypes=VIEW_NODES[view.type]||[];
+    return(<div className="acc-section">
+      <div className="acc-header"><span className="acc-label">{view.type.toUpperCase()+' NODES'}</span></div>
+      <div className="acc-body">
+        {vtypes.map(type=>{
+          const m=NM[type];
+          return(<div key={type} className="sb-item" draggable
+            onDragStart={sbDragStart(type,m.lbl,{})}
+            onClick={()=>placeNode(type,m.lbl,{})}>
+            <span className="sb-item-icon" style={{color:m.color}}>{m.icon}</span>
+            <span className="sb-item-name">{m.lbl}</span>
+          </div>);
+        })}
+        {view.type==='character'&&<>
+          <div className="sb-sep">LINK DIALOGUE TREE</div>
+          {dtrees.map(t=>(<div key={t.id} className="sb-item" onClick={()=>placeNode('CHAR_DIALOGUE_REF',t.name,{entityId:t.id})}>
+            <span className="sb-item-icon">&#128172;</span>
+            <span className="sb-item-name">{t.name}</span>
+          </div>))}
+          <div className="sb-sep">LINK QUEST</div>
+          {quests.map(q=>(<div key={q.id} className="sb-item" onClick={()=>placeNode('CHAR_QUEST_REF',q.name,{entityId:q.id})}>
+            <span className="sb-item-icon" style={{color:q.major?'#d4a020':'#a08060'}}>{q.major?'◆':'◇'}</span>
+            <span className="sb-item-name">{q.name}</span>
+          </div>))}
+        </>}
+        {view.type==='quest'&&<>
+          <div className="sb-sep">LINK DIALOGUE</div>
+          {dtrees.map(t=>(<div key={t.id} className="sb-item" onClick={()=>placeNode('QUEST_STEP',t.name,{entityId:t.id})}>
+            <span className="sb-item-icon">&#128172;</span>
+            <span className="sb-item-name">{t.name}</span>
+          </div>))}
+        </>}
+      </div>
+    </div>);
+  };
+
+  /* ── RENDER ──────────────────────────────────────────────────── */
+  return(
+    <div className="shell">
+      {/* NAV */}
+      <div className="nav">
+        {vStack.length>1&&<button className="nav-btn back-btn" onClick={popView}>&#8592; BACK</button>}
+        <span className="nav-title">&#10216; BEAUREGARDE CONSTRUCTION KIT</span>
+        <div className="nav-spacer"/>
+        <div className="nav-search">
+          <span style={{color:'var(--muted)',fontSize:'9px'}}>&#128269;</span>
+          <input className="nav-search-input" value={search}
+            onChange={e=>setSearch(e.target.value)}
+            placeholder="SEARCH NODES, CHARACTERS, SCENES..."/>
+          {search&&<span className="nav-search-clear" onClick={()=>setSearch('')}>&#x2715;</span>}
+        </div>
+        <select className="pal-sel" value={textSize} onChange={e=>setTextSize(e.target.value)}>
+          <option value="sm">TEXT SM</option>
+          <option value="md">TEXT MD</option>
+          <option value="lg">TEXT LG</option>
+        </select>
+        <select className="pal-sel" value={pal} onChange={e=>setPal(e.target.value)}>
+          <option value="void">VOID</option>
+          <option value="chalk">CHALK</option>
+          <option value="northside">NORTHSIDE</option>
+          <option value="chromakopia">CHROMAKOPIA</option>
+        </select>
+        <button className="nav-btn save-btn" onClick={()=>{saveState({chars,dtrees,quests,mt,amid,outfits,audio});showToast('SAVED');}}>SAVE</button>
+        <button className="nav-btn export-btn" onClick={exportGame}>EXPORT TO GAME</button>
+        <button className="nav-btn back-btn" style={{fontSize:'var(--fxt)',padding:'4px 8px'}}
+          title="Change the target file for next export"
+          onClick={async()=>{_fhHandle.current=null;try{const db=await getDB();db.transaction('h','readwrite').objectStore('h').delete('exportHandle');}catch(e){}showToast('FILE RESET — next export will prompt');}}>&#128196;</button>
+      </div>
+
+      {/* TREE TABS / BREADCRUMB */}
+      {view.type==='master'?(
+        <div className="tree-bar">
+          {mt.map(t=>{
+            const tc=TTC[t.treeType||'general'];
+            return(
+              <div key={t.id} className={'tree-tab'+(t.id===amid?' active':'')}
+                style={t.id===amid?{borderBottomColor:tc}:{}}
+                onClick={()=>setAmid(t.id)} onDoubleClick={e=>{if(e.target.classList.contains('tree-type-badge'))return;setRenamingTab(t.id);}}>
+                <span className="tree-type-badge" style={{background:tc}}
+                  title={'Type: '+TTF[t.treeType||'general']+' — click to cycle'}
+                  onClick={e=>{e.stopPropagation();cycleMT(t.id);}}>
+                  {TTL[t.treeType||'general']}
+                </span>
+                {renamingTab===t.id
+                  ?<input className="tree-tab-rename" autoFocus defaultValue={t.name}
+                      onBlur={e=>{renMT(t.id,e.target.value);setRenamingTab(null);}}
+                      onKeyDown={e=>{if(e.key==='Enter'){renMT(t.id,e.target.value);setRenamingTab(null);}e.stopPropagation();}}
+                      onClick={e=>e.stopPropagation()}/>
+                  :<span className="tree-tab-name">{t.name}</span>
+                }
+                {mt.length>1&&<span className="tree-tab-del" onClick={e=>{e.stopPropagation();delMT(t.id);}}>&#x2715;</span>}
+              </div>
+            );
+          })}
+          <div className="tree-new" onClick={newMT}>+ NEW</div>
+        </div>
+      ):(
+        <div className="tree-bar">
+          {vStack.map((v,i)=>(
+            <React.Fragment key={i}>
+              {i>0&&<span className="bc-sep">&nbsp;&#8250;&nbsp;</span>}
+              <div className={'bc-item'+(i===vStack.length-1?' active':'')}
+                onClick={()=>{ if(i<vStack.length-1)setVStack(vStack.slice(0,i+1)); }}>
+                {v.type==='dialogue'?(()=>{
+                  const tree=dtrees.find(t=>t.id===v.id);
+                  const oc=tree?.outfitCondition||'any';
+                  return(<>
+                    {renamingTree===v.id+'_bc'
+                      ?<input autoFocus className="tree-tab-rename" style={{fontSize:'var(--fxb)',marginLeft:4}}
+                          defaultValue={tree?.name||''}
+                          onBlur={e=>{renameTree(v.id,e.target.value);setRenamingTree(null);}}
+                          onKeyDown={e=>{if(e.key==='Enter'){renameTree(v.id,e.target.value);setRenamingTree(null);}e.stopPropagation();}}
+                          onClick={e=>e.stopPropagation()}/>
+                      :<span style={{marginLeft:4}} onDoubleClick={e=>{e.stopPropagation();setRenamingTree(v.id+'_bc');}} title="double-click to rename">
+                        {i===vStack.length-1?'DIALOGUE: '+(tree?.name||v.id):viewName(v)}
+                      </span>
+                    }
+                    <span title={'Outfit: '+outfitLabel(oc,outfits)+' — click to cycle'}
+                      style={{marginLeft:6,fontSize:'6px',fontWeight:700,padding:'1px 4px',background:outfitColor(oc,outfits),color:'var(--bg)',borderRadius:1,cursor:'pointer',letterSpacing:'0.5px'}}
+                      onClick={e=>{e.stopPropagation();setDtrees(p=>p.map(x=>x.id===v.id?{...x,outfitCondition:cycleOutfitId(x.outfitCondition||'any',outfits)}:x));}}>
+                      {outfitBadge(oc,outfits)}
+                    </span>
+                  </>);
+                })():viewName(v)}
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+
+      {/* BODY */}
+      <div className="body-row">
+        <div className="sidebar">{renderSidebar()}</div>
+
+        <div className="canvas-area">
+          <div className="canvas-wrap" ref={canvasRef}
+            onMouseDown={onCMD} onMouseMove={onCMM} onMouseUp={onCMU}
+            onWheel={onCW} onContextMenu={onCCM}
+            onDrop={onDrop} onDragOver={onDragOver}>
+
+            {nodes.length===0&&(
+              <div className="canvas-empty">
+                <div className="canvas-empty-label">{viewName(view)}</div>
+                <div className="canvas-empty-sub">click items in sidebar &#8729; or drag them here</div>
+              </div>
+            )}
+
+            <WireLayer conns={conns} nodes={nodes} portPositions={portPos} draft={draft} zoom={zoom} offset={offset}/>
+
+            <div className="canvas-inner" style={{transform:'translate('+(offset.x*zoom)+'px,'+(offset.y*zoom)+'px) scale('+zoom+')'}}>
+              {nodes.map(n=>(
+                <CanvasNode key={n.id} node={n}
+                  selected={n.id===selectedId}
+                  onHdr={onHdr} onDelete={delNode}
+                  onPortMouseDown={onPortMD}
+                  onOpen={view.type==='master'?pushView:null}
+                  onEdit={view.type==='master'?(id=>setPopover({type:'character',nodeId:n.id,entityId:id})):null}
+                  onDblClick={onNodeDblClick}
+                  cPorts={cPorts} conns={conns}
+                />
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* POPOVERS */}
+      {popover?.type==='character' && chars.find(x=>x.id===popover.entityId) && (
+        <CharPopover char={chars.find(x=>x.id===popover.entityId)}
+          onSave={c=>setChars(p=>p.map(x=>x.id===c.id?c:x))}
+          onOpen={pushView} onClose={()=>setPopover(null)}/>
+      )}
+      {popover?.type==='inventory' && nodes.find(x=>x.id===popover.nodeId) && (
+        <InventoryPopover node={nodes.find(x=>x.id===popover.nodeId)}
+          onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onClose={()=>setPopover(null)}/>
+      )}
+      {popover?.type==='spawn' && nodes.find(x=>x.id===popover.nodeId) && (
+        <SpawnPopover node={nodes.find(x=>x.id===popover.nodeId)}
+          chars={chars}
+          onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onClose={()=>setPopover(null)}/>
+      )}
+      {popover?.type==='scene' && nodes.find(x=>x.id===popover.nodeId) && (
+        <ScenePopover node={nodes.find(x=>x.id===popover.nodeId)}
+          chars={chars} audio={audio}
+          onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onClose={()=>setPopover(null)}/>
+      )}
+      {popover?.type==='quest' && quests.find(x=>x.id===popover.entityId) && (
+        <QuestPopover quest={quests.find(x=>x.id===popover.entityId)}
+          onSave={q=>setQuests(p=>p.map(x=>x.id===q.id?{...x,...q}:x))}
+          onOpen={pushView} onClose={()=>setPopover(null)}/>
+      )}
+      {popover?.type==='dialoguenode' && nodes.find(x=>x.id===popover.nodeId) && (
+        <DialogueNodePopover node={nodes.find(x=>x.id===popover.nodeId)}
+          chars={chars}
+          onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onClose={()=>setPopover(null)}/>
+      )}
+
+      {/* CONTEXT MENU */}
+      {ctx&&(
+        <div className="ctx-menu" style={{left:ctx.x,top:ctx.y}} onMouseLeave={()=>setCtx(null)}>
+          {ctx.nodeId&&<>
+            {(nodes.find(n=>n.id===ctx.nodeId)?.type==='CHARACTER'||nodes.find(n=>n.id===ctx.nodeId)?.type==='OCTAVIA')&&(
+              <div className="ctx-item" onClick={()=>{const n=nodes.find(x=>x.id===ctx.nodeId);if(n)setPopover({type:'character',nodeId:n.id,entityId:n.entityId||n.id});setCtx(null);}}>EDIT</div>
+            )}
+            {nodes.find(n=>n.id===ctx.nodeId)?.type==='SCENE'&&(
+              <div className="ctx-item" onClick={()=>{setPopover({type:'scene',nodeId:ctx.nodeId});setCtx(null);}}>EDIT SCENE</div>
+            )}
+            {nodes.find(n=>n.id===ctx.nodeId)?.type==='SPAWN_POINT'&&(
+              <div className="ctx-item" onClick={()=>{setPopover({type:'spawn',nodeId:ctx.nodeId});setCtx(null);}}>EDIT SPAWN POINT</div>
+            )}
+            {view.type==='master'&&NM[nodes.find(n=>n.id===ctx.nodeId)?.type]?.canOpen&&(
+              <div className="ctx-item" onClick={()=>{const n=nodes.find(x=>x.id===ctx.nodeId);if(n){const m=NM[n.type];pushView(m.ot,n.entityId||n.id);}setCtx(null);}}>OPEN CANVAS</div>
+            )}
+            <div className="ctx-item" onClick={()=>{const n=nodes.find(x=>x.id===ctx.nodeId);if(n)placeNode(n.type,n.label,n,null);setCtx(null);}}>DUPLICATE</div>
+            <div className="ctx-item danger" onClick={()=>{delNode(ctx.nodeId);setCtx(null);}}>DELETE NODE</div>
+          </>}
+        </div>
+      )}
+
+      {toast&&<div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

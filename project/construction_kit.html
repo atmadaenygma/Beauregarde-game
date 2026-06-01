@@ -4,11 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BEAUREGARDE — Construction Kit</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
+    @font-face {
+      font-family: 'TheMurk';
+      src: url('../graphics/assets/fonts/TheMurk-GrungeMatrix.otf') format('opentype');
+      font-weight: normal;
+    }
     :root {
       --bg:#68bfb8; --surface:#f0ebe0; --raised:#e4ddd0;
       --text:#0e0b08; --text2:#5a4838;
@@ -43,7 +47,7 @@
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     html, body { height:100%; overflow:hidden; }
-    body { background:var(--bg); color:var(--text); font-family:'Space Mono',monospace; }
+    body { background:var(--bg); color:var(--text); font-family:'TheMurk',monospace; }
 
     /* SHELL */
     .shell { display:flex; flex-direction:column; height:100vh; }
@@ -52,7 +56,7 @@
     .nav { display:flex; align-items:center; gap:8px; background:var(--surface); border-bottom:3px solid var(--brutal); padding:0 14px; height:48px; flex-shrink:0; z-index:300; }
     .nav-title { color:var(--accent); font-size:var(--fxh); font-weight:700; letter-spacing:3px; white-space:nowrap; }
     .nav-spacer { flex:1; }
-    .nav-btn { background:var(--raised); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); font-weight:700; letter-spacing:1px; padding:5px 12px; cursor:pointer; white-space:nowrap; box-shadow:3px 3px 0 var(--brutal); transition:box-shadow .06s,transform .06s; }
+    .nav-btn { background:var(--raised); border:2px solid var(--brutal); color:var(--text); font-family:'TheMurk',monospace; font-size:var(--fxb); font-weight:700; letter-spacing:1px; padding:5px 12px; cursor:pointer; white-space:nowrap; box-shadow:3px 3px 0 var(--brutal); transition:box-shadow .06s,transform .06s; }
     .nav-btn:hover { border-color:var(--accent); color:var(--accent); box-shadow:none; transform:translate(3px,3px); }
     .nav-btn.back-btn { border-color:var(--brutal); color:var(--text2); box-shadow:2px 2px 0 var(--brutal); }
     .nav-btn.back-btn:hover { color:var(--text); box-shadow:none; transform:translate(2px,2px); }
@@ -60,7 +64,7 @@
     .nav-btn.save-btn:hover { background:var(--accent2); color:var(--bg); box-shadow:none; transform:translate(3px,3px); }
     .nav-btn.export-btn { border-color:var(--accent); color:var(--accent); box-shadow:3px 3px 0 var(--accent); }
     .nav-btn.export-btn:hover { background:var(--accent); color:var(--bg); box-shadow:none; transform:translate(3px,3px); }
-    .pal-sel { background:var(--raised); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:4px 6px; cursor:pointer; }
+    .pal-sel { background:var(--raised); border:2px solid var(--brutal); color:var(--text); font-family:'TheMurk',monospace; font-size:var(--fxb); padding:4px 6px; cursor:pointer; }
 
     /* TREE / BREADCRUMB BAR */
     .tree-bar { display:flex; align-items:center; background:var(--surface); border-bottom:2px solid var(--brutal); height:34px; overflow-x:auto; overflow-y:hidden; flex-shrink:0; }
@@ -70,7 +74,7 @@
     .tree-tab.active { background:var(--raised); border-bottom:3px solid var(--accent); }
     .tree-tab-name { font-size:var(--fxb); color:var(--text2); letter-spacing:1px; }
     .tree-tab.active .tree-tab-name { color:var(--accent); }
-    .tree-tab-rename { font-size:var(--fxb); background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; padding:1px 4px; width:90px; }
+    .tree-tab-rename { font-size:var(--fxb); background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'TheMurk',monospace; padding:1px 4px; width:90px; }
     .tree-type-badge { font-size:var(--fxt); font-weight:700; letter-spacing:1px; padding:2px 4px; cursor:pointer; color:var(--bg); flex-shrink:0; user-select:none; }
     .tree-type-badge:hover { opacity:0.75; }
     .sb-item.sb-active { background:var(--raised); }
@@ -96,7 +100,7 @@
     .acc-header:hover { background:var(--raised); }
     .acc-arrow { font-size:var(--fxb); color:var(--text2); transition:transform .15s; }
     .acc-label { font-size:var(--fxb); font-weight:700; letter-spacing:2px; color:var(--text); flex:1; }
-    .acc-add { font-size:var(--fxs); letter-spacing:1px; color:var(--accent2); background:none; border:2px solid var(--accent2); padding:3px 7px; cursor:pointer; font-family:'Space Mono',monospace; box-shadow:2px 2px 0 var(--accent2); transition:box-shadow .06s,transform .06s; }
+    .acc-add { font-size:var(--fxs); letter-spacing:1px; color:var(--accent2); background:none; border:2px solid var(--accent2); padding:3px 7px; cursor:pointer; font-family:'TheMurk',monospace; box-shadow:2px 2px 0 var(--accent2); transition:box-shadow .06s,transform .06s; }
     .acc-add:hover { background:var(--accent2); color:var(--bg); box-shadow:none; transform:translate(2px,2px); }
     .acc-body { background:var(--bg); }
     .sb-item { display:flex; align-items:center; gap:7px; padding:6px 12px; cursor:pointer; user-select:none; }
@@ -157,19 +161,19 @@
     .edit-panel { width:280px; flex-shrink:0; background:var(--surface); border-left:2px solid var(--brutal); display:flex; flex-direction:column; z-index:10; }
     .ep-header { display:flex; align-items:center; padding:10px 12px; border-bottom:2px solid var(--brutal); gap:8px; }
     .ep-title { font-size:var(--fxh); font-weight:700; letter-spacing:2px; color:var(--accent); flex:1; }
-    .ep-close { background:none; border:2px solid var(--brutal); color:var(--text2); font-family:'Space Mono',monospace; font-size:var(--fxs); padding:3px 8px; cursor:pointer; }
+    .ep-close { background:none; border:2px solid var(--brutal); color:var(--text2); font-family:'TheMurk',monospace; font-size:var(--fxs); padding:3px 8px; cursor:pointer; }
     .ep-close:hover { border-color:var(--red); color:var(--red); }
     .ep-body { flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:10px; }
     .ep-body::-webkit-scrollbar { width:4px; }
     .ep-body::-webkit-scrollbar-thumb { background:var(--scroll); }
     .ep-field { display:flex; flex-direction:column; gap:4px; }
     .ep-label { font-size:var(--fxs); letter-spacing:2px; color:var(--text2); font-weight:700; }
-    .ep-input { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; }
+    .ep-input { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'TheMurk',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; }
     .ep-input:focus { border-color:var(--accent); outline:none; }
-    .ep-textarea { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; height:70px; resize:vertical; }
+    .ep-textarea { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'TheMurk',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; height:70px; resize:vertical; }
     .ep-textarea:focus { border-color:var(--accent); outline:none; }
     .ep-sep { font-size:var(--fxs); letter-spacing:2px; color:var(--dim); font-weight:700; border-top:2px solid var(--brutal); padding-top:6px; }
-    .ep-open-btn { background:var(--raised); border:2px solid var(--accent2); color:var(--accent2); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:6px; cursor:pointer; letter-spacing:1px; text-align:center; box-shadow:2px 2px 0 var(--accent2); transition:box-shadow .06s,transform .06s; }
+    .ep-open-btn { background:var(--raised); border:2px solid var(--accent2); color:var(--accent2); font-family:'TheMurk',monospace; font-size:var(--fxb); padding:6px; cursor:pointer; letter-spacing:1px; text-align:center; box-shadow:2px 2px 0 var(--accent2); transition:box-shadow .06s,transform .06s; }
     .ep-open-btn:hover { background:var(--accent2); color:var(--bg); box-shadow:none; transform:translate(2px,2px); }
 
     /* POPOVER */
@@ -177,7 +181,7 @@
     .popover-box { background:var(--surface); border:3px solid var(--brutal); box-shadow:8px 8px 0 var(--brutal); width:600px; max-width:96vw; max-height:85vh; display:flex; flex-direction:column; }
     .popover-header { display:flex; align-items:center; padding:12px 16px; border-bottom:2px solid var(--brutal); gap:10px; flex-shrink:0; }
     .popover-title { font-size:10px; font-weight:700; letter-spacing:3px; flex:1; }
-    .popover-close { background:none; border:2px solid var(--brutal); color:var(--text2); font-family:'Space Mono',monospace; font-size:var(--fxs); padding:4px 10px; cursor:pointer; box-shadow:2px 2px 0 var(--brutal); transition:box-shadow .06s,transform .06s; }
+    .popover-close { background:none; border:2px solid var(--brutal); color:var(--text2); font-family:'TheMurk',monospace; font-size:var(--fxs); padding:4px 10px; cursor:pointer; box-shadow:2px 2px 0 var(--brutal); transition:box-shadow .06s,transform .06s; }
     .popover-close:hover { border-color:var(--red); color:var(--red); box-shadow:none; transform:translate(2px,2px); }
     .popover-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
     .popover-body::-webkit-scrollbar { width:4px; }
@@ -193,7 +197,7 @@
     /* fields */
     .pf { display:flex; flex-direction:column; gap:4px; }
     .pfl { font-size:var(--fxs); letter-spacing:2px; color:var(--text2); font-weight:700; }
-    .pfi { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; }
+    .pfi { background:var(--input-bg); border:2px solid var(--brutal); color:var(--text); font-family:'TheMurk',monospace; font-size:var(--fxb); padding:5px 8px; width:100%; }
     .pfi:focus { border-color:var(--accent); outline:none; box-shadow:2px 2px 0 var(--accent); }
     .pf-row { display:flex; gap:10px; }
     /* item table */
@@ -201,24 +205,24 @@
     .itbl-hdr { display:flex; gap:6px; padding:2px 8px; opacity:0.45; }
     .itbl-hdr span { font-size:var(--fxs); letter-spacing:1px; }
     .irow { display:flex; gap:6px; align-items:center; padding:5px 8px; background:var(--raised); border:2px solid var(--brutal); }
-    .ifield { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'Space Mono',monospace; }
+    .ifield { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'TheMurk',monospace; }
     .ifield:focus { border-color:var(--accent); outline:none; }
     .ifield.fn { flex:2; }
     .ifield.fp { width:60px; }
     .ifield.ft { width:86px; }
     .ifield.fq { width:50px; }
-    .isel { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 4px; font-family:'Space Mono',monospace; width:86px; }
+    .isel { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 4px; font-family:'TheMurk',monospace; width:86px; }
     .idel { background:none; border:none; color:var(--dim); cursor:pointer; font-size:10px; padding:0 2px; flex-shrink:0; }
     .idel:hover { color:var(--red); }
-    .iadd { background:var(--raised); border:2px dashed var(--brutal); color:var(--text2); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:7px; cursor:pointer; letter-spacing:1px; text-align:center; }
+    .iadd { background:var(--raised); border:2px dashed var(--brutal); color:var(--text2); font-family:'TheMurk',monospace; font-size:var(--fxb); padding:7px; cursor:pointer; letter-spacing:1px; text-align:center; }
     .iadd:hover { border-color:var(--accent2); color:var(--accent2); }
-    .isave { background:var(--raised); border:2px solid var(--accent); color:var(--accent); font-family:'Space Mono',monospace; font-size:var(--fxb); padding:8px; cursor:pointer; letter-spacing:1px; text-align:center; margin-top:4px; box-shadow:3px 3px 0 var(--accent); transition:box-shadow .06s,transform .06s; }
+    .isave { background:var(--raised); border:2px solid var(--accent); color:var(--accent); font-family:'TheMurk',monospace; font-size:var(--fxb); padding:8px; cursor:pointer; letter-spacing:1px; text-align:center; margin-top:4px; box-shadow:3px 3px 0 var(--accent); transition:box-shadow .06s,transform .06s; }
     .isave:hover { background:var(--accent); color:var(--bg); box-shadow:none; transform:translate(3px,3px); }
     /* list rows (scenes, spawn) */
     .lrow { display:flex; gap:6px; align-items:center; padding:5px 8px; background:var(--raised); border:2px solid var(--brutal); }
-    .lfield-a { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'Space Mono',monospace; flex:1; min-width:0; }
+    .lfield-a { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'TheMurk',monospace; flex:1; min-width:0; }
     .lfield-a:focus { border-color:var(--accent); outline:none; }
-    .lfield-b { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'Space Mono',monospace; flex:2; min-width:0; }
+    .lfield-b { font-size:var(--fxb); color:var(--text); background:var(--input-bg); border:2px solid var(--brutal); padding:3px 5px; font-family:'TheMurk',monospace; flex:2; min-width:0; }
     .lfield-b:focus { border-color:var(--accent); outline:none; }
     .psec { font-size:var(--fxs); letter-spacing:2px; color:var(--dim); font-weight:700; margin-top:6px; }
 
@@ -233,7 +237,7 @@
 
     /* SEARCH */
     .nav-search { display:flex; align-items:center; background:var(--raised); border:2px solid var(--brutal); padding:0 8px; gap:5px; flex:1; max-width:260px; }
-    .nav-search-input { background:none; border:none; color:var(--text); font-family:'Space Mono',monospace; font-size:var(--fxb); letter-spacing:1px; width:100%; padding:5px 0; outline:none; }
+    .nav-search-input { background:none; border:none; color:var(--text); font-family:'TheMurk',monospace; font-size:var(--fxb); letter-spacing:1px; width:100%; padding:5px 0; outline:none; }
     .nav-search-input::placeholder { color:var(--muted); }
     .nav-search-clear { color:var(--dim); cursor:pointer; font-size:10px; flex-shrink:0; }
     .nav-search-clear:hover { color:var(--red); }
@@ -1498,7 +1502,7 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
   const panelStyle={position:'fixed',top:0,right:0,bottom:0,width:420,zIndex:600,
     display:'flex',flexDirection:'column',background:'var(--surface)',
     borderLeft:'3px solid var(--brutal)',boxShadow:'-6px 0 0 var(--brutal)',
-    fontFamily:"'Space Mono',monospace",
+    fontFamily:"'TheMurk',monospace",
   };
   const TABS=[['chat','CHAT'],['refs','REFERENCES'],['key','API KEY']];
 
@@ -1508,7 +1512,7 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
       <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 14px',height:48,borderBottom:'3px solid var(--brutal)',background:'var(--raised)',flexShrink:0}}>
         <span style={{color:'var(--accent)',fontSize:'var(--fxh)',fontWeight:700,letterSpacing:2,flex:1}}>✦ AI ASSISTANT</span>
         {TABS.map(([id,label])=>(
-          <button key={id} onClick={()=>setTab(id)} style={{background:tab===id?'var(--accent)':'none',color:tab===id?'var(--bg)':'var(--text2)',border:'2px solid '+(tab===id?'var(--accent)':'var(--brutal)'),fontFamily:"'Space Mono',monospace",fontSize:'var(--fxt)',padding:'3px 8px',cursor:'pointer',letterSpacing:'1px'}}>
+          <button key={id} onClick={()=>setTab(id)} style={{background:tab===id?'var(--accent)':'none',color:tab===id?'var(--bg)':'var(--text2)',border:'2px solid '+(tab===id?'var(--accent)':'var(--brutal)'),fontFamily:"'TheMurk',monospace",fontSize:'var(--fxt)',padding:'3px 8px',cursor:'pointer',letterSpacing:'1px'}}>
             {label}
           </button>
         ))}
@@ -1521,7 +1525,7 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
         <div style={{padding:'8px 10px',borderBottom:'2px solid var(--brutal)',display:'flex',flexWrap:'wrap',gap:5,flexShrink:0}}>
           {QUICK_PROMPTS.map(q=>(
             <button key={q.label} onClick={()=>send(q.prompt)}
-              style={{background:'var(--raised)',border:'2px solid var(--brutal)',color:'var(--text)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxt)',padding:'3px 8px',cursor:'pointer',letterSpacing:'0.5px',boxShadow:'2px 2px 0 var(--brutal)',transition:'all .06s'}}
+              style={{background:'var(--raised)',border:'2px solid var(--brutal)',color:'var(--text)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxt)',padding:'3px 8px',cursor:'pointer',letterSpacing:'0.5px',boxShadow:'2px 2px 0 var(--brutal)',transition:'all .06s'}}
               onMouseEnter={e=>{e.target.style.transform='translate(2px,2px)';e.target.style.boxShadow='none';}}
               onMouseLeave={e=>{e.target.style.transform='';e.target.style.boxShadow='2px 2px 0 var(--brutal)';}}>
               {q.label}
@@ -1549,9 +1553,9 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
           <textarea value={input} onChange={e=>setInput(e.target.value)}
             onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input);}}}
             placeholder="Ask anything... (Enter to send, Shift+Enter for new line)"
-            style={{flex:1,background:'var(--input-bg)',border:'2px solid var(--brutal)',color:'var(--text)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxb)',padding:'7px 9px',resize:'none',height:60,lineHeight:1.5}}/>
+            style={{flex:1,background:'var(--input-bg)',border:'2px solid var(--brutal)',color:'var(--text)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxb)',padding:'7px 9px',resize:'none',height:60,lineHeight:1.5}}/>
           <button onClick={()=>send(input)} disabled={loading}
-            style={{background:'var(--accent)',border:'2px solid var(--brutal)',color:'var(--bg)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'0 12px',cursor:'pointer',boxShadow:'3px 3px 0 var(--brutal)',alignSelf:'stretch',letterSpacing:1}}>
+            style={{background:'var(--accent)',border:'2px solid var(--brutal)',color:'var(--bg)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'0 12px',cursor:'pointer',boxShadow:'3px 3px 0 var(--brutal)',alignSelf:'stretch',letterSpacing:1}}>
             SEND
           </button>
         </div>
@@ -1565,7 +1569,7 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
           </div>
           <input ref={fileRef} type="file" accept=".txt,.md,.csv" style={{display:'none'}} onChange={uploadFile}/>
           <button onClick={()=>fileRef.current?.click()}
-            style={{background:'var(--raised)',border:'2px solid var(--accent2)',color:'var(--accent2)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'9px',cursor:'pointer',letterSpacing:1,boxShadow:'3px 3px 0 var(--accent2)',textAlign:'center'}}>
+            style={{background:'var(--raised)',border:'2px solid var(--accent2)',color:'var(--accent2)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'9px',cursor:'pointer',letterSpacing:1,boxShadow:'3px 3px 0 var(--accent2)',textAlign:'center'}}>
             + UPLOAD FILE (.txt / .md)
           </button>
           {uploadStatus&&<div style={{fontSize:'var(--fxs)',color:'var(--accent)',letterSpacing:1}}>{uploadStatus}</div>}
@@ -1601,7 +1605,7 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
               onKeyDown={e=>{if(e.key==='Enter')saveKey();}}/>
           </div>
           <button onClick={saveKey}
-            style={{background:'var(--accent)',border:'2px solid var(--accent)',color:'var(--bg)',fontFamily:"'Space Mono',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'9px',cursor:'pointer',letterSpacing:1,boxShadow:'3px 3px 0 var(--accent)',textAlign:'center'}}>
+            style={{background:'var(--accent)',border:'2px solid var(--accent)',color:'var(--bg)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'9px',cursor:'pointer',letterSpacing:1,boxShadow:'3px 3px 0 var(--accent)',textAlign:'center'}}>
             SAVE KEY
           </button>
           {uploadStatus&&<div style={{fontSize:'var(--fxb)',color:'#40c080',letterSpacing:1}}>{uploadStatus}</div>}
@@ -1804,7 +1808,7 @@ function DialogueNodePopover({node,chars,onSave,onClose}){
 
 /* ── CONDITION ROW ───────────────────────────────────────────────── */
 function ConditionRow({cond,outfits,chars,onChange,onRemove}){
-  const btn={fontFamily:"'Space Mono',monospace",fontSize:'var(--fxt)',fontWeight:700,padding:'2px 6px',cursor:'pointer',letterSpacing:'1px',border:'2px solid',flexShrink:0};
+  const btn={fontFamily:"'TheMurk',monospace",fontSize:'var(--fxt)',fontWeight:700,padding:'2px 6px',cursor:'pointer',letterSpacing:'1px',border:'2px solid',flexShrink:0};
   return(
     <div style={{display:'flex',gap:5,alignItems:'center',padding:'5px 0',borderBottom:'1px solid var(--dimmer)',flexWrap:'wrap'}}>
       <button style={{...btn,background:cond.negate?'var(--red)':'var(--raised)',borderColor:cond.negate?'var(--red)':'var(--brutal)',color:cond.negate?'var(--bg)':'var(--text)'}}

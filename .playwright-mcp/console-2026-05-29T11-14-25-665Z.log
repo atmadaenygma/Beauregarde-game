@@ -1,0 +1,51 @@
+[     336ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ https://unpkg.com/react-dom@18/umd/react-dom.development.js:29904
+[     717ms] [WARNING] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/ @ https://unpkg.com/@babel/standalone/babel.min.js:2
+[    1014ms] Uncaught Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.
+    at checkForNestedUpdates (https://unpkg.com/react-dom@18/umd/react-dom.development.js:27340:12)
+    at scheduleUpdateOnFiber (https://unpkg.com/react-dom@18/umd/react-dom.development.js:25523:4)
+    at dispatchSetState (https://unpkg.com/react-dom@18/umd/react-dom.development.js:16717:8)
+    at <anonymous> (:859:4)
+    at commitHookEffectListMount (https://unpkg.com/react-dom@18/umd/react-dom.development.js:23198:27)
+    at commitLayoutEffectOnFiber (https://unpkg.com/react-dom@18/umd/react-dom.development.js:23321:16)
+    at commitLayoutMountEffects_complete (https://unpkg.com/react-dom@18/umd/react-dom.development.js:24736:10)
+    at commitLayoutEffects_begin (https://unpkg.com/react-dom@18/umd/react-dom.development.js:24722:8)
+    at commitLayoutEffects (https://unpkg.com/react-dom@18/umd/react-dom.development.js:24660:4)
+    at commitRootImpl (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26871:6)
+    at commitRoot (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26730:6)
+    at performSyncWorkOnRoot (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26165:4)
+    at flushSyncCallbacks (https://unpkg.com/react-dom@18/umd/react-dom.development.js:12051:23)
+    at commitRootImpl (https://unpkg.com/react-dom@18/umd/react-dom.development.js:27007:4)
+    at commitRoot (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26730:6)
+    at finishConcurrentRender (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26029:10)
+    at performConcurrentWorkOnRoot (https://unpkg.com/react-dom@18/umd/react-dom.development.js:25857:8)
+    at workLoop (https://unpkg.com/react@18/umd/react.development.js:2652:35)
+    at flushWork (https://unpkg.com/react@18/umd/react.development.js:2625:15)
+    at performWorkUntilDeadline (https://unpkg.com/react@18/umd/react.development.js:2919:22)
+[    1016ms] [ERROR] The above error occurred in the <App> component:
+
+    at App (<anonymous>:674:19)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ https://unpkg.com/react-dom@18/umd/react-dom.development.js:18713
+[    1015ms] Uncaught Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.
+    at checkForNestedUpdates (https://unpkg.com/react-dom@18/umd/react-dom.development.js:27340:12)
+    at scheduleUpdateOnFiber (https://unpkg.com/react-dom@18/umd/react-dom.development.js:25523:4)
+    at dispatchSetState (https://unpkg.com/react-dom@18/umd/react-dom.development.js:16717:8)
+    at <anonymous> (:859:4)
+    at commitHookEffectListMount (https://unpkg.com/react-dom@18/umd/react-dom.development.js:23198:27)
+    at commitLayoutEffectOnFiber (https://unpkg.com/react-dom@18/umd/react-dom.development.js:23321:16)
+    at commitLayoutMountEffects_complete (https://unpkg.com/react-dom@18/umd/react-dom.development.js:24736:10)
+    at commitLayoutEffects_begin (https://unpkg.com/react-dom@18/umd/react-dom.development.js:24722:8)
+    at commitLayoutEffects (https://unpkg.com/react-dom@18/umd/react-dom.development.js:24660:4)
+    at commitRootImpl (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26871:6)
+    at commitRoot (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26730:6)
+    at performSyncWorkOnRoot (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26165:4)
+    at flushSyncCallbacks (https://unpkg.com/react-dom@18/umd/react-dom.development.js:12051:23)
+    at commitRootImpl (https://unpkg.com/react-dom@18/umd/react-dom.development.js:27007:4)
+    at commitRoot (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26730:6)
+    at finishConcurrentRender (https://unpkg.com/react-dom@18/umd/react-dom.development.js:26029:10)
+    at performConcurrentWorkOnRoot (https://unpkg.com/react-dom@18/umd/react-dom.development.js:25857:8)
+    at workLoop (https://unpkg.com/react@18/umd/react.development.js:2652:35)
+    at flushWork (https://unpkg.com/react@18/umd/react.development.js:2625:15)
+    at performWorkUntilDeadline (https://unpkg.com/react@18/umd/react.development.js:2919:22)
+[    1027ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:7890/favicon.ico:0

@@ -1,0 +1,88 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: ⟨ BEAUREGARDE CONSTRUCTION KIT
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🔍
+      - textbox "SEARCH NODES, CHARACTERS, SCENES..." [ref=e8]
+    - combobox [ref=e9] [cursor=pointer]:
+      - option "TEXT SM" [selected]
+      - option "TEXT MD"
+      - option "TEXT LG"
+    - combobox [ref=e10] [cursor=pointer]:
+      - option "VOID" [selected]
+      - option "CHALK"
+      - option "NORTHSIDE"
+      - option "CHROMAKOPIA"
+    - button "SAVE" [ref=e11] [cursor=pointer]
+    - button "EXPORT TO GAME" [active] [ref=e12] [cursor=pointer]
+    - button "📄" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - generic [ref=e15] [cursor=pointer]:
+      - 'generic "Type: GENERAL — click to cycle" [ref=e16]': G
+      - generic [ref=e17]: Main Graph
+    - generic [ref=e18] [cursor=pointer]: + NEW
+  - generic [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e22] [cursor=pointer]:
+        - generic [ref=e23]: ►
+        - generic [ref=e24]: NODE GRAPHS
+        - button "+ NEW" [ref=e25]
+      - generic [ref=e26]:
+        - generic [ref=e27] [cursor=pointer]:
+          - generic [ref=e28]: OCTAVIA
+          - generic [ref=e29]: PROTAGONIST
+        - generic [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]: ○
+          - generic [ref=e33]: Octavia
+          - generic [ref=e34]: to scene / thoughts
+      - generic [ref=e35]:
+        - generic [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]: ►
+          - generic [ref=e38]: CHARACTERS
+          - button "+ ADD" [ref=e39]
+        - generic [ref=e40]:
+          - generic [ref=e41] [cursor=pointer]:
+            - generic [ref=e42]: ◉
+            - generic [ref=e43]: Raymond
+            - generic [ref=e44]: store clerk
+          - generic [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]: ◉
+            - generic [ref=e47]: Diego
+            - generic [ref=e48]: street vendor
+          - generic [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]: ◉
+            - generic [ref=e51]: Pharmacist
+            - generic [ref=e52]: network medic
+          - generic [ref=e53] [cursor=pointer]:
+            - generic [ref=e54]: ◉
+            - generic [ref=e55]: Dr. Chen
+            - generic [ref=e56]: mod medic
+          - generic [ref=e57] [cursor=pointer]:
+            - generic [ref=e58]: ◉
+            - generic [ref=e59]: Collette
+            - generic [ref=e60]: missing person
+          - generic [ref=e61] [cursor=pointer]:
+            - generic [ref=e62]: ◉
+            - generic [ref=e63]: Charlie
+            - generic [ref=e64]: archivist
+      - generic [ref=e66] [cursor=pointer]:
+        - generic [ref=e67]: ►
+        - generic [ref=e68]: DIALOGUE TREES
+        - button "+ ADD" [ref=e69]
+      - generic [ref=e71] [cursor=pointer]:
+        - generic [ref=e72]: ►
+        - generic [ref=e73]: QUESTS
+        - button "+ ADD" [ref=e74]
+      - generic [ref=e76] [cursor=pointer]:
+        - generic [ref=e77]: ►
+        - generic [ref=e78]: TOOLS
+      - generic [ref=e80] [cursor=pointer]:
+        - generic [ref=e81]: ►
+        - generic [ref=e82]: NODE LIBRARY
+        - generic [ref=e83]: "0"
+    - generic [ref=e85]:
+      - generic:
+        - generic: MASTER
+        - generic: click items in sidebar ∙ or drag them here
+      - img
+  - generic: WRITTEN → beauregarde_data.json

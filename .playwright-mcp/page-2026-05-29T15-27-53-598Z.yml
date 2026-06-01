@@ -1,0 +1,104 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: ⟨ BEAUREGARDE CONSTRUCTION KIT
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🔍
+      - textbox "SEARCH NODES, CHARACTERS, SCENES..." [ref=e8]
+    - combobox [ref=e9] [cursor=pointer]:
+      - option "VOID" [selected]
+      - option "CHALK"
+      - option "NORTHSIDE"
+      - option "CHROMAKOPIA"
+    - button "SAVE" [ref=e10] [cursor=pointer]
+    - button "EXPORT TO GAME" [ref=e11] [cursor=pointer]
+  - generic [ref=e12]:
+    - generic [ref=e13] [cursor=pointer]:
+      - 'generic "Type: GENERAL — click to cycle" [ref=e14]': G
+      - generic [ref=e15]: Main
+    - generic [ref=e16] [cursor=pointer]: + NEW
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: ►
+        - generic [ref=e22]: NODE GRAPHS
+        - button "+ NEW" [ref=e23]
+      - generic [ref=e24]:
+        - generic [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]: OCTAVIA
+          - generic [ref=e27]: PROTAGONIST
+        - generic [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]: ○
+          - generic [ref=e31]: Octavia
+          - generic [ref=e32]: to scene / thoughts
+      - generic [ref=e34] [cursor=pointer]:
+        - generic [ref=e35]: ►
+        - generic [ref=e36]: CHARACTERS
+        - button "+ ADD" [ref=e37]
+      - generic [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: ►
+        - generic [ref=e66]: DIALOGUE TREES
+        - button "+ ADD" [ref=e67]
+      - generic [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: ►
+        - generic [ref=e71]: QUESTS
+        - button "+ ADD" [ref=e72]
+      - generic [ref=e73]:
+        - generic [ref=e74] [cursor=pointer]:
+          - generic [ref=e75]: ►
+          - generic [ref=e76]: TOOLS
+        - generic [ref=e84]:
+          - generic [ref=e85] [cursor=pointer]:
+            - generic [ref=e86]: ⊕
+            - generic [ref=e87]: SPAWN POINT
+          - generic [ref=e88] [cursor=pointer]:
+            - generic [ref=e89]: 🎬
+            - generic [ref=e90]: SCENE
+          - generic [ref=e91] [cursor=pointer]:
+            - generic [ref=e92]: 🎒
+            - generic [ref=e93]: INVENTORY
+          - generic [ref=e94] [cursor=pointer]:
+            - generic [ref=e95]: ⚡
+            - generic [ref=e96]: TRIGGER
+      - generic [ref=e78] [cursor=pointer]:
+        - generic [ref=e79]: ►
+        - generic [ref=e80]: NODE LIBRARY
+        - generic [ref=e81]: "1"
+    - generic [ref=e83]:
+      - img
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e99]: 🎬
+          - generic [ref=e100]: SCENE
+          - generic [ref=e101]: Scene
+          - generic [ref=e102] [cursor=pointer]: ✕
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - generic "CHARACTER" [ref=e105]
+            - generic [ref=e106]: CHARACTER
+          - generic [ref=e107]:
+            - generic "FROM QUEST" [ref=e108]
+            - generic [ref=e109]: FROM QUEST
+          - generic [ref=e110]:
+            - generic "FROM SCENE" [ref=e111]
+            - generic [ref=e112]: FROM SCENE
+          - generic [ref=e113]:
+            - generic [ref=e114]: SCENE
+            - generic [ref=e115]: Scene
+          - generic [ref=e116]:
+            - generic [ref=e117]: TYPE
+            - generic [ref=e118]: NEUTRAL
+          - generic [ref=e119]:
+            - generic [ref=e120]: OCT X
+            - generic [ref=e121]: —
+          - generic [ref=e123]:
+            - generic "EXITS TO" [ref=e124]
+            - generic [ref=e125]: EXITS TO
+          - generic [ref=e126]:
+            - generic "DIALOGUE" [ref=e127]
+            - generic [ref=e128]: DIALOGUE
+          - generic [ref=e129]:
+            - generic "TRIGGER" [ref=e130]
+            - generic [ref=e131]: TRIGGER
+          - generic [ref=e132]:
+            - generic "INVENTORY" [ref=e133]
+            - generic [ref=e134]: INVENTORY

@@ -9,8 +9,13 @@
   src: url('../graphics/assets/fonts/Blue Screen Personal Use.ttf') format('truetype');
   font-weight: normal;
 }
+@font-face {
+  font-family: 'TheMurk';
+  src: url('../graphics/assets/fonts/TheMurk-GrungeMatrix.otf') format('opentype');
+  font-weight: normal;
+}
 * { margin:0; padding:0; box-sizing:border-box; }
-html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:'Blue Screen', monospace; }
+html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:'TheMurk', monospace; }
 #scale-wrap { width:1280px; height:720px; position:absolute; top:0; transform-origin:top left; }
 </style>
 </head>
@@ -536,6 +541,8 @@ const MUSIC_LIB={
   ],
   vocals:[
     {id:'v1',title:'WHITE LIPPED SNAKE',artist:'vocals',src:'../audio/music/vocals/white lipped snake.mp3',duration:''},
+    {id:'v2',title:'NEEDLES, CAGES',    artist:'vocals',src:'../audio/music/vocals/Needles, Cages.mp3',duration:''},
+    {id:'v3',title:'TETHERED MERCY',    artist:'vocals',src:'../audio/music/vocals/Tethered Mercy.mp3',duration:''},
   ],
 };
 // ── VIDEO LIBRARY ──────────────────────────────────────────────
@@ -728,7 +735,7 @@ function useMonologue(lines){
 }
 
 // ── SHARED COMPONENTS ─────────────────────────────────────────
-function Mono({text}){return text?(<div style={{position:'absolute',bottom:210,left:'50%',transform:'translateX(-50%)',color:'#e8d2a072',fontSize:8,fontStyle:'italic',fontFamily:"'Blue Screen',monospace",textAlign:'center',maxWidth:720,zIndex:200,pointerEvents:'none',letterSpacing:.3,textShadow:'0 0 30px #000,0 2px 16px #000',lineHeight:1.7}}>{text}</div>):null;}
+function Mono({text}){return text?(<div style={{position:'absolute',bottom:210,left:'50%',transform:'translateX(-50%)',color:'#e8d2a072',fontSize:8,fontStyle:'italic',fontFamily:"'TheMurk',monospace",textAlign:'center',maxWidth:720,zIndex:200,pointerEvents:'none',letterSpacing:.3,textShadow:'0 0 30px #000,0 2px 16px #000',lineHeight:1.7}}>{text}</div>):null;}
 function Heart({state='red'}){
   const col={red:C.red,yellow:C.gold,blue:'#2070d0'}[state]||C.red;
   return(<div style={{position:'absolute',bottom:20,left:22,zIndex:300,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
@@ -736,11 +743,11 @@ function Heart({state='red'}){
       <path d="M19 31C19 31 2 20 2 11C2 6 6 2 11 2C14 2 17 4 19 7C21 4 24 2 27 2C32 2 36 6 36 11C36 20 19 31 19 31Z" fill={col}/>
       <path d="M19 26C19 26 7 18 7 12C7 9 9 7 12 7C14 7 16 8.5 19 12C22 8.5 24 7 26 7C29 7 31 9 31 12C31 18 19 26 19 26Z" fill={col} opacity={.28}/>
     </svg>
-    <span style={{color:col,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",textShadow:`0 0 6px ${col}`}}>VITALS</span>
+    <span style={{color:col,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",textShadow:`0 0 6px ${col}`}}>VITALS</span>
   </div>);
 }
-function MoneyHUD({amount}){return amount>0?(<div style={{position:'absolute',bottom:20,left:78,zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'3px 10px',fontFamily:"'Blue Screen',monospace",display:'flex',alignItems:'center',gap:5}}><img src="../graphics/inventory/currency/money.png" style={{width:14,height:14,objectFit:'contain',imageRendering:'pixelated'}}/><span style={{color:'#8ab840',fontSize:8,letterSpacing:2}}>${amount}</span></div>):null;}
-function StaminaBar({stamina}){const pct=Math.max(0,Math.min(100,stamina));const col=pct>50?'#88e030':pct>25?'#e0a030':'#d04030';return(<div style={{position:'absolute',bottom:20,right:22,zIndex:300,display:'flex',alignItems:'center',gap:6}}><div style={{width:60,height:12,background:C.panel,border:`1px solid ${C.border}`,padding:'1px'}}><div style={{height:'100%',width:`${pct}%`,background:col,transition:'width 0.1s linear'}}></div></div><span style={{color:col,fontSize:7,letterSpacing:1,fontFamily:"'Blue Screen',monospace",width:25,textAlign:'right'}}>{Math.round(pct)}%</span></div>);}
+function MoneyHUD({amount}){return amount>0?(<div style={{position:'absolute',bottom:20,left:78,zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'3px 10px',fontFamily:"'TheMurk',monospace",display:'flex',alignItems:'center',gap:5}}><img src="../graphics/inventory/currency/money.png" style={{width:14,height:14,objectFit:'contain',imageRendering:'pixelated'}}/><span style={{color:'#8ab840',fontSize:8,letterSpacing:2}}>${amount}</span></div>):null;}
+function StaminaBar({stamina}){const pct=Math.max(0,Math.min(100,stamina));const col=pct>50?'#88e030':pct>25?'#e0a030':'#d04030';return(<div style={{position:'absolute',bottom:20,right:22,zIndex:300,display:'flex',alignItems:'center',gap:6}}><div style={{width:60,height:12,background:C.panel,border:`1px solid ${C.border}`,padding:'1px'}}><div style={{height:'100%',width:`${pct}%`,background:col,transition:'width 0.1s linear'}}></div></div><span style={{color:col,fontSize:7,letterSpacing:1,fontFamily:"'TheMurk',monospace",width:25,textAlign:'right'}}>{Math.round(pct)}%</span></div>);}
 // Canvas-based chroma key for videos exported without alpha channel (solid green background).
 // Replace the source video with a proper VP9+alpha WebM to remove this component.
 function ChromaKeyVideo({src,flip,height,playing,playbackRate,filterStr}){
@@ -863,7 +870,7 @@ function Char({facing,walking,running=false,crouching=false,kicking=false,jumpPh
   }
   return null;
 }
-function Prompt({text}){return(<div style={{position:'absolute',bottom:'100%',left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,marginBottom:6,fontFamily:"'Blue Screen',monospace",zIndex:9999}}>{text}</div>);}
+function Prompt({text}){return(<div style={{position:'absolute',bottom:'100%',left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,marginBottom:6,fontFamily:"'TheMurk',monospace",zIndex:9999}}>{text}</div>);}
 function NpcVideo({src,height,width,rate=0.9}){
   const ref=useRef(null);
   useEffect(()=>{if(ref.current)ref.current.playbackRate=rate;},[rate]);
@@ -871,13 +878,13 @@ function NpcVideo({src,height,width,rate=0.9}){
   return<video ref={ref} src={src} style={{...sz,objectFit:'contain',display:'block'}} autoPlay muted loop/>;
 }
 function Fade({on}){return<div style={{position:'absolute',inset:0,zIndex:600,background:C.bg,opacity:on?1:0,transition:'opacity .65s ease',pointerEvents:'none'}}/>;}
-function SceneLabel({label}){return(<div style={{position:'absolute',top:14,left:'50%',transform:'translateX(-50%)',color:C.dim,fontSize:7,letterSpacing:4,zIndex:300,fontFamily:"'Blue Screen',monospace"}}>{label}</div>);}
-function Controls({hints}){return(<div style={{position:'absolute',bottom:18,right:20,zIndex:300,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}}>{hints.map(([k,v])=>(<div key={k} style={{display:'flex',gap:8,alignItems:'center'}}><span style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>{v}</span><span style={{color:C.text,fontSize:8,fontFamily:"'Blue Screen',monospace",border:`1px solid ${C.border}`,padding:'1px 7px',background:C.panel}}>{k}</span></div>))}</div>);}
+function SceneLabel({label}){return(<div style={{position:'absolute',top:14,left:'50%',transform:'translateX(-50%)',color:C.dim,fontSize:7,letterSpacing:4,zIndex:300,fontFamily:"'TheMurk',monospace"}}>{label}</div>);}
+function Controls({hints}){return(<div style={{position:'absolute',bottom:18,right:20,zIndex:300,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}}>{hints.map(([k,v])=>(<div key={k} style={{display:'flex',gap:8,alignItems:'center'}}><span style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>{v}</span><span style={{color:C.text,fontSize:8,fontFamily:"'TheMurk',monospace",border:`1px solid ${C.border}`,padding:'1px 7px',background:C.panel}}>{k}</span></div>))}</div>);}
 function DebugOverlay({px,scene,onSceneChange}){
   const SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store'];
   const linkStyle={color:'#00ff88',fontSize:8,letterSpacing:1,cursor:'pointer',textDecoration:'none',display:'block',lineHeight:2,opacity:.75};
-  return(<div style={{position:'absolute',top:34,left:16,zIndex:700,fontFamily:"'Courier New','Courier',monospace",fontSize:8,lineHeight:2,color:'#00ff88',background:'rgba(0,0,0,0.75)',padding:'4px 12px',letterSpacing:1,borderLeft:'2px solid #00ff8855'}}>
-    <div>SCENE: <select value={scene} onChange={(e)=>onSceneChange?.(e.target.value)} style={{background:C.panel,color:'#00ff88',border:'1px solid #00ff88',fontFamily:"'Courier New','Courier',monospace",fontSize:8,padding:'2px 4px',cursor:'pointer'}}>
+  return(<div style={{position:'absolute',top:34,left:16,zIndex:700,fontFamily:"'TheMurk',monospace",fontSize:8,lineHeight:2,color:'#00ff88',background:'rgba(0,0,0,0.75)',padding:'4px 12px',letterSpacing:1,borderLeft:'2px solid #00ff8855'}}>
+    <div>SCENE: <select value={scene} onChange={(e)=>onSceneChange?.(e.target.value)} style={{background:C.panel,color:'#00ff88',border:'1px solid #00ff88',fontFamily:"'TheMurk',monospace",fontSize:8,padding:'2px 4px',cursor:'pointer'}}>
       {SCENES.map(s=><option key={s} value={s}>{s}</option>)}
     </select></div>
     <div>WORLD X: {Math.round(px)}</div>
@@ -927,14 +934,14 @@ function VoiceBox({seq,onChoose,onFinish}){
     <div style={{position:'absolute',inset:0,zIndex:400,background:'rgba(0,0,0,0.90)',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div style={{position:'relative',zIndex:10,width:700,padding:'0 20px'}}>
         {!isChoice?(<>
-          {node?.v&&<div style={{color:vc,fontSize:8,letterSpacing:4,fontFamily:"'Blue Screen',monospace",marginBottom:18,opacity:.9}}>// {node.v}</div>}
-          <div style={{color:vc,fontSize:15,lineHeight:2,fontFamily:"'Blue Screen',monospace",fontStyle:'italic',minHeight:72,marginBottom:32,letterSpacing:.3}}>
+          {node?.v&&<div style={{color:vc,fontSize:8,letterSpacing:4,fontFamily:"'TheMurk',monospace",marginBottom:18,opacity:.9}}>// {node.v}</div>}
+          <div style={{color:vc,fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',minHeight:72,marginBottom:32,letterSpacing:.3}}>
             {txt.slice(0,chars)}
             {!full&&<span style={{animation:'blink .65s steps(1) infinite',color:vc}}>▌</span>}
           </div>
-          {full&&<div style={{color:`${C.dim}66`,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[E] CONTINUE</div>}
+          {full&&<div style={{color:`${C.dim}66`,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[E] CONTINUE</div>}
         </>):(<>
-          <div style={{color:C.dim,fontSize:8,fontFamily:"'Blue Screen',monospace",lineHeight:1.9,marginBottom:28,letterSpacing:.3,borderLeft:`2px solid ${C.border}`,paddingLeft:16}}>
+          <div style={{color:C.dim,fontSize:8,fontFamily:"'TheMurk',monospace",lineHeight:1.9,marginBottom:28,letterSpacing:.3,borderLeft:`2px solid ${C.border}`,paddingLeft:16}}>
             {node.prompt}
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:5}}>
@@ -942,11 +949,11 @@ function VoiceBox({seq,onChoose,onFinish}){
               <div key={i} onClick={()=>setSel(i)}
                 style={{display:'flex',gap:12,alignItems:'flex-start',cursor:'pointer',padding:'5px 10px',
                   borderLeft:`2px solid ${sel===i?C.red:'transparent'}`,background:'transparent'}}>
-                <span style={{color:'#3a2c14',fontSize:8,fontFamily:"'Blue Screen',monospace",minWidth:14}}>{i+1}</span>
-                <span style={{color:opt.muted?C.dim:C.text,fontSize:7,lineHeight:1.65,fontFamily:"'Blue Screen',monospace",fontStyle:opt.muted?'italic':'normal'}}>{opt.t}</span>
+                <span style={{color:'#3a2c14',fontSize:8,fontFamily:"'TheMurk',monospace",minWidth:14}}>{i+1}</span>
+                <span style={{color:opt.muted?C.dim:C.text,fontSize:7,lineHeight:1.65,fontFamily:"'TheMurk',monospace",fontStyle:opt.muted?'italic':'normal'}}>{opt.t}</span>
               </div>
             ))}
-            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginTop:12}}>[ 1/2/3/4 · ↑↓ ] SELECT  [ E ] CONFIRM</div>
+            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",marginTop:12}}>[ 1/2/3/4 · ↑↓ ] SELECT  [ E ] CONFIRM</div>
           </div>
         </>)}
       </div>
@@ -1025,7 +1032,7 @@ function ChatBox({convKey,npcName,npcImg,total,onAct}){
 
   if(!node)return null;
 
-  const panel={background:'#fff',border:'3px solid #000',fontFamily:"'Space Mono',monospace",boxShadow:'6px 6px 0 #000'};
+  const panel={background:'#fff',border:'3px solid #000',fontFamily:"'TheMurk',monospace",boxShadow:'6px 6px 0 #000'};
   // 70% bigger than original 360×560 / 300×440
   const OCT_W=612,OCT_H=952;
   const NPC_W=510,NPC_H=748;
@@ -1079,7 +1086,7 @@ function ChatBox({convKey,npcName,npcImg,total,onAct}){
             <div style={{color:'#bbb',fontSize:10,fontStyle:'italic',letterSpacing:1}}>...</div>
           )}
           {history.length>3&&(
-            <div style={{fontSize:7,color:'#bbb',letterSpacing:2,textAlign:'center',marginTop:4,fontFamily:"'Space Mono',monospace"}}>
+            <div style={{fontSize:7,color:'#bbb',letterSpacing:2,textAlign:'center',marginTop:4,fontFamily:"'TheMurk',monospace"}}>
               {isChoice?'PG↑↓ SCROLL HISTORY':'↑↓ SCROLL'}
             </div>
           )}
@@ -1111,7 +1118,7 @@ function ChatBox({convKey,npcName,npcImg,total,onAct}){
         {/* Continue hint when no choices */}
         {!isChoice&&(
           <div style={{textAlign:'center',fontSize:8,color:'rgba(255,255,255,0.55)',
-            letterSpacing:3,fontFamily:"'Space Mono',monospace"}}>
+            letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>
             [ E ] CONTINUE
           </div>
         )}
@@ -1147,7 +1154,7 @@ function Bldg({d,px,facing}){
     <svg style={{position:'absolute',inset:0}} width={d.w} height={d.h}>
       {Array.from({length:rows},(_,r)=>Array.from({length:cols},(_,c)=>{const lit=sr(r*17+c*31+d.wx*.1,7)>.36;return lit?<rect key={`${r}-${c}`} x={c*36+7} y={r*46+9} width={20} height={28} fill={d.wc} opacity={.45+sr(r+c,d.wx*.01)*.45}/>:null;}))}
     </svg>
-    {d.sign&&<div style={{position:'absolute',bottom:16,left:'50%',transform:'translateX(-50%)',color:d.sign.col,fontSize:8,letterSpacing:3,fontFamily:"'Blue Screen',monospace",textShadow:`0 0 6px ${d.sign.col},0 0 20px ${d.sign.col}55`,whiteSpace:'nowrap',animation:'flicker 9s infinite'}}>{d.sign.txt}</div>}
+    {d.sign&&<div style={{position:'absolute',bottom:16,left:'50%',transform:'translateX(-50%)',color:d.sign.col,fontSize:8,letterSpacing:3,fontFamily:"'TheMurk',monospace",textShadow:`0 0 6px ${d.sign.col},0 0 20px ${d.sign.col}55`,whiteSpace:'nowrap',animation:'flicker 9s infinite'}}>{d.sign.txt}</div>}
     {d.sign?.txt==='CORNER STORE'&&(<>
       {/* Blue awning */}
       <div style={{position:'absolute',bottom:d.h-2,left:'15%',width:'70%',height:22,
@@ -1200,7 +1207,7 @@ function InventoryPanel({items,heartNum,onUse,onClose}){
   return(
     <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',
       zIndex:400,background:C.panel,border:`1px solid ${C.border}`,
-      width:320,fontFamily:"'Blue Screen',monospace",overflow:'hidden'}}>
+      width:320,fontFamily:"'TheMurk',monospace",overflow:'hidden'}}>
       {/* Header */}
       <div style={{background:C.selBg,borderBottom:`1px solid ${C.border}`,
         padding:'8px 14px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -1546,7 +1553,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
       })}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 40%,#060402a8 100%)'}}/>
-      {popup&&<div style={{position:'absolute',top:60,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'12px 20px',fontFamily:"'Blue Screen',monospace",maxWidth:440}}>
+      {popup&&<div style={{position:'absolute',top:60,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'12px 20px',fontFamily:"'TheMurk',monospace",maxWidth:440}}>
         <div style={{color:C.red,fontSize:7,letterSpacing:3,marginBottom:8}}>// {popup.title}</div>
         <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
         {popupAction==='bedrest'?(
@@ -1716,7 +1723,7 @@ function BathroomScene({heart,mono,onLeave,onShowerDone,bathroomSpawnPos,bathroo
         </div>);
       })}
       {activeSeq&&<VoiceBox key={dialogueStep} seq={activeSeq} onChoose={handleChoose} onFinish={handleFinish}/>}
-      {popup&&!dialogueStep&&<div style={{position:'absolute',top:60,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'12px 20px',fontFamily:"'Blue Screen',monospace",maxWidth:440}}>
+      {popup&&!dialogueStep&&<div style={{position:'absolute',top:60,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'12px 20px',fontFamily:"'TheMurk',monospace",maxWidth:440}}>
         <div style={{color:C.red,fontSize:7,letterSpacing:3,marginBottom:8}}>// {popup.title}</div>
         <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
         <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
@@ -1834,8 +1841,8 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
       <audio ref={apt4bAudio} src="../audio/sfx/ambient/building/vacuum_cleaner_baby.mp3" loop preload="auto" muted/>
       <audio ref={knockAudio} src="../audio/sfx/interact/doors/knocking.mp3" preload="auto" muted/>
       {exiting&&<div style={{position:'absolute',inset:0,zIndex:300,background:'#000',opacity:.7,pointerEvents:'none'}}/>}
-      {exiting&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:301,color:C.dim,fontSize:7,letterSpacing:4,fontFamily:"'Blue Screen',monospace"}}>LOBBY ↓</div>}
-      {popup&&<div style={{position:'absolute',top:60,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'12px 20px',fontFamily:"'Blue Screen',monospace",maxWidth:440}}>
+      {exiting&&<div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:301,color:C.dim,fontSize:7,letterSpacing:4,fontFamily:"'TheMurk',monospace"}}>LOBBY ↓</div>}
+      {popup&&<div style={{position:'absolute',top:60,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'12px 20px',fontFamily:"'TheMurk',monospace",maxWidth:440}}>
         <div style={{color:C.red,fontSize:7,letterSpacing:3,marginBottom:8}}>// {popup.title}</div>
         <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
         <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
@@ -1904,13 +1911,13 @@ function ElevatorScene({onDone,onExit,currentOutfit}){
         alt="elevator"/>
       <Char facing="right" walking={false} charX={VW/2} charBottom={42} charHeight={336} currentOutfit={currentOutfit}/>
       <div style={{position:'absolute',right:20,top:'50%',transform:'translateY(-50%)',background:C.panel,border:`1px solid ${C.border}`,padding:12,zIndex:300}}>
-        <div style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:10}}>FLOOR</div>
+        <div style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",marginBottom:10}}>FLOOR</div>
         {floors.map((f,i)=>(
-          <div key={f} style={{display:'block',width:'100%',padding:'8px 12px',marginBottom:6,background:currentFloor===(f==='G'?0:parseInt(f))?C.gold:selected===i?C.selBg:C.selBg,color:currentFloor===(f==='G'?0:parseInt(f))?'#000':C.text,border:`1px solid ${C.border}`,fontFamily:"'Blue Screen',monospace",fontSize:8,opacity:moving?0.5:1,letterSpacing:1}}>
+          <div key={f} style={{display:'block',width:'100%',padding:'8px 12px',marginBottom:6,background:currentFloor===(f==='G'?0:parseInt(f))?C.gold:selected===i?C.selBg:C.selBg,color:currentFloor===(f==='G'?0:parseInt(f))?'#000':C.text,border:`1px solid ${C.border}`,fontFamily:"'TheMurk',monospace",fontSize:8,opacity:moving?0.5:1,letterSpacing:1}}>
             {selected===i&&'[ E ] '}{f}
           </div>
         ))}
-        <div style={{display:'block',width:'100%',padding:'8px 12px',marginTop:10,background:selected===floors.length?'#3a2020':'#1a0808',color:C.red,border:`1px solid ${C.border}`,fontFamily:"'Blue Screen',monospace",fontSize:8,opacity:moving?0.5:1,letterSpacing:1}}>
+        <div style={{display:'block',width:'100%',padding:'8px 12px',marginTop:10,background:selected===floors.length?'#3a2020':'#1a0808',color:C.red,border:`1px solid ${C.border}`,fontFamily:"'TheMurk',monospace",fontSize:8,opacity:moving?0.5:1,letterSpacing:1}}>
           {selected===floors.length&&'[ E ] '}EXIT
         </div>
       </div>
@@ -1929,7 +1936,7 @@ function StairwellScene({mode,onDone}){
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0907'}}>
       <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
-        <div style={{textAlign:'center',color:C.dim,fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{textAlign:'center',color:C.dim,fontFamily:"'TheMurk',monospace"}}>
           <div style={{fontSize:8,letterSpacing:2,marginBottom:20}}>{mode==='up'?'↑ ASCENDING ↑':'↓ DESCENDING ↓'}</div>
           <div style={{fontSize:8,letterSpacing:1}}>STAIRS</div>
         </div>
@@ -1992,12 +1999,12 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
         alt="lobby"/>
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={92} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
       {(nearObj||nearElev)&&(nearObj?.prompt||nearElev?.id==='elevator')&&(
-        <div style={{position:'absolute',bottom:130,left:'50%',transform:'translateX(-50%)',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,fontFamily:"'Blue Screen',monospace",zIndex:300}}>
+        <div style={{position:'absolute',bottom:130,left:'50%',transform:'translateX(-50%)',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,fontFamily:"'TheMurk',monospace",zIndex:300}}>
           {nearObj?.prompt||'[ E ] ELEVATOR'}
         </div>
       )}
       {popup&&(
-        <div style={{position:'absolute',top:60,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'12px 20px',fontFamily:"'Blue Screen',monospace",maxWidth:440}}>
+        <div style={{position:'absolute',top:60,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'12px 20px',fontFamily:"'TheMurk',monospace",maxWidth:440}}>
           <div style={{color:C.red,fontSize:7,letterSpacing:3,marginBottom:8}}>// {popup.title}</div>
           <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
           <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
@@ -2045,7 +2052,7 @@ function InternalThoughtsBox({convKey,onDone}){
         maxWidth:520,width:'90%',padding:'32px 40px',
         background:'rgba(8,9,10,0.92)',
         borderLeft:'3px solid #40e090',
-        fontFamily:"'Space Mono',monospace",letterSpacing:'1px',
+        fontFamily:"'TheMurk',monospace",letterSpacing:'1px',
       }}>
         {emotion&&<div style={{fontSize:7,color:'#40e090',marginBottom:14,letterSpacing:'3px'}}>〰 {emotion}</div>}
         <div style={{fontSize:10,color:'rgba(220,230,220,0.9)',lineHeight:2,fontStyle:'italic'}}>
@@ -2148,7 +2155,7 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
       {atApt&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] APARTMENT"/></div>}
       {nearBusyDoor&&!doorMsg&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
       {nearNoAnswerDoor&&!doorMsg&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
-      {doorMsg&&<div style={{position:'absolute',bottom:200,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:8,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace",whiteSpace:'nowrap'}}>{doorMsg}</div>}
+      {doorMsg&&<div style={{position:'absolute',bottom:200,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:8,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace",whiteSpace:'nowrap'}}>{doorMsg}</div>}
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={102} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
@@ -2401,7 +2408,7 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
       {conv&&<ChatBox convKey={conv.key} npcName={conv.name} npcImg={''} total={0}
         onAct={act=>{if(act==='end'||!act)setConv(null);}}/>}
       {streetTexts.map(st=>(
-        <div key={st.id} style={{position:'absolute',top:Math.random()*200+100,left:st.x,zIndex:100,fontFamily:"'Blue Screen',monospace",fontSize:8,color:`${C.dim}`,whiteSpace:'nowrap',animation:`fade 3s ease-out`,opacity:.7,pointerEvents:'none'}}>
+        <div key={st.id} style={{position:'absolute',top:Math.random()*200+100,left:st.x,zIndex:100,fontFamily:"'TheMurk',monospace",fontSize:8,color:`${C.dim}`,whiteSpace:'nowrap',animation:`fade 3s ease-out`,opacity:.7,pointerEvents:'none'}}>
           "{st.txt}"
         </div>
       ))}
@@ -2495,7 +2502,7 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
         const near52=Math.abs(item.wx-px)<52;
         const near90=Math.abs(item.wx-px)<90;
         return(<div key={item.id} style={{position:'absolute',bottom:200,left:item.wx,transform:'translateX(-50%)',zIndex:VIEWPORT.promptZ,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-          {near90&&!near52&&<div style={{color:C.dim,fontSize:7,letterSpacing:2,fontFamily:"'Blue Screen',monospace",whiteSpace:'nowrap',textShadow:'0 0 6px #000'}}>{item.look}</div>}
+          {near90&&!near52&&<div style={{color:C.dim,fontSize:7,letterSpacing:2,fontFamily:"'TheMurk',monospace",whiteSpace:'nowrap',textShadow:'0 0 6px #000'}}>{item.look}</div>}
           {near52&&<div style={{position:'relative'}}><Prompt text={`[ E ] TAKE — $${item.price}`}/></div>}
         </div>);
       })}
@@ -2506,21 +2513,21 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
         {nearCounter&&!conv&&basket.length>0&&<Prompt text={canPay?`[ E ] PAY — $${total}`:'[ E ] TALK (need cash)'}/>}
       </div>
       {/* Exit prompt */}
-      {atExit&&!basket.length&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
-      {atExit&&basket.length>0&&!paid&&!stolen&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.red,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] LEAVE (unpaid)</div>}
+      {atExit&&!basket.length&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] EXIT</div>}
+      {atExit&&basket.length>0&&!paid&&!stolen&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.red,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] LEAVE (unpaid)</div>}
       {/* Floor */}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
       {/* Basket */}
-      {basket.length>0&&<div style={{position:'absolute',top:20,right:20,zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'6px 12px',fontFamily:"'Blue Screen',monospace",minWidth:120}}>
+      {basket.length>0&&<div style={{position:'absolute',top:20,right:20,zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'6px 12px',fontFamily:"'TheMurk',monospace",minWidth:120}}>
         <div style={{color:C.dim,fontSize:8,letterSpacing:2,marginBottom:5}}>BASKET</div>
         {basket.map(id=>{const it=STORE_ITEMS.find(i=>i.id===id);return<div key={id} style={{display:'flex',justifyContent:'space-between',gap:14,color:C.text,fontSize:8}}><span>{it?.label}</span><span style={{color:C.gold}}>${it?.price}</span></div>;})}
         <div style={{borderTop:`1px solid ${C.border}33`,marginTop:4,paddingTop:4,display:'flex',justifyContent:'space-between',color:C.text,fontSize:8}}><span>TOTAL</span><span style={{color:C.gold}}>${total}</span></div>
         <div style={{color:money>=total?'#8ab840':C.red,fontSize:8,marginTop:3}}>{money>=total?`HAVE $${money} — OK`:`NEED $${total-money} MORE`}</div>
       </div>}
-      {stolen&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.red,fontSize:8,letterSpacing:4,fontFamily:"'Blue Screen',monospace",textShadow:`0 0 12px ${C.red}`}}>// THEFT</div>}
-      {paid&&!credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// PAID — ${money-total} REMAINING</div>}
-      {credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.gold,fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// CREDIT — COME BACK WHEN YOU CAN</div>}
+      {stolen&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.red,fontSize:8,letterSpacing:4,fontFamily:"'TheMurk',monospace",textShadow:`0 0 12px ${C.red}`}}>// THEFT</div>}
+      {paid&&!credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// PAID — ${money-total} REMAINING</div>}
+      {credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.gold,fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// CREDIT — COME BACK WHEN YOU CAN</div>}
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={65} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="CORNER STORE"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
@@ -2604,16 +2611,16 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
         <NpcVideo src={SECURITY_GUARD_VID} height={554}/>
         {nearGuard&&!conv&&<Prompt text="[ E ] TALK"/>}
       </div>
-      {guardBlocking&&px>=220&&px<=380&&!conv&&<div style={{position:'absolute',bottom:300,left:'50%',transform:'translateX(-50%)',zIndex:150,color:C.red,fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace",textShadow:`0 0 8px ${C.red}`}}>// ACCESS DENIED — COVER MUTATIONS</div>}
+      {guardBlocking&&px>=220&&px<=380&&!conv&&<div style={{position:'absolute',bottom:300,left:'50%',transform:'translateX(-50%)',zIndex:150,color:C.red,fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace",textShadow:`0 0 8px ${C.red}`}}>// ACCESS DENIED — COVER MUTATIONS</div>}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      {paid&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'Blue Screen',monospace"}}>// THANK YOU — STAY SAFE</div>}
+      {paid&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// THANK YOU — STAY SAFE</div>}
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={23} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="PHARMACY — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="pharmacy" onSceneChange={debugGo}/>}
       {conv&&<ChatBox convKey={conv} npcName={conv.startsWith('guard')?'GUARD':'PHARMACIST'} npcImg={conv.startsWith('guard')?GUARD_PORTRAIT:PHARMACIST_PORTRAIT} total={total} onAct={handleAct}/>}
-      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
+      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] EXIT</div>}
     </div>
   );
 }
@@ -2690,7 +2697,7 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="restaurant" onSceneChange={debugGo}/>}
       {conv&&<ChatBox convKey={conv} npcName={conv==='chef_browse'?'CHEF':'DIEGO'} npcImg={conv==='chef_browse'?CHEF_PORTRAIT:DIEGO_PORTRAIT} total={0} onAct={handleAct}/>}
-      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,right:20,zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
+      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,right:20,zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] EXIT</div>}
     </div>
   );
 }
@@ -2737,9 +2744,9 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0908'}}>
       <video src={ALLEY_VIDEO_STORE_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
       <div style={{position:'absolute',bottom:29,left:850,zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
-        <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// CHARLIE</div>
+        <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// CHARLIE</div>
         <NpcVideo src={CHARLIE_IDLE_VID} height={408} width={408}/>
-        {nearCounter&&!conv&&<div style={{position:'absolute',bottom:-35,left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 8px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] TALK</div>}
+        {nearCounter&&!conv&&<div style={{position:'absolute',bottom:-35,left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 8px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] TALK</div>}
       </div>
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
@@ -2751,7 +2758,7 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
         if(act==='giveMoveVideo'){window.dispatchEvent(new CustomEvent('beau_unlockVideo',{detail:{id:'v1'}}));setConv(null);return;}
         if(act==='end'||!act)setConv(null);
       }}/>}
-      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>[ E ] EXIT</div>}
+      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] EXIT</div>}
     </div>
   );
 }
@@ -2766,7 +2773,7 @@ function Nightmare({onDone}){
   return(<div style={{width:VW,height:VH,position:'absolute',inset:0,zIndex:400,background:ph%3===2?'#0a0302':'#060202',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
     <svg style={{position:'absolute',inset:0,opacity:.06}} width={VW} height={VH}>{Array.from({length:14},(_,r)=>Array.from({length:25},(_,c)=>(<rect key={`${r}-${c}`} x={c*54+(r%2)*27} y={r*52} width={50} height={48} rx={1} fill="none" stroke="#e8d2a0" strokeWidth={.5}/>)))}</svg>
     <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 2px,#00000028 2px,#00000028 3px)'}}/>
-    {line.t&&<div style={{color:line.g?C.gold:C.text,fontSize:line.g?13:17,fontFamily:"'Blue Screen',monospace",textAlign:'center',maxWidth:700,lineHeight:1.8,fontStyle:'italic',letterSpacing:.5,opacity:vis?1:0,transition:'opacity .38s',animation:line.g?'ng 3s steps(1) infinite':'none',textShadow:line.g?`0 0 12px ${C.gold}`:undefined}}>{line.t}</div>}
+    {line.t&&<div style={{color:line.g?C.gold:C.text,fontSize:line.g?13:17,fontFamily:"'TheMurk',monospace",textAlign:'center',maxWidth:700,lineHeight:1.8,fontStyle:'italic',letterSpacing:.5,opacity:vis?1:0,transition:'opacity .38s',animation:line.g?'ng 3s steps(1) infinite':'none',textShadow:line.g?`0 0 12px ${C.gold}`:undefined}}>{line.t}</div>}
     {ph===6&&<div style={{position:'absolute',inset:0,background:C.red,opacity:.12,animation:'flash .9s ease-out 1'}}/>}
   </div>);
 }
@@ -2906,15 +2913,15 @@ function Opening({onDone}){
       <div style={{position:'relative',zIndex:10,width:660,...gxf}}>
         {/* chromatic aberration ghosts during glitch */}
         {glitch&&shown&&<>
-          <div style={{position:'absolute',top:0,left:0,width:'100%',color:`${col}88`,fontSize:15,lineHeight:2,fontFamily:"'Blue Screen',monospace",fontStyle:'italic',letterSpacing:.3,transform:'translateX(-5px)',pointerEvents:'none',whiteSpace:'pre-wrap'}}>{node.speaker&&'\n\n'}{shown}</div>
-          <div style={{position:'absolute',top:0,left:0,width:'100%',color:'#4090b088',fontSize:15,lineHeight:2,fontFamily:"'Blue Screen',monospace",fontStyle:'italic',letterSpacing:.3,transform:'translateX(5px)',pointerEvents:'none',whiteSpace:'pre-wrap'}}>{node.speaker&&'\n\n'}{shown}</div>
+          <div style={{position:'absolute',top:0,left:0,width:'100%',color:`${col}88`,fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,transform:'translateX(-5px)',pointerEvents:'none',whiteSpace:'pre-wrap'}}>{node.speaker&&'\n\n'}{shown}</div>
+          <div style={{position:'absolute',top:0,left:0,width:'100%',color:'#4090b088',fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,transform:'translateX(5px)',pointerEvents:'none',whiteSpace:'pre-wrap'}}>{node.speaker&&'\n\n'}{shown}</div>
         </>}
         {node.speaker&&(
-          <div style={{color:col,fontSize:8,letterSpacing:4,fontFamily:"'Blue Screen',monospace",marginBottom:16,opacity:.8}}>
+          <div style={{color:col,fontSize:8,letterSpacing:4,fontFamily:"'TheMurk',monospace",marginBottom:16,opacity:.8}}>
             // {node.speaker}
           </div>
         )}
-        <div style={{color:col,fontSize:15,lineHeight:2,fontFamily:"'Blue Screen',monospace",fontStyle:'italic',minHeight:72,marginBottom:40,letterSpacing:.3}}>
+        <div style={{color:col,fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',minHeight:72,marginBottom:40,letterSpacing:.3}}>
           {shown}
           {!full&&<span style={{color:`${col}80`,letterSpacing:.5}}>{tail}</span>}
           {!full&&<span style={{animation:'blink .65s steps(1) infinite',color:col}}>▌</span>}
@@ -2926,12 +2933,12 @@ function Opening({onDone}){
                 style={{display:'flex',gap:12,alignItems:'flex-start',cursor:'pointer',padding:'5px 10px',
                   borderLeft:`2px solid ${sel===i?col:'transparent'}`,
                   background:'transparent'}}>
-                <span style={{color:'#3a2c14',fontSize:8,fontFamily:"'Blue Screen',monospace",minWidth:14,paddingTop:2}}>{i+1}</span>
+                <span style={{color:'#3a2c14',fontSize:8,fontFamily:"'TheMurk',monospace",minWidth:14,paddingTop:2}}>{i+1}</span>
                 <span style={{color:opt.muted?'#4a3820':C.text,fontSize:7,lineHeight:1.65,
-                  fontFamily:"'Blue Screen',monospace",fontStyle:opt.muted?'italic':'normal'}}>{opt.t}</span>
+                  fontFamily:"'TheMurk',monospace",fontStyle:opt.muted?'italic':'normal'}}>{opt.t}</span>
               </div>
             ))}
-            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace",marginTop:12}}>
+            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",marginTop:12}}>
               [ 1/2/3 ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM &nbsp;·&nbsp; [ ENTER ] SKIP
             </div>
           </div>
@@ -2948,7 +2955,7 @@ function ThreadsOverlay({onClose,marcusFound,warehouseFound,inventory=[],heartNu
   const [activeTab,setActiveTab]=useState('THREADS');
   const [invSel,setInvSel]=useState(null);
   const heartColor={red:C.red,yellow:C.gold,blue:'#2070d0'}[heartNum>=75?'red':heartNum>=50?'yellow':'blue']||C.red;
-  const mono={fontFamily:"'Blue Screen',monospace"};
+  const mono={fontFamily:"'TheMurk',monospace"};
   const ENTRIES={
     personal:[
       {id:'p1',name:'THE MISSING WEEK',handle:'@gap-week-00',status:'FRAGMENT',info:'Seven days. She was unconscious for seven days. Someone left water. She doesn\'t know who.'},
@@ -2987,7 +2994,7 @@ function ThreadsOverlay({onClose,marcusFound,warehouseFound,inventory=[],heartNu
                 borderRight:`1px solid ${C.border}`,cursor:clickable?'pointer':'default'}}>{t}</div>);
           })}
           <div style={{flex:1}}/>
-          <div onClick={onClose} style={{padding:'0 20px',height:44,display:'flex',alignItems:'center',color:C.red,fontSize:7,letterSpacing:2,cursor:'pointer',borderLeft:`1px solid ${C.border}`,fontFamily:"'Blue Screen',monospace"}}>[ TAB ] CLOSE</div>
+          <div onClick={onClose} style={{padding:'0 20px',height:44,display:'flex',alignItems:'center',color:C.red,fontSize:7,letterSpacing:2,cursor:'pointer',borderLeft:`1px solid ${C.border}`,fontFamily:"'TheMurk',monospace"}}>[ TAB ] CLOSE</div>
         </div>
         {activeTab==='INVENTORY'?(
           <div style={{gridColumn:'1/-1',display:'flex',flexDirection:'column',overflow:'hidden'}}>
@@ -3082,7 +3089,7 @@ function ThreadsOverlay({onClose,marcusFound,warehouseFound,inventory=[],heartNu
         )}
         {/* Bottom bar */}
         <div style={{gridColumn:'1/-1',borderTop:`1px solid ${C.border}`,height:28,background:'#0c0a07',display:'flex',alignItems:'center',padding:'0 16px',gap:16}}>
-          {[['↑↓','NAVIGATE'],['E','SELECT'],['TAB','CLOSE']].map(([k,v])=>(<div key={k} style={{display:'flex',gap:6,alignItems:'center'}}><span style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>{v}</span><span style={{color:C.text,fontSize:8,border:`1px solid ${C.border}`,padding:'0 5px',background:C.selBg,fontFamily:"'Blue Screen',monospace"}}>{k}</span></div>))}
+          {[['↑↓','NAVIGATE'],['E','SELECT'],['TAB','CLOSE']].map(([k,v])=>(<div key={k} style={{display:'flex',gap:6,alignItems:'center'}}><span style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>{v}</span><span style={{color:C.text,fontSize:8,border:`1px solid ${C.border}`,padding:'0 5px',background:C.selBg,fontFamily:"'TheMurk',monospace"}}>{k}</span></div>))}
         </div>
       </div>
     </div>
@@ -3622,7 +3629,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
 
       // Image viewer
       if(isImageMode){return(
-        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
           <div style={{display:'flex',alignItems:'center',padding:`${Math.round(2*F)}px ${Math.round(4*F)}px`,borderBottom:`1px solid ${C.border}44`,background:C.panel,flexShrink:0,gap:Math.round(6*F)}}>
             <span style={{color:C.dim,fontSize:Math.round(7*F),cursor:'pointer',userSelect:'none'}} onClick={()=>setViewingImage(null)}>← VIDEO</span>
             <span style={{flex:1,color:C.text,fontSize:Math.round(6*F),letterSpacing:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
@@ -3639,7 +3646,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
       if(!playing){
         const PADX=Math.round(5*F);
         return(
-        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
           {/* Header with clickable BACK + title + count */}
           <div style={{display:'flex',alignItems:'center',padding:`${Math.round(2*F)}px ${PADX}px`,borderBottom:`1px solid ${C.border}44`,background:C.panel,flexShrink:0,gap:Math.round(4*F)}}>
             <span onClick={()=>{setPhoneSubApp(null);setSelectedIdx(0);}}
@@ -3696,7 +3703,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         {s:'►|', f:null},
       ];
       return(
-        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
           {/* Header */}
           <div style={{display:'flex',alignItems:'center',gap:Math.round(5*F),padding:`${Math.round(2*F)}px ${Math.round(4*F)}px`,borderBottom:`1px solid ${C.border}44`,background:C.panel,flexShrink:0}}>
             <span style={{color:C.dim,fontSize:Math.round(7*F),cursor:'pointer',userSelect:'none',flexShrink:0}}
@@ -3787,7 +3794,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
       const prevTrack=()=>{setMusicTrackIdx(i=>Math.max(0,i-1));setMusicTime(0);};
       const nextTrack=()=>{setMusicTrackIdx(i=>Math.min((tracks?.length||1)-1,i+1));setMusicTime(0);};
       return(
-        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace",background:C.bg}}>
+        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace",background:C.bg}}>
           {/* Header */}
           <div style={{display:'flex',alignItems:'center',padding:`${Math.round(2*F)}px ${Math.round(4*F)}px`,borderBottom:`1px solid ${C.border}44`,background:C.panel,flexShrink:0,gap:Math.round(5*F)}}>
             <span onClick={()=>{setPhoneSubApp(null);setSelectedIdx(0);}} style={{color:C.dim,fontSize:Math.round(6*F),cursor:'pointer',userSelect:'none',letterSpacing:1,border:`1px solid ${C.border}66`,padding:`${Math.round(1*F)}px ${Math.round(3*F)}px`,borderRadius:1}}>← BACK</span>
@@ -3854,7 +3861,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
     if(tab.id==='phone'&&!phoneSubApp){
       const F=HUD_FONT_SCALE;
       return(
-        <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden',fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden',fontFamily:"'TheMurk',monospace"}}>
           <div style={{display:'flex',height:TAB_BAR_H,borderBottom:`1px solid ${C.border}66`,background:C.panel,flexShrink:0}}>
             {HUD_TABS.map((t,i)=>{
               const active=i===activeTabIdx;
@@ -3903,7 +3910,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
     }
     const isStub=tab.hasDropdown?false:tab.source==='stub';
     return(
-      <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+      <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
         {/* Tab bar */}
         <div style={{display:'flex',height:TAB_BAR_H,borderBottom:`1px solid ${C.border}66`,background:C.panel,flexShrink:0}}>
           {HUD_TABS.map((t,i)=>{
@@ -4251,7 +4258,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
       if(playing&&playing.article){
         const NP='#f2ead6';const NK='#0a0704';const NA='#8a6a2a';
         return(
-          <div style={{display:'flex',flexDirection:'column',height:'100%',background:NP,color:NK,fontFamily:"'Blue Screen',monospace",overflow:'hidden'}}>
+          <div style={{display:'flex',flexDirection:'column',height:'100%',background:NP,color:NK,fontFamily:"'TheMurk',monospace",overflow:'hidden'}}>
             {/* Masthead */}
             <div style={{background:NK,color:NP,padding:`${Math.round(2*F)}px ${Math.round(5*F)}px`,flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:`2px solid ${NA}`}}>
               <span style={{fontSize:Math.round(7*F),letterSpacing:3,fontWeight:'900'}}>PHILADELPHIA BULLETIN</span>
@@ -4297,7 +4304,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
 
       // ── LIST PREVIEW (no video selected / video has no article) ──────────
       return(
-        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
           {selVid?(
             <div style={{flex:1,display:'flex',flexDirection:'column',padding:`${Math.round(4*F)}px ${Math.round(5*F)}px`,gap:Math.round(3*F),overflow:'hidden'}}>
               <div style={{color:selVid.forbidden?'#c43028':C.dim,fontSize:Math.round(5*F),letterSpacing:2}}>{selVid.category} · {selVid.duration}</div>
@@ -4347,7 +4354,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         if(t){a.src=t.src;a.load();a.play().then(()=>setMusicPlaying(true)).catch(()=>{});}
       };
       return(
-        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
           {/* Track list */}
           <div style={{flex:1,overflowY:'auto',minHeight:0,padding:`${Math.round(2*F)}px 0`}} ref={listScrollRef}>
             {tracks.length===0?(
@@ -4398,7 +4405,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
       const videoCount=videoLibUnlocked.size;
       const unlockedVids=VIDEO_LIBRARY.filter(v=>videoLibUnlocked.has(v.id));
       return(
-        <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden',fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden',fontFamily:"'TheMurk',monospace"}}>
           <div style={{padding:`${Math.round(2*F)}px ${Math.round(5*F)}px`,borderBottom:`1px solid ${C.border}33`,flexShrink:0}}>
             <span style={{color:C.red,fontSize:Math.round(6*F),letterSpacing:2}}>// {selApp?.name||'PHONE'}</span>
           </div>
@@ -4435,7 +4442,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
     }
 
     const sysFooter=(
-      <div style={{background:C.selBg,borderTop:`1px solid ${C.border}`,padding:`${Math.round(1*HUD_FONT_SCALE)}px ${Math.round(4*HUD_FONT_SCALE)}px`,flexShrink:0,display:'flex',justifyContent:'space-between',color:C.dim,fontSize:Math.round(6*HUD_FONT_SCALE),letterSpacing:0.5,fontFamily:"'Blue Screen',monospace"}}>
+      <div style={{background:C.selBg,borderTop:`1px solid ${C.border}`,padding:`${Math.round(1*HUD_FONT_SCALE)}px ${Math.round(4*HUD_FONT_SCALE)}px`,flexShrink:0,display:'flex',justifyContent:'space-between',color:C.dim,fontSize:Math.round(6*HUD_FONT_SCALE),letterSpacing:0.5,fontFamily:"'TheMurk',monospace"}}>
         <span>{H.close} CLOSE</span><span>{H.tabs} TABS</span><span>{H.lr} MODE</span><span>{H.nav} NAV</span><span>{H.use} USE</span>
       </div>
     );
@@ -4443,9 +4450,9 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
     if(tab.id==='system'){
       if(sysMode==='save'||sysMode==='load'){
         const slot=SAVE_SLOTS[selectedIdx];
-        if(!slot) return(<div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:C.dim,fontSize:Math.round(8*HUD_FONT_SCALE),fontFamily:"'Blue Screen',monospace"}}>// SELECT SLOT</div>);
+        if(!slot) return(<div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:C.dim,fontSize:Math.round(8*HUD_FONT_SCALE),fontFamily:"'TheMurk',monospace"}}>// SELECT SLOT</div>);
         return(
-          <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+          <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
             <div style={{flex:1,display:'flex',padding:Math.round(3*HUD_FONT_SCALE),gap:Math.round(3*HUD_FONT_SCALE),overflow:'hidden',minHeight:0}}>
               <div style={{width:'28%',border:`1px solid ${C.border}66`,background:C.panel,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:C.dim,fontSize:Math.round(7*HUD_FONT_SCALE),textAlign:'center'}}>
                 {slot.status==='empty'?'EMPTY':slot.scene.toUpperCase()}
@@ -4475,7 +4482,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         const previewKey=Object.keys(COLOR_PRESETS)[Math.max(0,Math.min(selectedIdx,Object.keys(COLOR_PRESETS).length-1))];
         const preview=COLOR_PRESETS[previewKey]||COLOR_PRESETS.default;
         return(
-          <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+          <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
             <div style={{flex:1,padding:Math.round(4*HUD_FONT_SCALE),overflow:'hidden',minHeight:0,display:'flex',flexDirection:'column',gap:Math.round(4*HUD_FONT_SCALE)}}>
               <div style={{color:C.gold,fontSize:Math.round(9*HUD_FONT_SCALE),fontWeight:700,letterSpacing:2}}>{preview.name} — PREVIEW</div>
               {/* Color swatch row */}
@@ -4496,7 +4503,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         );
       } else if(sysMode==='quit'){
         return(
-          <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+          <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
             <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:Math.round(8*HUD_FONT_SCALE),padding:Math.round(8*HUD_FONT_SCALE),textAlign:'center'}}>
               <div style={{color:C.gold,fontSize:Math.round(10*HUD_FONT_SCALE),letterSpacing:2}}>// EXIT GAME?</div>
               <div style={{color:C.text,fontSize:Math.round(8*HUD_FONT_SCALE),lineHeight:1.6}}>Unsaved progress will be lost.</div>
@@ -4514,14 +4521,14 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
     const actualSource=actualTab?.source||'stub';
     if(actualSource==='stub'){
       return(
-        <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:C.dim,fontSize:Math.round(24*HUD_FONT_SCALE),fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:C.dim,fontSize:Math.round(24*HUD_FONT_SCALE),fontFamily:"'TheMurk',monospace"}}>
           // NO DATA
         </div>
       );
     }
     if(items.length===0||!selected){
       return(
-        <div style={{padding:Math.round(8*HUD_FONT_SCALE),color:C.dim,fontSize:Math.round(24*HUD_FONT_SCALE),fontFamily:"'Blue Screen',monospace"}}>
+        <div style={{padding:Math.round(8*HUD_FONT_SCALE),color:C.dim,fontSize:Math.round(24*HUD_FONT_SCALE),fontFamily:"'TheMurk',monospace"}}>
           // NO {actualTab.label}
         </div>
       );
@@ -4584,7 +4591,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
       body=selected.info||'';
     }
     return(
-      <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'Blue Screen',monospace"}}>
+      <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
         {/* Info display — fills all space above footer */}
         <div style={{flex:1,display:'flex',padding:Math.round(3*HUD_FONT_SCALE),gap:Math.round(3*HUD_FONT_SCALE),overflow:'hidden',minHeight:0}}>
           {/* Left portrait box — fixed 155px square */}
@@ -4780,7 +4787,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
       {/* OPP Popout — Other Peoples Problems definition */}
       {showOppPopout&&(
         <div style={{position:'fixed',inset:0,zIndex:8888,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.75)',backdropFilter:'blur(2px)'}}>
-          <div style={{background:C.panel,border:`2px solid ${C.border}`,padding:'20px',maxWidth:'280px',textAlign:'center',fontFamily:"'Blue Screen',monospace",animation:'hudFadeIn 0.2s ease'}}>
+          <div style={{background:C.panel,border:`2px solid ${C.border}`,padding:'20px',maxWidth:'280px',textAlign:'center',fontFamily:"'TheMurk',monospace",animation:'hudFadeIn 0.2s ease'}}>
             <div style={{fontSize:Math.round(8*HUD_FONT_SCALE),color:C.gold,letterSpacing:2,marginBottom:'12px',fontWeight:700}}>
               OPP
             </div>
@@ -4799,7 +4806,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
               Network problems that affect others. When people you trust need help.
             </div>
             <button onClick={()=>setShowOppPopout(false)}
-              style={{background:C.selBg,border:`1px solid ${C.border}`,color:C.gold,padding:'6px 12px',fontSize:Math.round(6*HUD_FONT_SCALE),cursor:'pointer',fontFamily:"'Blue Screen',monospace",letterSpacing:1}}>
+              style={{background:C.selBg,border:`1px solid ${C.border}`,color:C.gold,padding:'6px 12px',fontSize:Math.round(6*HUD_FONT_SCALE),cursor:'pointer',fontFamily:"'TheMurk',monospace",letterSpacing:1}}>
               OK
             </button>
           </div>
@@ -4861,7 +4868,7 @@ function PauseMenu({onResume,onRestart,onQuit}){
     return()=>window.removeEventListener('keydown',kd,true);
   },[sel,onResume,onRestart,onQuit]);
   return(
-    <div style={{position:'absolute',inset:0,zIndex:9000,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Blue Screen',monospace"}}>
+    <div style={{position:'absolute',inset:0,zIndex:9000,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'TheMurk',monospace"}}>
       <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:0,minWidth:220}}>
         <div style={{color:C.dim,fontSize:7,letterSpacing:4,marginBottom:24}}>// PAUSED</div>
         {opts.map((o,i)=>(
@@ -4920,7 +4927,7 @@ function LoadingScreen({onStart}){
     };
   },[ready,onStart]);
   return(
-    <div style={{position:'absolute',inset:0,background:'#000',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',fontFamily:"'Blue Screen',monospace",userSelect:'none'}}>
+    <div style={{position:'absolute',inset:0,background:'#000',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',fontFamily:"'TheMurk',monospace",userSelect:'none'}}>
       <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(0deg,rgba(0,0,0,0.18) 0px,rgba(0,0,0,0.18) 1px,transparent 1px,transparent 2px)',pointerEvents:'none',zIndex:2}}/>
       <div style={{position:'relative',zIndex:3,display:'flex',flexDirection:'column',alignItems:'center'}}>
         <div style={{width:440,height:1,background:'#ffffff18',marginBottom:36}}/>
@@ -5175,10 +5182,10 @@ function QuestApp(){
         musicDuration={musicDuration} setMusicDuration={setMusicDuration}
         musicAudioRef={musicAudioRef}/>}
       {showPause&&<PauseMenu onResume={()=>setShowPause(false)} onRestart={()=>{setShowPause(false);go(scene);}} onQuit={()=>{setShowPause(false);go('opening');}}/>}
-      <div style={{position:'absolute',top:14,left:16,zIndex:600,color:`${C.dim}44`,fontSize:8,letterSpacing:3,fontFamily:"'Blue Screen',monospace",opacity:fading?0:1,transition:'opacity 1s'}}>
+      <div style={{position:'absolute',top:14,left:16,zIndex:600,color:`${C.dim}44`,fontSize:8,letterSpacing:3,fontFamily:"'TheMurk',monospace",opacity:fading?0:1,transition:'opacity 1s'}}>
         QUEST I — WAKING UP
       </div>
-      {padConnected&&<div style={{position:'absolute',top:10,right:12,zIndex:600,color:`${C.gold}88`,fontSize:8,letterSpacing:2,fontFamily:"'Blue Screen',monospace"}}>● CONTROLLER</div>}
+      {padConnected&&<div style={{position:'absolute',top:10,right:12,zIndex:600,color:`${C.gold}88`,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>● CONTROLLER</div>}
     </div>
   );
 }

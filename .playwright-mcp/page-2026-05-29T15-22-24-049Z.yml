@@ -1,0 +1,82 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: ⟨ BEAUREGARDE CONSTRUCTION KIT
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🔍
+      - textbox "SEARCH NODES, CHARACTERS, SCENES..." [ref=e8]
+    - combobox [ref=e9] [cursor=pointer]:
+      - option "VOID" [selected]
+      - option "CHALK"
+      - option "NORTHSIDE"
+      - option "CHROMAKOPIA"
+    - button "SAVE" [ref=e10] [cursor=pointer]
+    - button "EXPORT TO GAME" [ref=e11] [cursor=pointer]
+  - generic [ref=e12]:
+    - generic [ref=e13] [cursor=pointer]:
+      - 'generic "Type: GENERAL — click to cycle" [ref=e14]': G
+      - generic [ref=e15]: Main
+    - generic [ref=e16] [cursor=pointer]: + NEW
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: ►
+        - generic [ref=e22]: NODE GRAPHS
+        - button "+ NEW" [ref=e23]
+      - generic [ref=e24]:
+        - generic [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]: OCTAVIA
+          - generic [ref=e27]: PROTAGONIST
+        - generic [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]: ○
+          - generic [ref=e31]: Octavia
+          - generic [ref=e32]: to scene / thoughts
+      - generic [ref=e33]:
+        - generic [ref=e34] [cursor=pointer]:
+          - generic [ref=e35]: ►
+          - generic [ref=e36]: CHARACTERS
+          - button "+ ADD" [ref=e37]
+        - generic [ref=e38]:
+          - generic [ref=e39] [cursor=pointer]:
+            - generic [ref=e40]: ◉
+            - generic [ref=e41]: Raymond
+            - generic [ref=e42]: store clerk
+          - generic [ref=e43] [cursor=pointer]:
+            - generic [ref=e44]: ◉
+            - generic [ref=e45]: Diego
+            - generic [ref=e46]: street vendor
+          - generic [ref=e47] [cursor=pointer]:
+            - generic [ref=e48]: ◉
+            - generic [ref=e49]: Pharmacist
+            - generic [ref=e50]: network medic
+          - generic [ref=e51] [cursor=pointer]:
+            - generic [ref=e52]: ◉
+            - generic [ref=e53]: Dr. Chen
+            - generic [ref=e54]: mod medic
+          - generic [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]: ◉
+            - generic [ref=e57]: Collette
+            - generic [ref=e58]: missing person
+          - generic [ref=e59] [cursor=pointer]:
+            - generic [ref=e60]: ◉
+            - generic [ref=e61]: Charlie
+            - generic [ref=e62]: archivist
+      - generic [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: ►
+        - generic [ref=e66]: DIALOGUE TREES
+        - button "+ ADD" [ref=e67]
+      - generic [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: ►
+        - generic [ref=e71]: QUESTS
+        - button "+ ADD" [ref=e72]
+      - generic [ref=e74] [cursor=pointer]:
+        - generic [ref=e75]: ►
+        - generic [ref=e76]: TOOLS
+      - generic [ref=e78] [cursor=pointer]:
+        - generic [ref=e79]: ►
+        - generic [ref=e80]: NODE LIBRARY
+        - generic [ref=e81]: "0"
+    - generic [ref=e83]:
+      - generic:
+        - generic: MASTER
+        - generic: click items in sidebar ∙ or drag them here
+      - img

@@ -1,0 +1,121 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: ⟨ BEAUREGARDE CONSTRUCTION KIT
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🔍
+      - textbox "SEARCH NODES, CHARACTERS, SCENES..." [ref=e8]
+    - combobox [ref=e9] [cursor=pointer]:
+      - option "VOID" [selected]
+      - option "CHALK"
+      - option "NORTHSIDE"
+      - option "CHROMAKOPIA"
+    - button "SAVE" [ref=e10] [cursor=pointer]
+    - button "EXPORT TO GAME" [ref=e11] [cursor=pointer]
+  - generic [ref=e12]:
+    - generic [ref=e13] [cursor=pointer]:
+      - 'generic "Type: GENERAL — click to cycle" [ref=e14]': G
+      - generic [ref=e15]: Main
+    - generic [ref=e16] [cursor=pointer]: + NEW
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: ►
+        - generic [ref=e22]: NODE GRAPHS
+        - button "+ NEW" [ref=e23]
+      - generic [ref=e24]:
+        - generic [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]: OCTAVIA
+          - generic [ref=e27]: PROTAGONIST
+        - generic [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]: ○
+          - generic [ref=e31]: Octavia
+          - generic [ref=e32]: to scene / thoughts
+      - generic [ref=e34] [cursor=pointer]:
+        - generic [ref=e35]: ►
+        - generic [ref=e36]: CHARACTERS
+        - button "+ ADD" [ref=e37]
+      - generic [ref=e63]:
+        - generic [ref=e64] [cursor=pointer]:
+          - generic [ref=e65]: ►
+          - generic [ref=e66]: DIALOGUE TREES
+          - button "+ ADD" [ref=e67]
+        - generic [ref=e142]:
+          - generic [ref=e143] [cursor=pointer]:
+            - generic [ref=e144]: 💬
+            - generic [ref=e145]: Raymond — First Meeting
+          - generic [ref=e146] [cursor=pointer]:
+            - generic [ref=e147]: 💬
+            - generic [ref=e148]: Diego — Food Offer
+          - generic [ref=e149] [cursor=pointer]:
+            - generic [ref=e150]: 💬
+            - generic [ref=e151]: Pharmacist — Safe Space
+      - generic [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: ►
+        - generic [ref=e71]: QUESTS
+        - button "+ ADD" [ref=e72]
+      - generic [ref=e74] [cursor=pointer]:
+        - generic [ref=e75]: ►
+        - generic [ref=e76]: TOOLS
+      - generic [ref=e78] [cursor=pointer]:
+        - generic [ref=e79]: ►
+        - generic [ref=e80]: NODE LIBRARY
+        - generic [ref=e81]: "2"
+    - generic [ref=e83]:
+      - img
+      - generic:
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - generic [ref=e86]: 🎬
+            - generic [ref=e87]: SCENE
+            - generic [ref=e88]: Scene
+            - generic [ref=e89] [cursor=pointer]: ✕
+          - generic [ref=e90]:
+            - generic [ref=e91]:
+              - generic "CHARACTER" [ref=e92]
+              - generic [ref=e93]: CHARACTER
+            - generic [ref=e94]:
+              - generic "FROM QUEST" [ref=e95]
+              - generic [ref=e96]: FROM QUEST
+            - generic [ref=e97]:
+              - generic "FROM SCENE" [ref=e98]
+              - generic [ref=e99]: FROM SCENE
+            - generic [ref=e100]:
+              - generic [ref=e101]: SCENE
+              - generic [ref=e102]: Scene
+            - generic [ref=e103]:
+              - generic [ref=e104]: TYPE
+              - generic [ref=e105]: NEUTRAL
+            - generic [ref=e106]:
+              - generic [ref=e107]: OCT X
+              - generic [ref=e108]: —
+            - generic [ref=e110]:
+              - generic "EXITS TO" [ref=e111]
+              - generic [ref=e112]: EXITS TO
+            - generic [ref=e113]:
+              - generic "DIALOGUE" [ref=e114]
+              - generic [ref=e115]: DIALOGUE
+            - generic [ref=e116]:
+              - generic "TRIGGER" [ref=e117]
+              - generic [ref=e118]: TRIGGER
+            - generic [ref=e119]:
+              - generic "INVENTORY" [ref=e120]
+              - generic [ref=e121]: INVENTORY
+        - generic [ref=e122]:
+          - generic [ref=e123]:
+            - generic [ref=e124]: ⊕
+            - generic [ref=e125]: SPAWN POINT
+            - generic [ref=e126]: Spawn Point
+            - generic [ref=e127] [cursor=pointer]: ✕
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - generic "CHARACTER" [ref=e130]
+              - generic [ref=e131]: CHARACTER
+            - generic [ref=e132]:
+              - generic [ref=e133]: CHAR
+              - generic [ref=e134]: Spawn Point
+            - generic [ref=e135]:
+              - generic [ref=e136]: WORLD X
+              - generic [ref=e137]: "0"
+            - generic [ref=e139]:
+              - generic "TO SCENE" [ref=e140]
+              - generic [ref=e141]: TO SCENE

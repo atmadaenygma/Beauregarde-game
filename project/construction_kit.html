@@ -20,10 +20,12 @@
       --accent:#1a7870; --accent2:#b84818; --red:#c43028;
       --muted:#887868; --tag-bg:#e8e2d3; --input-bg:#ffffff; --scroll:#9a9080;
       --brutal:#0e0b08;
-      --fxt:6px; --fxs:7px; --fxb:8px; --fxh:9px;
+      --fxt:10px; --fxs:11px; --fxb:13px; --fxh:14px;
     }
-    body.fs-md { --fxt:8px; --fxs:9px; --fxb:10px; --fxh:11px; }
-    body.fs-lg { --fxt:10px; --fxs:11px; --fxb:13px; --fxh:14px; }
+    body.fs-md  { --fxt:12px; --fxs:13px; --fxb:15px; --fxh:16px; }
+    body.fs-lg  { --fxt:14px; --fxs:15px; --fxb:17px; --fxh:18px; }
+    body.fs-xl  { --fxt:16px; --fxs:17px; --fxb:19px; --fxh:20px; }
+    body.fs-xxl { --fxt:18px; --fxs:19px; --fxb:21px; --fxh:22px; }
     body.pal-chalk {
       --bg:#f0ebe0; --surface:#ffffff; --raised:#e8e2d4;
       --text:#1a1208; --text2:#6a5840; --dim:#b0988a; --dimmer:#d8d0c0; --border:#c8c0b0;
@@ -250,6 +252,16 @@
     /* OUTFIT SUB-ACCORDION */
     .outfit-acc-hdr { display:flex; align-items:center; gap:7px; padding:7px 12px; cursor:pointer; user-select:none; border-top:2px solid var(--brutal); }
     .outfit-acc-hdr:hover { background:var(--raised); }
+
+    /* MEDIA PICKER */
+    .mpick { display:flex; flex-direction:column; gap:4px; }
+    .mpick-preview { width:100%; max-height:150px; object-fit:contain; background:var(--bg); border:2px solid var(--brutal); display:block; }
+    .mpick-empty { height:66px; border:2px dashed var(--border); display:flex; align-items:center; justify-content:center; font-size:var(--fxs); color:var(--dimmer); letter-spacing:2px; background:var(--bg); }
+    .mpick-row { display:flex; gap:4px; }
+    .mpick-row .pfi { flex:1; min-width:0; font-size:var(--fxt) !important; }
+    .mpick-browse { border:2px solid var(--brutal); background:var(--raised); color:var(--text2); font-size:11px; padding:0 9px; cursor:pointer; flex-shrink:0; box-shadow:2px 2px 0 var(--brutal); transition:box-shadow .06s,transform .06s; font-family:'TheMurk',monospace; }
+    .mpick-browse:hover { border-color:var(--accent2); color:var(--accent2); box-shadow:none; transform:translate(2px,2px); }
+    .mpick-hint { font-size:var(--fxt); color:var(--muted); letter-spacing:0.5px; }
   </style>
 </head>
 <body>
@@ -349,6 +361,30 @@ const NP={
       {id:'to_dialogue',label:'DIALOGUE',    pt:'dialogue'},
       {id:'to_trigger', label:'TRIGGER',     pt:'trigger'},
       {id:'to_inventory',label:'INVENTORY',  pt:'item'},
+    ]
+  },
+  /* ITEM — tracks a specific item across the world */
+  ITEM:{
+    inputs:[
+      {id:'from_scene', label:'FROM SCENE',  pt:'place'},
+      {id:'from_char',  label:'FROM CHAR',   pt:'character'},
+      {id:'from_quest', label:'FROM QUEST',  pt:'quest'},
+    ],
+    outputs:[
+      {id:'required_by',label:'REQUIRED BY', pt:'quest'},
+      {id:'unlocks',    label:'UNLOCKS',     pt:'dialogue'},
+      {id:'given_to',   label:'GIVEN TO',    pt:'character'},
+    ]
+  },
+  /* LEVEL CONNECTOR */
+  LEVEL_CONNECTOR:{
+    inputs:[
+      {id:'enter_from', label:'ENTER FROM',  pt:'exit', multi:true},
+    ],
+    outputs:[
+      {id:'exit_a',     label:'EXIT A',      pt:'exit'},
+      {id:'exit_b',     label:'EXIT B',      pt:'exit'},
+      {id:'exit_c',     label:'EXIT C',      pt:'exit'},
     ]
   },
   /* DIALOGUE SUB-CANVAS */
@@ -467,11 +503,13 @@ const NM={
   QUEST_COLLECTABLE:{icon:'📦',lbl:'COLLECTABLE',    color:'#a06890'},
   QUEST_CONDITION:  {icon:'?', lbl:'CONDITION',      color:'#c4a040'},
   QUEST_END:        {icon:'◼', lbl:'QUEST END',      color:'#c43028'},
+  LEVEL_CONNECTOR:  {icon:'⊞', lbl:'LEVEL',          color:'#3ab0c0'},
+  ITEM:             {icon:'📦',lbl:'ITEM',            color:'#a06890'},
 };
 
 /* node types available per view context */
 const VIEW_NODES={
-  master:    ['OCTAVIA','SPAWN_POINT','DIALOGUE_TREE','QUEST','SCENE','INVENTORY','TRIGGER'],
+  master:    ['OCTAVIA','SPAWN_POINT','DIALOGUE_TREE','QUEST','SCENE','INVENTORY','TRIGGER','LEVEL_CONNECTOR','ITEM'],
   character: ['CHAR_DETAIL','CHAR_DIALOGUE_REF','CHAR_QUEST_REF'],
   dialogue:  ['THOUGHTS','STATEMENT','QUESTION','ITEMS','DEAD_END','LOOP','END_CONVO','OUTFIT_CHECK'],
   quest:     ['QUEST_INFO','QUEST_STEP','QUEST_COLLECTABLE','QUEST_CONDITION','QUEST_END'],
@@ -504,7 +542,7 @@ const SEED_QUESTS=[
 /* ── STORAGE ─────────────────────────────────────────────────────── */
 const LS='beauregarde_kit_v4';
 const migrateTree=t=>({playCount:'always',playLimit:1,conditions:[],...t});
-const loadState=()=>{try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s&&s.chars)return{chars:s.chars,dtrees:(s.dtrees||[]).map(migrateTree),quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT};}catch(e){}return null;};
+const loadState=()=>{try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s&&s.chars)return{chars:s.chars,dtrees:(s.dtrees||[]).map(migrateTree),quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT,items:s.items||[],vars:s.vars||[]};}catch(e){}return null;};
 const saveState=s=>{try{localStorage.setItem(LS,JSON.stringify(s));}catch(e){}};
 
 /* ── TREE TYPES ──────────────────────────────────────────────────── */
@@ -626,6 +664,14 @@ function NodeFields({node}){
     {(node.sceneChars||[]).length>0&&<div className="nf"><span className="nfl">CHARS</span><span className="nfv">{node.sceneChars.length}</span></div>}
     {node.musicCueLabel&&<div className="nf"><span className="nfl">&#9834; MUSIC</span><span className="nfv" style={{color:'#a030e0'}}>{node.musicCueLabel}</span></div>}
   </>);
+  if(t==='LEVEL_CONNECTOR')return(<>
+    <div className="nf"><span className="nfl">LEVEL</span><span className="nfv">{node.label||'—'}</span></div>
+    <div className="nf"><span className="nfl">MAP</span><span className="nfv" style={{color:'#3ab0c0'}}>{node.mapW||'—'}×{node.mapH||'—'}</span></div>
+    <div className="nf"><span className="nfl">SCALE</span><span className="nfv" style={{color:'#3ab0c0',fontWeight:700}}>{node.mapScale||1.0}×</span></div>
+    {(node.npcSpawns||[]).length>0&&<div className="nf"><span className="nfl">NPCS</span><span className="nfv">{node.npcSpawns.length} spawn{node.npcSpawns.length!==1?'s':''}</span></div>}
+    {(node.exits||[]).length>0&&<div className="nf"><span className="nfl">EXITS</span><span className="nfv">{node.exits.length} exit{node.exits.length!==1?'s':''}</span></div>}
+    {node.musicCueLabel&&<div className="nf"><span className="nfl">&#9834; MUSIC</span><span className="nfv" style={{color:'#a030e0'}}>{node.musicCueLabel}</span></div>}
+  </>);
   if(t==='STATEMENT')return(<><div className="nf"><span className="nfl">SPEAKER</span><span className="nfv">{node.speaker||em}</span></div><div className="nf"><span className="nfl">TEXT</span><span className="nfv">{trunc(node.text,26)}</span></div></>);
   if(t==='QUESTION')return(<div className="nf"><span className="nfl">PROMPT</span><span className="nfv">{node.text||em}</span></div>);
   if(t==='THOUGHTS')return(<><div className="nf"><span className="nfl">EMOTION</span><span className="nfv" style={{color:'#40e090'}}>{node.emotion||node.voice||'FEAR'}</span></div><div className="nf"><span className="nfl">TEXT</span><span className="nfv">{trunc(node.text,26)}</span></div></>);
@@ -637,7 +683,19 @@ function NodeFields({node}){
   if(t==='CHAR_DETAIL')return(<><div className="nf"><span className="nfl">NAME</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ROLE</span><span className="nfv">{node.role||em}</span></div><div className="nf"><span className="nfl">TRUST</span><span className="nfv">{node.trust||0} / 4</span></div></>);
   if(t==='PLACE_SCENE')return(<><div className="nf"><span className="nfl">SCENE</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">ATMO</span><span className="nfv">{node.atmosphere||em}</span></div></>);
   if(t==='QUEST_INFO')return(<><div className="nf"><span className="nfl">QUEST</span><span className="nfv">{node.label}</span></div><div className="nf"><span className="nfl">TYPE</span><span className="nfv">{node.major?'◆ MAJOR':'◇ MINOR'}</span></div></>);
-  if(t==='QUEST_STEP')return(<div className="nf"><span className="nfl">STEP</span><span className="nfv">{node.label||em}</span></div>);
+  if(t==='QUEST_STEP')return(<>
+    <div className="nf"><span className="nfl">STEP</span><span className="nfv">{node.label||em}</span></div>
+    {node.dialogueKey&&<div className="nf"><span className="nfl">DIAL</span><span className="nfv" style={{color:'#c47a10'}}>{node.dialogueKey}</span></div>}
+    {node.atPlace&&<div className="nf"><span className="nfl">AT</span><span className="nfv" style={{color:'#5090d0'}}>{node.atPlace}</span></div>}
+  </>);
+  if(t==='QUEST_COLLECTABLE')return(<div className="nf"><span className="nfl">ITEM</span><span className="nfv">{node.item||node.label||em}</span></div>);
+  if(t==='QUEST_CONDITION')return(<><div className="nf"><span className="nfl">IF</span><span className="nfv" style={{color:'#c4a040'}}>{node.condition||node.label||em}</span></div></>);
+  if(t==='QUEST_END')return(<div className="nf"><span className="nfl">END</span><span className="nfv" style={{color:'#c43028'}}>quest complete</span></div>);
+  if(t==='ITEM')return(<>
+    <div className="nf"><span className="nfl">ITEM</span><span className="nfv" style={{color:'#a06890'}}>{node.label||'—'}</span></div>
+    {node.itemCategory&&<div className="nf"><span className="nfl">TYPE</span><span className="nfv">{node.itemCategory.toUpperCase()}</span></div>}
+    {node.itemSource&&<div className="nf"><span className="nfl">SOURCE</span><span className="nfv" style={{color:'#a06890',opacity:0.8}}>{node.itemSource}</span></div>}
+  </>);
   return null;
 }
 
@@ -743,7 +801,7 @@ function CharPopover({char,onSave,onOpen,onClose}){
   const [d,setD]=useState({
     alignment:'neutral',enemyType:'weak',hitPoints:10,lootable:false,lootItems:[],
     pickpocketable:false,pickpocketDifficulty:'medium',pickpocketItems:[],
-    caughtConsequence:'',handle:'',status:'contact',portrait:'',info:'',discovered:true,category:null,...char
+    caughtConsequence:'',handle:'',status:'contact',portrait:'',portrait360:'',info:'',discovered:true,category:null,...char
   });
   const u=f=>setD(p=>({...p,...f}));
   const addLoot=()=>u({lootItems:[...d.lootItems,{id:uid(),name:''}]});
@@ -785,10 +843,18 @@ function CharPopover({char,onSave,onOpen,onClose}){
             </div>
           </div>
           <div className="pf-row">
-            <div className="pf" style={{flex:3}}><label className="pfl">PORTRAIT FILENAME</label>
-              <input className="pfi" placeholder="raymond_portrait.png" value={d.portrait||''} onChange={e=>u({portrait:e.target.value})}/></div>
+            <div className="pf" style={{flex:3}}>
+              <label className="pfl">PORTRAIT (PNG / JPEG — HUD people grid)</label>
+              <MediaPicker value={d.portrait||''} onChange={v=>u({portrait:v})} accept="image"
+                label="PORTRAIT" hint="L:\Beauregarde_game\underneath\graphics\portraits\npc\..."/>
+            </div>
             <div className="pf" style={{flex:1}}><label className="pfl">TRUST 0&#8211;4</label>
               <input className="pfi" type="number" min="0" max="4" value={d.trust||0} onChange={e=>u({trust:parseInt(e.target.value)||0})}/></div>
+          </div>
+          <div className="pf">
+            <label className="pfl">PORTRAIT 360 (WebM — HUD detail view, scrub with mouse)</label>
+            <MediaPicker value={d.portrait360||''} onChange={v=>u({portrait360:v})} accept="video"
+              label="360 VIDEO" hint="L:\Beauregarde_game\underneath\graphics\characters\...\cyber_octavia_360.webm"/>
           </div>
           <div className="pf"><label className="pfl">HUD INFO (lore paragraph)</label>
             <textarea className="pfi" style={{height:54,resize:'vertical'}} placeholder="Shown in PEOPLE tab of the game HUD." value={d.info||''} onChange={e=>u({info:e.target.value})}/></div>
@@ -959,10 +1025,13 @@ function SpawnPopover({node,chars,onSave,onClose}){
 }
 
 /* ── QUEST POPOVER ───────────────────────────────────────────────── */
-function QuestPopover({quest,onSave,onOpen,onClose}){
+function QuestPopover({quest,items,onSave,onOpen,onClose}){
   const [d,setD]=useState({status:'active',progress:'',info:'',category:'',major:false,...quest});
+  const [requiredItems,setRequiredItems]=useState(quest.requiredItems||[]);
+  const [rewardItems,setRewardItems]=useState(quest.rewardItems||[]);
   const u=f=>setD(p=>({...p,...f}));
   const statusColor=s=>s==='complete'?'#40c080':s==='locked'?'#7a6040':'#d4a020';
+  const reg=id=>(items||[]).find(x=>x.id===id);
   return(
     <PopoverModal title={'&#9670; '+(d.name||'Quest')} color={d.major?'#d4a020':'#a08060'} onClose={onClose}>
       <div className="popover-body">
@@ -998,11 +1067,392 @@ function QuestPopover({quest,onSave,onOpen,onClose}){
           <input className="pfi" placeholder="3 key contacts found..." value={d.progress||''} onChange={e=>u({progress:e.target.value})}/></div>
         <div className="pf"><label className="pfl">DESCRIPTION (HUD info paragraph)</label>
           <textarea className="pfi" style={{height:70,resize:'vertical'}} placeholder="Full quest description shown in the game HUD." value={d.info||''} onChange={e=>u({info:e.target.value})}/></div>
-        <div style={{display:'flex',gap:8,marginTop:4}}>
-          <button className="isave" style={{flex:1}} onClick={()=>{onSave(d);onClose();}}>SAVE QUEST</button>
-          {onOpen&&<button className="isave" style={{flex:1,borderColor:'var(--accent2)',color:'var(--accent2)'}}
-            onClick={()=>{onSave(d);onOpen('quest',quest.id);onClose();}}>CANVAS &#x2197;</button>}
+        {/* item gates */}
+        <div className="ep-sep" style={{marginTop:8}}>ITEM GATES</div>
+        <div className="pf">
+          <label className="pfl" style={{color:'#a06890'}}>REQUIRED ITEMS — must have to unlock</label>
+          {requiredItems.map(id=>{const r=reg(id);return(
+            <div key={id} style={{display:'flex',gap:6,alignItems:'center',padding:'3px 0'}}>
+              {r&&<span style={{fontSize:'var(--fxt)',fontWeight:700,padding:'1px 5px',background:ITEM_CAT_COLOR[r.category]||'#888',color:'var(--bg)'}}>{r.category.toUpperCase().slice(0,3)}</span>}
+              <span style={{flex:1,fontSize:'var(--fxb)',color:'var(--text)'}}>{r?.name||id}</span>
+              <button className="idel" onClick={()=>setRequiredItems(p=>p.filter(x=>x!==id))}>&#x2715;</button>
+            </div>
+          );})}
+          <select className="pfi" style={{marginTop:4}} value="" onChange={e=>{if(e.target.value)setRequiredItems(p=>[...p,e.target.value]);}}>
+            <option value="">+ add required item</option>
+            {(items||[]).filter(i=>!requiredItems.includes(i.id)).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}
+          </select>
         </div>
+        <div className="pf">
+          <label className="pfl" style={{color:'#40c080'}}>REWARD ITEMS — given on completion</label>
+          {rewardItems.map(id=>{const r=reg(id);return(
+            <div key={id} style={{display:'flex',gap:6,alignItems:'center',padding:'3px 0'}}>
+              {r&&<span style={{fontSize:'var(--fxt)',fontWeight:700,padding:'1px 5px',background:ITEM_CAT_COLOR[r.category]||'#888',color:'var(--bg)'}}>{r.category.toUpperCase().slice(0,3)}</span>}
+              <span style={{flex:1,fontSize:'var(--fxb)',color:'var(--text)'}}>{r?.name||id}</span>
+              <button className="idel" onClick={()=>setRewardItems(p=>p.filter(x=>x!==id))}>&#x2715;</button>
+            </div>
+          );})}
+          <select className="pfi" style={{marginTop:4}} value="" onChange={e=>{if(e.target.value)setRewardItems(p=>[...p,e.target.value]);}}>
+            <option value="">+ add reward item</option>
+            {(items||[]).filter(i=>!rewardItems.includes(i.id)).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}
+          </select>
+        </div>
+        <div style={{display:'flex',gap:8,marginTop:4}}>
+          <button className="isave" style={{flex:1}} onClick={()=>{onSave({...d,requiredItems,rewardItems});onClose();}}>SAVE QUEST</button>
+          {onOpen&&<button className="isave" style={{flex:1,borderColor:'var(--accent2)',color:'var(--accent2)'}}
+            onClick={()=>{onSave({...d,requiredItems,rewardItems});onOpen('quest',quest.id);onClose();}}>CANVAS &#x2197;</button>}
+        </div>
+      </div>
+    </PopoverModal>
+  );
+}
+
+/* ── ITEM POPOVER (registry entry editor) ───────────────────────── */
+const ITEM_CATS=['key','document','consumable','equipment','misc'];
+const ITEM_SRCS=['scene','npc','quest-reward','store','loot'];
+const ITEM_CAT_COLOR={key:'#e0a020',document:'#5090d0',consumable:'#40c080',equipment:'#a06890',misc:'#7a7090'};
+const ITEM_SRC_COLOR={scene:'#5090d0',npc:'#40c080','quest-reward':'#d4a020',store:'#c47a10',loot:'#c43028'};
+
+/* ── VARIABLE REGISTRY ───────────────────────────────────────────── */
+/* One author-defined state store. flags/ints/enums/keywords gate everything.
+   This replaces hardcoded condition kinds — the game runtime reads {varKey,op,value}
+   from one object, so new variables NEVER need new game code. */
+const VAR_TYPES=['flag','int','enum','keyword'];
+const VAR_CATS=['story','relationship','world','skill','keyword'];
+const VAR_TYPE_COLOR={flag:'#40c080',int:'#d4a020',enum:'#5090d0',keyword:'#a060c0'};
+const VAR_CAT_COLOR={story:'#c47a10',relationship:'#40c080',world:'#5090d0',skill:'#d4a020',keyword:'#a060c0'};
+const slugifyKey=s=>(s||'').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+const mkVar=o=>({id:uid(),name:'',key:'',type:'flag',category:'story',initial:false,enumValues:[],description:'',...o});
+/* ops available per variable type */
+const VAR_OPS={
+  flag:    [['is_true','IS SET'],['is_false','IS NOT SET']],
+  keyword: [['is_true','HAS'],['is_false','MISSING']],
+  int:     [['gte','≥'],['gt','>'],['lte','≤'],['lt','<'],['eq','='],['neq','≠']],
+  enum:    [['eq','IS'],['neq','IS NOT']],
+};
+
+/* ── VARIABLE POPOVER (registry entry editor) ───────────────────── */
+function VarPopover({variable,onSave,onClose}){
+  const [name,setName]=useState(variable.name||'');
+  const [type,setType]=useState(variable.type||'flag');
+  const [category,setCategory]=useState(variable.category||'story');
+  const [initial,setInitial]=useState(variable.initial!==undefined?variable.initial:false);
+  const [enumValues,setEnumValues]=useState(variable.enumValues||[]);
+  const [description,setDescription]=useState(variable.description||'');
+  const [enumDraft,setEnumDraft]=useState('');
+
+  // when type changes, reset initial to a sane default for that type
+  const changeType=t=>{
+    setType(t);
+    if(t==='flag'||t==='keyword')setInitial(false);
+    else if(t==='int')setInitial(0);
+    else if(t==='enum')setInitial(enumValues[0]||'');
+  };
+  const addEnum=()=>{const v=enumDraft.trim();if(v&&!enumValues.includes(v)){const nv=[...enumValues,v];setEnumValues(nv);if(!initial)setInitial(nv[0]);setEnumDraft('');}};
+
+  const key=slugifyKey(name);
+  const save=()=>{
+    onSave({...variable,name,key,type,category,
+      initial:type==='int'?(parseInt(initial)||0):initial,
+      enumValues:type==='enum'?enumValues:[],description});
+    onClose();
+  };
+
+  return(
+    <PopoverModal title="&#9670; VARIABLE" color={VAR_TYPE_COLOR[type]||'#40c080'} onClose={onClose}>
+      <div className="popover-body">
+        <div className="pf-row">
+          <div className="pf" style={{flex:3}}>
+            <label className="pfl">VARIABLE NAME</label>
+            <input className="pfi" value={name} onChange={e=>setName(e.target.value)} placeholder="told_raymond_about_collette"/>
+          </div>
+          <div className="pf" style={{flex:2}}>
+            <label className="pfl">CATEGORY</label>
+            <select className="pfi" value={category} onChange={e=>setCategory(e.target.value)}>
+              {VAR_CATS.map(c=><option key={c} value={c}>{c.toUpperCase()}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="pf">
+          <label className="pfl">TYPE</label>
+          <div style={{display:'flex',gap:6,marginTop:4}}>
+            {VAR_TYPES.map(t=>(
+              <button key={t} style={{flex:1,padding:'7px 4px',fontSize:'var(--fxs)',letterSpacing:'1px',fontFamily:'inherit',cursor:'pointer',
+                background:type===t?VAR_TYPE_COLOR[t]:'var(--raised)',
+                border:'2px solid '+(type===t?'transparent':'var(--brutal)'),color:type===t?'var(--bg)':'var(--text2)'}}
+                onClick={()=>changeType(t)}>{t.toUpperCase()}</button>
+            ))}
+          </div>
+          <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'0.5px',marginTop:4,lineHeight:1.6}}>
+            {type==='flag'&&'Boolean — on/off. The workhorse: "did X happen?"'}
+            {type==='keyword'&&'A topic Octavia collects — can be asked about with anyone (Shadowrun-style).'}
+            {type==='int'&&'A number — counters, suspicion levels, fragments collected.'}
+            {type==='enum'&&'One of a fixed set of named states.'}
+          </div>
+        </div>
+        {type==='enum'&&(
+          <div className="pf">
+            <label className="pfl">ENUM VALUES</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:4}}>
+              {enumValues.map(v=>(
+                <span key={v} style={{fontSize:'var(--fxs)',padding:'2px 6px',background:'var(--raised)',border:'2px solid var(--brutal)',letterSpacing:'0.5px',display:'flex',gap:5,alignItems:'center'}}>
+                  {v}<span style={{cursor:'pointer',color:'var(--red)'}} onClick={()=>setEnumValues(p=>p.filter(x=>x!==v))}>&#x2715;</span>
+                </span>
+              ))}
+            </div>
+            <div style={{display:'flex',gap:4}}>
+              <input className="pfi" style={{flex:1}} value={enumDraft} placeholder="add a state…"
+                onChange={e=>setEnumDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addEnum();}}}/>
+              <button className="mpick-browse" onClick={addEnum}>+ ADD</button>
+            </div>
+          </div>
+        )}
+        <div className="pf">
+          <label className="pfl">INITIAL VALUE (game start)</label>
+          {(type==='flag'||type==='keyword')&&(
+            <label style={{display:'flex',alignItems:'center',gap:6,fontSize:'var(--fxs)',cursor:'pointer',letterSpacing:'1px',marginTop:4}}>
+              <input type="checkbox" checked={!!initial} onChange={e=>setInitial(e.target.checked)}/>
+              {type==='keyword'?'OCTAVIA STARTS WITH THIS KEYWORD':'STARTS SET (TRUE)'}
+            </label>
+          )}
+          {type==='int'&&(
+            <input className="pfi" type="number" value={initial} onChange={e=>setInitial(e.target.value)}/>
+          )}
+          {type==='enum'&&(
+            <select className="pfi" value={initial} onChange={e=>setInitial(e.target.value)}>
+              {enumValues.length===0&&<option value="">— add values first —</option>}
+              {enumValues.map(v=><option key={v} value={v}>{v}</option>)}
+            </select>
+          )}
+        </div>
+        <div className="pf">
+          <label className="pfl">DESCRIPTION</label>
+          <textarea className="pfi" style={{height:50,resize:'vertical'}} value={description}
+            onChange={e=>setDescription(e.target.value)} placeholder="What does this track? Where is it set / checked?"/>
+        </div>
+        {name&&<div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px',marginTop:2}}>key: {key}</div>}
+        <button className="isave" onClick={save}>SAVE VARIABLE</button>
+      </div>
+    </PopoverModal>
+  );
+}
+
+function ItemPopover({item,onSave,onClose}){
+  const [name,setName]=useState(item.name||'');
+  const [category,setCategory]=useState(item.category||'misc');
+  const [unique,setUnique]=useState(item.unique||false);
+  const [description,setDescription]=useState(item.description||'');
+  const [source,setSource]=useState(item.source||'scene');
+  const [icon,setIcon]=useState(item.icon||'');
+  const [restore,setRestore]=useState(item.restore||0);
+  const [equippable,setEquippable]=useState(item.equippable||false);
+
+  const save=()=>{
+    const key=name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+    onSave({...item,name,key,category,unique,description,source,icon,restore,equippable});
+    onClose();
+  };
+
+  return(
+    <PopoverModal title="&#128230; ITEM" color="#a06890" onClose={onClose}>
+      <div className="popover-body">
+        <div className="pf-row">
+          <div className="pf" style={{flex:3}}>
+            <label className="pfl">ITEM NAME</label>
+            <input className="pfi" value={name} onChange={e=>setName(e.target.value)} placeholder="Burner Phone"/>
+          </div>
+          <div className="pf" style={{flex:2}}>
+            <label className="pfl">CATEGORY</label>
+            <select className="pfi" value={category} onChange={e=>setCategory(e.target.value)}>
+              {ITEM_CATS.map(c=><option key={c} value={c}>{c.toUpperCase()}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="pf-row">
+          <div className="pf" style={{flex:3}}>
+            <label className="pfl">SOURCE — how Octavia gets this</label>
+            <select className="pfi" value={source} onChange={e=>setSource(e.target.value)}>
+              <option value="scene">SCENE (found / pickup)</option>
+              <option value="npc">NPC (given / sold)</option>
+              <option value="quest-reward">QUEST REWARD</option>
+              <option value="store">STORE (buy)</option>
+              <option value="loot">LOOT (combat drop)</option>
+            </select>
+          </div>
+          <div className="pf" style={{flex:2,justifyContent:'center'}}>
+            <label className="pfl">UNIQUE</label>
+            <label style={{display:'flex',alignItems:'center',gap:6,fontSize:'var(--fxs)',cursor:'pointer',letterSpacing:'1px',marginTop:6}}>
+              <input type="checkbox" checked={unique} onChange={e=>setUnique(e.target.checked)}/>
+              MAX 1 IN INVENTORY
+            </label>
+          </div>
+        </div>
+        <div className="pf">
+          <label className="pfl">DESCRIPTION</label>
+          <textarea className="pfi" style={{height:60,resize:'vertical'}} value={description}
+            onChange={e=>setDescription(e.target.value)}
+            placeholder="What is this item? Where does it matter in the story?"/>
+        </div>
+        <div className="pf">
+          <label className="pfl">HUD ICON (PNG — shown in inventory tab)</label>
+          <MediaPicker value={icon} onChange={setIcon} accept="image"
+            label="ICON" hint="L:\Beauregarde_game\underneath\graphics\inventory\..."/>
+        </div>
+        <div className="pf-row">
+          <div className="pf" style={{flex:1}}>
+            <label className="pfl">RESTORE (vitals %)</label>
+            <input className="pfi" type="number" min="0" max="100" value={restore} onChange={e=>setRestore(parseInt(e.target.value)||0)}/>
+          </div>
+          <div className="pf" style={{flex:2}}>
+            <label className="pfl">EQUIPPABLE</label>
+            <label style={{display:'flex',alignItems:'center',gap:6,fontSize:'var(--fxs)',cursor:'pointer',letterSpacing:'1px',marginTop:6}}>
+              <input type="checkbox" checked={equippable} onChange={e=>setEquippable(e.target.checked)}/>
+              WEARABLE / EQUIP SLOT
+            </label>
+          </div>
+        </div>
+        {name&&<div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px',marginTop:2}}>
+          key: {name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')}
+        </div>}
+        <button className="isave" onClick={save}>SAVE ITEM</button>
+      </div>
+    </PopoverModal>
+  );
+}
+
+/* ── ITEM NODE POPOVER (canvas node → registry link) ─────────────── */
+function ItemNodePopover({node,items,onSave,onClose}){
+  const [itemId,setItemId]=useState(node.itemId||'');
+  const reg=items.find(i=>i.id===itemId);
+
+  const save=()=>{
+    onSave({...node,itemId,label:reg?reg.name:'Item',
+      itemCategory:reg?.category||'',itemSource:reg?.source||'',itemKey:reg?.key||''});
+    onClose();
+  };
+
+  return(
+    <PopoverModal title="&#128230; ITEM NODE" color="#a06890" onClose={onClose}>
+      <div className="popover-body">
+        <div className="pf">
+          <label className="pfl">ITEM FROM REGISTRY</label>
+          <select className="pfi" value={itemId} onChange={e=>setItemId(e.target.value)}>
+            <option value="">— select item —</option>
+            {(items||[]).map(i=>(
+              <option key={i.id} value={i.id}>{i.name} [{i.category}]</option>
+            ))}
+          </select>
+          {items.length===0&&<div style={{fontSize:'var(--fxs)',color:'var(--muted)',letterSpacing:'1px',marginTop:4}}>
+            No items in registry yet. Add items in the ITEMS sidebar section first.
+          </div>}
+        </div>
+        {reg&&(
+          <div style={{display:'flex',gap:6,marginTop:4}}>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,padding:'2px 6px',background:ITEM_CAT_COLOR[reg.category]||'#888',color:'var(--bg)',letterSpacing:'1px'}}>{reg.category.toUpperCase()}</span>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,padding:'2px 6px',background:ITEM_SRC_COLOR[reg.source]||'#888',color:'var(--bg)',letterSpacing:'1px'}}>{reg.source.toUpperCase()}</span>
+            {reg.description&&<span style={{fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'0.5px',alignSelf:'center'}}>{reg.description}</span>}
+          </div>
+        )}
+        <div style={{fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'0.5px',lineHeight:1.7,marginTop:8,padding:'6px 8px',background:'var(--raised)',border:'2px solid var(--brutal)'}}>
+          Wire FROM SCENE / FROM CHAR / FROM QUEST to show where this item comes from.<br/>
+          Wire REQUIRED BY to a QUEST node it gates. Wire UNLOCKS to a DIALOGUE_TREE it unlocks.
+        </div>
+        <button className="isave" onClick={save}>SAVE</button>
+      </div>
+    </PopoverModal>
+  );
+}
+
+/* ── QUEST NODE POPOVER (sub-canvas node editor) ─────────────────── */
+function QuestNodePopover({node,dtrees,onSave,onClose}){
+  const t=node.type;
+  const meta=NM[t]||{color:'#d4a020',lbl:t};
+  const [label,setLabel]=useState(node.label||'');
+  const [notes,setNotes]=useState(node.notes||'');
+  const [dialogueKey,setDialogueKey]=useState(node.dialogueKey||'');
+  const [atPlace,setAtPlace]=useState(node.atPlace||'');
+  const [item,setItem]=useState(node.item||node.label||'');
+  const [condition,setCondition]=useState(node.condition||node.label||'');
+
+  const save=()=>{
+    let u={...node,notes};
+    if(t==='QUEST_STEP') u={...u,label,dialogueKey,atPlace};
+    if(t==='QUEST_COLLECTABLE') u={...u,label:item,item};
+    if(t==='QUEST_CONDITION') u={...u,condition,label:condition};
+    onSave(u);onClose();
+  };
+
+  const titleMap={
+    QUEST_INFO:'◆ QUEST ROOT',QUEST_STEP:'▶ STEP',
+    QUEST_COLLECTABLE:'📦 COLLECTABLE',QUEST_CONDITION:'? CONDITION',QUEST_END:'◼ QUEST END',
+  };
+
+  return(
+    <PopoverModal title={titleMap[t]||meta.lbl} color={meta.color} onClose={onClose}>
+      <div className="popover-body">
+        {t==='QUEST_STEP'&&(<>
+          <div className="pf">
+            <label className="pfl">STEP NAME</label>
+            <input className="pfi" value={label} onChange={e=>setLabel(e.target.value)} placeholder="What does Octavia do in this step?"/>
+          </div>
+          <div className="pf">
+            <label className="pfl">DIALOGUE KEY</label>
+            <select className="pfi" value={dialogueKey} onChange={e=>setDialogueKey(e.target.value)}>
+              <option value="">— none —</option>
+              {(dtrees||[]).map(d=>{const key=d.name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');return<option key={d.id} value={key}>{d.name}</option>;})}
+            </select>
+            <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px',marginTop:3}}>
+              Dialogue tree that fires when this step is active
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">AT PLACE</label>
+            <select className="pfi" value={atPlace} onChange={e=>setAtPlace(e.target.value)}>
+              <option value="">— none —</option>
+              {KNOWN_SCENES.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="pf">
+            <label className="pfl">DESIGN NOTES</label>
+            <textarea className="pfi" style={{height:60,resize:'vertical'}} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Notes for yourself — intent, context, ideas..."/>
+          </div>
+        </>)}
+
+        {t==='QUEST_COLLECTABLE'&&(<>
+          <div className="pf">
+            <label className="pfl">ITEM NAME</label>
+            <input className="pfi" value={item} onChange={e=>setItem(e.target.value)} placeholder="What does Octavia pick up?"/>
+          </div>
+          <div className="pf">
+            <label className="pfl">DESIGN NOTES</label>
+            <textarea className="pfi" style={{height:60,resize:'vertical'}} value={notes} onChange={e=>setNotes(e.target.value)}/>
+          </div>
+        </>)}
+
+        {t==='QUEST_CONDITION'&&(<>
+          <div className="pf">
+            <label className="pfl">CONDITION</label>
+            <input className="pfi" value={condition} onChange={e=>setCondition(e.target.value)}
+              placeholder="e.g. trust >= 2 · has item: burner phone · scene visited: pharmacy"/>
+          </div>
+          <div style={{fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'1px',padding:'4px 0',lineHeight:1.8}}>
+            IF MET &#x2192; forward path &nbsp;&#x2022;&nbsp; IF NOT MET &#x2192; alternate path
+          </div>
+          <div className="pf">
+            <label className="pfl">DESIGN NOTES</label>
+            <textarea className="pfi" style={{height:50,resize:'vertical'}} value={notes} onChange={e=>setNotes(e.target.value)}/>
+          </div>
+        </>)}
+
+        {(t==='QUEST_INFO'||t==='QUEST_END')&&(
+          <div className="pf">
+            <label className="pfl">DESIGN NOTES</label>
+            <textarea className="pfi" style={{height:80,resize:'vertical'}} value={notes} onChange={e=>setNotes(e.target.value)}
+              placeholder={t==='QUEST_INFO'?'Overall quest intent, setup context...':'What changes when the quest ends? Consequences, unlocks...'}/>
+          </div>
+        )}
+
+        <button className="isave" onClick={save}>SAVE</button>
       </div>
     </PopoverModal>
   );
@@ -1170,6 +1620,347 @@ function ScenePopover({node,chars,audio,onSave,onClose}){
           ))}
           <button className="iadd" onClick={addItem}>+ ADD STORE ITEM</button>
           <button className="isave" style={{marginTop:4}} onClick={save}>SAVE</button>
+        </div>
+      )}
+    </PopoverModal>
+  );
+}
+
+/* ── LEVEL CONNECTOR POPOVER ─────────────────────────────────────── */
+function LevelPopover({node,chars,audio,allLevelNodes,onSave,onClose}){
+  const TABS=['MAP','SPAWNS','EXITS','SETTINGS'];
+  const [tab,setTab]=useState('MAP');
+  const [name,setName]=useState(node.label||'');
+  const [mapFile,setMapFile]=useState(node.mapFile||'');
+  const [mapW,setMapW]=useState(node.mapW||3200);
+  const [mapH,setMapH]=useState(node.mapH||900);
+  const [mapScale,setMapScale]=useState(node.mapScale||1.0);
+  const [maskFile,setMaskFile]=useState(node.maskFile||'');
+  const [playerSpawn,setPlayerSpawn]=useState(node.playerSpawn||{x:400,y:620,facing:'right'});
+  const [npcSpawns,setNpcSpawns]=useState(node.npcSpawns||[]);
+  const [exits,setExits]=useState(node.exits||[]);
+  const [sceneType,setSceneType]=useState(node.sceneType||'neutral');
+  const [atmosphere,setAtmosphere]=useState(node.atmosphere||'');
+  const [musicCue,setMusicCue]=useState(node.musicCue||'');
+  const [selSpawn,setSelSpawn]=useState(null);
+  const cvRef=useRef(null);
+  const dragRef=useRef(null);
+
+  const CV_W=480;
+  const cvH=mapW>0?Math.max(60,Math.round(CV_W*(mapH/mapW))):150;
+
+  /* ── mini canvas draw ───────────────────────── */
+  useEffect(()=>{
+    const cv=cvRef.current;
+    if(!cv||tab!=='SPAWNS')return;
+    const ctx=cv.getContext('2d');
+    ctx.clearRect(0,0,CV_W,cvH);
+    // background
+    ctx.fillStyle='#0e1a14';
+    ctx.fillRect(0,0,CV_W,cvH);
+    // ground line at 72%
+    const gY=Math.round(cvH*0.72);
+    ctx.strokeStyle='#2a4030';ctx.lineWidth=1;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(0,gY);ctx.lineTo(CV_W,gY);ctx.stroke();
+    ctx.setLineDash([]);
+    // helper: world → canvas
+    const wc=(wx,wy)=>({x:Math.round((wx/mapW)*CV_W),y:Math.round((wy/mapH)*cvH)});
+    // exits edge markers
+    exits.forEach(ex=>{
+      ctx.fillStyle='#e0a020';
+      if(ex.direction==='left'){ctx.fillRect(0,cvH/2-10,7,20);}
+      else if(ex.direction==='right'){ctx.fillRect(CV_W-7,cvH/2-10,7,20);}
+      else if(ex.direction==='up'){const ex2=Math.round(((ex.x||0)/mapW)*CV_W);ctx.fillRect(ex2-10,0,20,7);}
+      else{const ex2=Math.round(((ex.x||0)/mapW)*CV_W);ctx.fillRect(ex2-10,cvH-7,20,7);}
+    });
+    // NPC spawns
+    npcSpawns.forEach(sp=>{
+      const p=wc(sp.x,sp.y);
+      const ch=chars.find(c=>c.id===sp.charId);
+      const col=ch?.alignment==='foe'?'#e04040':'#40c080';
+      const isSelected=selSpawn===sp.id;
+      ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);
+      ctx.fillStyle=isSelected?'#ffffff':col;ctx.fill();
+      ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+      // facing indicator
+      const ax=sp.facing==='right'?p.x+12:p.x-12;
+      ctx.strokeStyle=col;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(ax,p.y);ctx.stroke();
+      if(ch){ctx.fillStyle='#7a9888';ctx.font='6px monospace';ctx.fillText(ch.name.slice(0,8).toUpperCase(),p.x-14,p.y-10);}
+    });
+    // player spawn
+    const pp=wc(playerSpawn.x,playerSpawn.y);
+    const pSel=selSpawn==='player';
+    ctx.beginPath();ctx.arc(pp.x,pp.y,9,0,Math.PI*2);
+    ctx.fillStyle=pSel?'#ffffff':'#40e090';ctx.fill();
+    ctx.strokeStyle='#40e090';ctx.lineWidth=2;ctx.stroke();
+    const pax=playerSpawn.facing==='right'?pp.x+14:pp.x-14;
+    ctx.strokeStyle='#40e090';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(pp.x,pp.y);ctx.lineTo(pax,pp.y);ctx.stroke();
+    ctx.fillStyle='#0e1a14';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('P',pp.x,pp.y);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  });
+
+  /* ── drag interaction ───────────────────────── */
+  const onCvDown=e=>{
+    const r=cvRef.current.getBoundingClientRect();
+    const cx=e.clientX-r.left,cy=e.clientY-r.top;
+    const wc=(wx,wy)=>({x:Math.round((wx/mapW)*CV_W),y:Math.round((wy/mapH)*cvH)});
+    const pp=wc(playerSpawn.x,playerSpawn.y);
+    if(Math.hypot(cx-pp.x,cy-pp.y)<14){setSelSpawn('player');dragRef.current={id:'player'};e.preventDefault();return;}
+    for(const sp of npcSpawns){
+      const p=wc(sp.x,sp.y);
+      if(Math.hypot(cx-p.x,cy-p.y)<12){setSelSpawn(sp.id);dragRef.current={id:sp.id};e.preventDefault();return;}
+    }
+    setSelSpawn(null);
+  };
+
+  useEffect(()=>{
+    const onMove=e=>{
+      if(!dragRef.current)return;
+      const r=cvRef.current?.getBoundingClientRect();
+      if(!r)return;
+      const cx=Math.max(0,Math.min(CV_W,e.clientX-r.left));
+      const cy=Math.max(0,Math.min(cvH,e.clientY-r.top));
+      const wx=Math.round((cx/CV_W)*mapW);
+      const wy=Math.round((cy/cvH)*mapH);
+      if(dragRef.current.id==='player'){setPlayerSpawn(p=>({...p,x:wx,y:wy}));}
+      else{setNpcSpawns(p=>p.map(s=>s.id===dragRef.current.id?{...s,x:wx,y:wy}:s));}
+    };
+    const onUp=()=>{dragRef.current=null;};
+    window.addEventListener('mousemove',onMove);
+    window.addEventListener('mouseup',onUp);
+    return()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('mouseup',onUp);};
+  },[mapW,mapH,cvH]);
+
+  const addNpc=()=>setNpcSpawns(p=>[...p,{id:uid(),charId:'',x:600,y:620,facing:'left',scaleOverride:100}]);
+  const uNpc=(id,f)=>setNpcSpawns(p=>p.map(s=>s.id===id?{...s,...f}:s));
+  const dNpc=id=>{setNpcSpawns(p=>p.filter(s=>s.id!==id));if(selSpawn===id)setSelSpawn(null);};
+
+  const addExit=()=>setExits(p=>[...p,{id:uid(),label:'Exit',x:3100,y:450,direction:'right',linksTo:''}]);
+  const uExit=(id,f)=>setExits(p=>p.map(s=>s.id===id?{...s,...f}:s));
+  const dExit=id=>setExits(p=>p.filter(s=>s.id!==id));
+
+  const save=()=>{
+    const tr=(audio||[]).find(a=>a.id===musicCue);
+    onSave({...node,label:name,mapFile,mapW,mapH,mapScale,maskFile,
+      playerSpawn,npcSpawns,exits,sceneType,atmosphere,
+      musicCue,musicCueLabel:tr?tr.label:''});
+    onClose();
+  };
+
+  const selNpc=npcSpawns.find(s=>s.id===selSpawn);
+
+  return(
+    <PopoverModal title="&#x229E; LEVEL" color="#3ab0c0" onClose={onClose}>
+      <div className="pop-tabs">
+        {TABS.map(t=><div key={t} className={'pop-tab'+(tab===t?' active':'')} onClick={()=>setTab(t)}>{t}</div>)}
+      </div>
+
+      {tab==='MAP'&&(
+        <div className="pop-tab-body">
+          <div className="pf-row">
+            <div className="pf" style={{flex:2}}>
+              <label className="pfl">LEVEL ID / NAME</label>
+              <div style={{display:'flex',gap:4}}>
+                <select className="pfi" style={{flex:1}} value={KNOWN_SCENES.includes(name)?name:''} onChange={e=>{if(e.target.value)setName(e.target.value);}}>
+                  <option value="">— known scenes —</option>
+                  {KNOWN_SCENES.map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+                <input className="pfi" style={{flex:1}} value={name} placeholder="custom id" onChange={e=>setName(e.target.value)}/>
+              </div>
+            </div>
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">SCENE TYPE</label>
+              <select className="pfi" value={sceneType} onChange={e=>setSceneType(e.target.value)}>
+                <option value="neutral">NEUTRAL</option>
+                <option value="store">STORE</option>
+                <option value="combat">COMBAT ZONE</option>
+                <option value="elevator">ELEVATOR</option>
+              </select>
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">BACKGROUND FILE</label>
+            <MediaPicker value={mapFile} onChange={setMapFile} accept="image"
+              label="BACKGROUND" hint="L:\Beauregarde_game\underneath\graphics\backgrounds\..."/>
+          </div>
+          <div className="pf-row">
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">MAP WIDTH px</label>
+              <input className="pfi" type="number" value={mapW} onChange={e=>setMapW(parseInt(e.target.value)||3200)}/>
+            </div>
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">MAP HEIGHT px</label>
+              <input className="pfi" type="number" value={mapH} onChange={e=>setMapH(parseInt(e.target.value)||900)}/>
+            </div>
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">MAP SCALE ×</label>
+              <select className="pfi" value={mapScale} onChange={e=>setMapScale(parseFloat(e.target.value))}>
+                {[0.5,0.75,1.0,1.25,1.5,2.0].map(v=><option key={v} value={v}>{v}×</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">COLLISION MASK (optional)</label>
+            <MediaPicker value={maskFile} onChange={setMaskFile} accept="image"
+              label="MASK" hint="L:\Beauregarde_game\underneath\graphics\masks\..."/>
+          </div>
+          <div style={{fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'1px',padding:'4px 0 2px',lineHeight:1.8}}>
+            SCALE × auto-resizes all characters proportionally. 1.0× = default sprite sizes. Per-character overrides in SPAWNS tab.
+          </div>
+          <button className="isave" onClick={save}>SAVE LEVEL</button>
+        </div>
+      )}
+
+      {tab==='SPAWNS'&&(
+        <div className="pop-tab-body" style={{gap:8}}>
+          {/* mini canvas preview */}
+          <canvas ref={cvRef} width={CV_W} height={cvH}
+            style={{display:'block',width:'100%',height:'auto',border:'2px solid var(--brutal)',cursor:'crosshair'}}
+            onMouseDown={onCvDown}/>
+          <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px'}}>
+            drag dots to reposition &#x2022; ● green = Octavia &#x2022; teal = friendly NPC &#x2022; red = foe NPC &#x2022; yellow bars = exits
+          </div>
+
+          {/* player spawn */}
+          <div style={{fontSize:'var(--fxs)',fontWeight:700,letterSpacing:'2px',color:'#40e090',marginTop:6}}>OCTAVIA SPAWN</div>
+          <div style={{display:'flex',gap:8,alignItems:'center',padding:'6px 8px',
+            background: selSpawn==='player'?'var(--raised)':'var(--raised)',
+            border:'2px solid '+(selSpawn==='player'?'#40e090':'var(--brutal)')}}
+            onClick={()=>setSelSpawn('player')}>
+            <span style={{fontSize:'var(--fxs)',color:'#40e090',letterSpacing:'1px',flex:'0 0 auto'}}>WORLD X</span>
+            <input className="ifield" style={{width:75}} type="number" value={playerSpawn.x}
+              onChange={e=>setPlayerSpawn(p=>({...p,x:parseInt(e.target.value)||0}))}/>
+            <span style={{fontSize:'var(--fxs)',color:'#40e090',letterSpacing:'1px',flex:'0 0 auto'}}>Y</span>
+            <input className="ifield" style={{width:75}} type="number" value={playerSpawn.y}
+              onChange={e=>setPlayerSpawn(p=>({...p,y:parseInt(e.target.value)||0}))}/>
+            <select className="isel" style={{width:86}} value={playerSpawn.facing}
+              onChange={e=>setPlayerSpawn(p=>({...p,facing:e.target.value}))}>
+              <option value="right">&#x2192; RIGHT</option>
+              <option value="left">&#x2190; LEFT</option>
+            </select>
+          </div>
+
+          {/* selected NPC indicator */}
+          {selNpc&&(
+            <div style={{fontSize:'var(--fxs)',color:'var(--accent2)',letterSpacing:'1px',padding:'3px 8px',
+              background:'var(--raised)',border:'2px solid var(--accent2)'}}>
+              SELECTED: {chars.find(c=>c.id===selNpc.charId)?.name||'NPC'} — drag the dot above or edit fields below
+            </div>
+          )}
+
+          {/* NPC spawns */}
+          <div style={{fontSize:'var(--fxs)',fontWeight:700,letterSpacing:'2px',color:'var(--text2)',marginTop:4}}>NPC SPAWNS</div>
+          <div className="itbl-hdr" style={{display:'flex',gap:6,padding:'2px 8px'}}>
+            <span style={{flex:2}}>CHARACTER</span>
+            <span style={{width:62}}>WORLD X</span>
+            <span style={{width:52}}>WORLD Y</span>
+            <span style={{width:74}}>FACING</span>
+            <span style={{width:46}}>SIZE%</span>
+            <span style={{width:20}}></span>
+          </div>
+          {npcSpawns.map(sp=>{
+            const ch=chars.find(c=>c.id===sp.charId);
+            return(
+              <div key={sp.id} className="irow"
+                style={{outline:selSpawn===sp.id?'2px solid #3ab0c0':'none',cursor:'pointer'}}
+                onClick={()=>setSelSpawn(sp.id)}>
+                <select className="isel" style={{flex:2,width:'auto'}} value={sp.charId}
+                  onChange={e=>uNpc(sp.id,{charId:e.target.value})}>
+                  <option value="">— select —</option>
+                  {chars.filter(c=>c.id!=='c1').map(c=><option key={c.id} value={c.id}>{c.name}{c.alignment==='foe'?' [FOE]':''}</option>)}
+                </select>
+                <input className="ifield" style={{width:62}} type="number" value={sp.x}
+                  onChange={e=>uNpc(sp.id,{x:parseInt(e.target.value)||0})}/>
+                <input className="ifield" style={{width:52}} type="number" value={sp.y}
+                  onChange={e=>uNpc(sp.id,{y:parseInt(e.target.value)||0})}/>
+                <select className="isel" style={{width:74}} value={sp.facing||'left'}
+                  onChange={e=>uNpc(sp.id,{facing:e.target.value})}>
+                  <option value="right">&#x2192; RIGHT</option>
+                  <option value="left">&#x2190; LEFT</option>
+                </select>
+                <input className="ifield" style={{width:46}} type="number" value={sp.scaleOverride||100} min={25} max={300}
+                  onChange={e=>uNpc(sp.id,{scaleOverride:parseInt(e.target.value)||100})}/>
+                <button className="idel" onClick={e=>{e.stopPropagation();dNpc(sp.id);}}>&#x2715;</button>
+              </div>
+            );
+          })}
+          <button className="iadd" onClick={addNpc}>+ ADD NPC SPAWN</button>
+          <button className="isave" style={{marginTop:4}} onClick={save}>SAVE</button>
+        </div>
+      )}
+
+      {tab==='EXITS'&&(
+        <div className="pop-tab-body">
+          <div style={{fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'1px',marginBottom:8,lineHeight:1.7}}>
+            Define the transition points out of this level. Each entry corresponds to one of this node&#39;s EXIT ports. Wire this node on the canvas to connect levels.
+          </div>
+          <div className="itbl-hdr" style={{display:'flex',gap:6,padding:'2px 8px'}}>
+            <span style={{flex:2}}>LABEL</span>
+            <span style={{width:72}}>WORLD X</span>
+            <span style={{width:80}}>DIRECTION</span>
+            <span style={{flex:2}}>LINKS TO</span>
+            <span style={{width:20}}></span>
+          </div>
+          {exits.map(ex=>(
+            <div key={ex.id} className="irow">
+              <input className="ifield fn" value={ex.label} placeholder="Exit name"
+                onChange={e=>uExit(ex.id,{label:e.target.value})}/>
+              <input className="ifield" style={{width:72}} type="number" value={ex.x}
+                onChange={e=>uExit(ex.id,{x:parseInt(e.target.value)||0})}/>
+              <select className="isel" style={{width:80}} value={ex.direction||'right'}
+                onChange={e=>uExit(ex.id,{direction:e.target.value})}>
+                <option value="left">&#x2190; LEFT</option>
+                <option value="right">RIGHT &#x2192;</option>
+                <option value="up">&#x2191; UP</option>
+                <option value="down">&#x2193; DOWN</option>
+              </select>
+              <select className="isel fn" style={{flex:2,width:'auto'}} value={ex.linksTo||''}
+                onChange={e=>uExit(ex.id,{linksTo:e.target.value})}>
+                <option value="">— link to level —</option>
+                {(allLevelNodes||[]).filter(n=>n.id!==node.id&&n.label).map(n=>(
+                  <option key={n.id} value={n.label}>{n.label} [LEVEL]</option>
+                ))}
+                {KNOWN_SCENES.filter(s=>!(allLevelNodes||[]).some(n=>n.label===s)).map(s=>(
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <button className="idel" onClick={()=>dExit(ex.id)}>&#x2715;</button>
+            </div>
+          ))}
+          <button className="iadd" onClick={addExit}>+ ADD EXIT</button>
+          <button className="isave" style={{marginTop:4}} onClick={save}>SAVE</button>
+        </div>
+      )}
+
+      {tab==='SETTINGS'&&(
+        <div className="pop-tab-body">
+          <div className="pf">
+            <label className="pfl">ATMOSPHERE / FOG</label>
+            <input className="pfi" value={atmosphere} onChange={e=>setAtmosphere(e.target.value)} placeholder="e.g. overcast, neon-lit night"/>
+          </div>
+          <div className="pf">
+            <label className="pfl" style={{color:'#a030e0'}}>&#9834; MUSIC CUE</label>
+            <select className="pfi" value={musicCue} onChange={e=>setMusicCue(e.target.value)}
+              style={{borderColor:musicCue?'#a030e0':'var(--brutal)'}}>
+              <option value="">— none —</option>
+              {(audio||[]).filter(a=>a.type!=='sfx').map(a=>(
+                <option key={a.id} value={a.id}>[{a.type.toUpperCase()}] {a.label}</option>
+              ))}
+              {(audio||[]).filter(a=>a.type==='sfx').length>0&&(
+                (audio||[]).filter(a=>a.type==='sfx').map(a=>(
+                  <option key={a.id} value={a.id}>[SFX] {a.label}</option>
+                ))
+              )}
+            </select>
+          </div>
+          <div style={{fontSize:'var(--fxs)',color:'var(--dim)',letterSpacing:'1px',marginTop:8,lineHeight:1.9,padding:'6px 8px',background:'var(--raised)',border:'2px solid var(--brutal)'}}>
+            MAP SCALE {mapScale}&#215; &#x2192; character base size: {Math.round(mapScale*100)}% of default<br/>
+            MAP {mapW}&#215;{mapH}px &#x2022; EXITS: {exits.length} &#x2022; NPC SPAWNS: {npcSpawns.length}
+          </div>
+          <button className="isave" style={{marginTop:8}} onClick={save}>SAVE LEVEL</button>
         </div>
       )}
     </PopoverModal>
@@ -1387,15 +2178,22 @@ function AudioTrackRow({track,onUpdate,onDelete}){
   );
 }
 
-/* ── AI REFERENCE LIBRARY (IndexedDB) ───────────────────────────── */
+/* ── AI REFERENCE LIBRARY + HISTORY (IndexedDB) ─────────────────── */
 const openRefDB=()=>new Promise((res,rej)=>{
-  const req=indexedDB.open('beau_ai_refs',1);
-  req.onupgradeneeded=e=>e.target.result.createObjectStore('refs',{keyPath:'id'});
+  const req=indexedDB.open('beau_ai_refs',2);
+  req.onupgradeneeded=e=>{
+    const db=e.target.result;
+    if(!db.objectStoreNames.contains('refs'))db.createObjectStore('refs',{keyPath:'id'});
+    if(!db.objectStoreNames.contains('history'))db.createObjectStore('history',{keyPath:'id'});
+  };
   req.onsuccess=e=>res(e.target.result);req.onerror=rej;
 });
 const loadRefs=async()=>{try{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('refs','readonly').objectStore('refs').getAll();r.onsuccess=e=>res(e.target.result);r.onerror=rej;});}catch(e){return[];}};
 const saveRef=async ref=>{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('refs','readwrite').objectStore('refs').put(ref);r.onsuccess=res;r.onerror=rej;});};
 const deleteRef=async id=>{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('refs','readwrite').objectStore('refs').delete(id);r.onsuccess=res;r.onerror=rej;});};
+const loadHistory=async()=>{try{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('history','readonly').objectStore('history').getAll();r.onsuccess=e=>res((e.target.result||[]).sort((a,b)=>b.updatedAt-a.updatedAt));r.onerror=rej;});}catch(e){return[];}};
+const saveConv=async conv=>{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('history','readwrite').objectStore('history').put(conv);r.onsuccess=res;r.onerror=rej;});};
+const deleteConv=async id=>{const db=await openRefDB();return new Promise((res,rej)=>{const r=db.transaction('history','readwrite').objectStore('history').delete(id);r.onsuccess=res;r.onerror=rej;});};
 
 /* ── AI ASSISTANT ────────────────────────────────────────────────── */
 const AI_MODEL='claude-sonnet-4-6';
@@ -1408,20 +2206,41 @@ const QUICK_PROMPTS=[
   {label:'Dialogue tree',prompt:'Write a branching dialogue tree for an NPC encounter. Include the NPC\'s opening line, 2–3 player response options, and a follow-up for each branch.'},
 ];
 
+const WELCOME_MSG={role:'assistant',content:'Hello! I\'m your Beauregarde writing assistant. Upload reference material in the REFERENCES tab, then ask me anything — character dialogue, world-building, backstories, quest ideas. What are you working on?'};
+
 function AIAssistant({chars,dtrees,quests,onClose}){
   const [tab,setTab]=useState('chat');
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem('beau_ai_key')||'');
   const [keyDraft,setKeyDraft]=useState(()=>localStorage.getItem('beau_ai_key')||'');
   const [refs,setRefs]=useState([]);
-  const [msgs,setMsgs]=useState([{role:'assistant',content:'Hello! I\'m your Beauregarde writing assistant. Upload reference material in the REFERENCES tab, then ask me anything — character dialogue, world-building, backstories, quest ideas. What are you working on?'}]);
+  const [msgs,setMsgs]=useState([WELCOME_MSG]);
   const [input,setInput]=useState('');
   const [loading,setLoading]=useState(false);
   const [uploadStatus,setUploadStatus]=useState('');
+  const [convId]=useState(()=>'conv_'+Date.now());
+  const convCreatedAt=useRef(Date.now());
+  const [chatHistory,setChatHistory]=useState([]);
+  const [histView,setHistView]=useState(null);
   const chatEndRef=useRef(null);
   const fileRef=useRef(null);
 
   useEffect(()=>{loadRefs().then(setRefs);},[]);
+  useEffect(()=>{loadHistory().then(setChatHistory);},[]);
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[msgs]);
+
+  /* auto-save conversation whenever msgs change (debounced 600ms) */
+  useEffect(()=>{
+    if(msgs.length<=1)return;
+    const timer=setTimeout(()=>{
+      const firstUser=msgs.find(m=>m.role==='user');
+      const title=firstUser?(firstUser.content.slice(0,55)+(firstUser.content.length>55?'…':'')):
+        'Session '+new Date(convCreatedAt.current).toLocaleDateString();
+      const conv={id:convId,title,messages:msgs,savedAt:convCreatedAt.current,updatedAt:Date.now()};
+      saveConv(conv);
+      setChatHistory(p=>{const idx=p.findIndex(c=>c.id===convId);if(idx>=0){const n=[...p];n[idx]=conv;return n;}return[conv,...p];});
+    },600);
+    return()=>clearTimeout(timer);
+  },[msgs,convId]);
 
   const saveKey=()=>{localStorage.setItem('beau_ai_key',keyDraft);setApiKey(keyDraft);setUploadStatus('API key saved.');setTimeout(()=>setUploadStatus(''),2000);};
 
@@ -1429,9 +2248,10 @@ function AIAssistant({chars,dtrees,quests,onClose}){
     const charList=chars.map(c=>`${c.name} (${c.role}${c.tags?.length?' — '+c.tags.join(', '):''})`).join('\n  ');
     const questList=quests.map(q=>`${q.major?'◆':'◇'} ${q.name}: ${q.info||''}`).join('\n  ');
     const treeList=dtrees.map(t=>t.name).join(', ');
-    // reference content — first 6000 chars each, with cache marker
-    const refBlock=refs.length?'\n\nREFERENCE MATERIAL (use these for tone, themes, world detail):\n'+
-      refs.map(r=>`=== ${r.name} ===\n${r.content.slice(0,6000)}${r.content.length>6000?'\n[truncated — '+Math.round(r.content.length/1000)+'KB total]':''}`).join('\n\n'):'';
+    // text reference content — first 6000 chars each, with cache marker (PDFs go as document blocks separately)
+    const textRefs=refs.filter(r=>!r.type||r.type==='text');
+    const refBlock=textRefs.length?'\n\nREFERENCE MATERIAL (use these for tone, themes, world detail):\n'+
+      textRefs.map(r=>`=== ${r.name} ===\n${r.content.slice(0,6000)}${r.content.length>6000?'\n[truncated — '+Math.round(r.content.length/1000)+'KB total]':''}`).join('\n\n'):'';
     return `You are a creative writing assistant for BEAUREGARDE — a cyberpunk RPG set in The Veil, a dystopian urban neighborhood where body modification is common and an underground network operates in the shadows. The protagonist is Octavia: a modified survivor waking up after 7 missing days.
 
 GAME WORLD:
@@ -1458,6 +2278,11 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
     const history=[...msgs.filter(m=>m.role!=='assistant'||msgs.indexOf(m)>0),userMsg];
     setMsgs(p=>[...p,userMsg]);setInput('');setLoading(true);
     try{
+      const pdfRefs=refs.filter(r=>r.type==='pdf');
+      const systemBlocks=[
+        {type:'text',text:buildSystem(),cache_control:{type:'ephemeral'}},
+        ...pdfRefs.map(r=>({type:'document',source:{type:'base64',media_type:'application/pdf',data:r.data},title:r.name,cache_control:{type:'ephemeral'}})),
+      ];
       const res=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{
@@ -1469,7 +2294,7 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
         },
         body:JSON.stringify({
           model:AI_MODEL,max_tokens:2048,
-          system:[{type:'text',text:buildSystem(),cache_control:{type:'ephemeral'}}],
+          system:systemBlocks,
           messages:history,
         }),
       });
@@ -1483,28 +2308,50 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
 
   const uploadFile=async e=>{
     const file=e.target.files[0];if(!file)return;
+    const isPdf=file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf');
     setUploadStatus('Reading '+file.name+'...');
     const reader=new FileReader();
-    reader.onload=async ev=>{
-      const ref={id:uid(),name:file.name,content:ev.target.result,size:file.size,addedAt:Date.now()};
-      await saveRef(ref);
-      setRefs(p=>[...p,ref]);
-      setUploadStatus('✓ '+file.name+' added ('+Math.round(file.size/1024)+'KB)');
-      setTimeout(()=>setUploadStatus(''),3000);
-    };
-    reader.onerror=()=>{setUploadStatus('✗ Could not read file.');setTimeout(()=>setUploadStatus(''),3000);};
-    reader.readAsText(file);
+    if(isPdf){
+      reader.onload=async ev=>{
+        const base64=ev.target.result.split(',')[1];
+        const ref={id:uid(),name:file.name,type:'pdf',data:base64,size:file.size,addedAt:Date.now()};
+        await saveRef(ref);
+        setRefs(p=>[...p,ref]);
+        setUploadStatus('✓ '+file.name+' added ('+Math.round(file.size/1024)+'KB PDF)');
+        setTimeout(()=>setUploadStatus(''),3000);
+      };
+      reader.onerror=()=>{setUploadStatus('✗ Could not read file.');setTimeout(()=>setUploadStatus(''),3000);};
+      reader.readAsDataURL(file);
+    }else{
+      reader.onload=async ev=>{
+        const ref={id:uid(),name:file.name,type:'text',content:ev.target.result,size:file.size,addedAt:Date.now()};
+        await saveRef(ref);
+        setRefs(p=>[...p,ref]);
+        setUploadStatus('✓ '+file.name+' added ('+Math.round(file.size/1024)+'KB)');
+        setTimeout(()=>setUploadStatus(''),3000);
+      };
+      reader.onerror=()=>{setUploadStatus('✗ Could not read file.');setTimeout(()=>setUploadStatus(''),3000);};
+      reader.readAsText(file);
+    }
     e.target.value='';
   };
 
   const removeRef=async id=>{await deleteRef(id);setRefs(p=>p.filter(r=>r.id!==id));};
+
+  const newSession=()=>{setMsgs([WELCOME_MSG]);setHistView(null);setTab('chat');};
+
+  const removeConv=async id=>{
+    await deleteConv(id);
+    setChatHistory(p=>p.filter(c=>c.id!==id));
+    if(histView?.id===id)setHistView(null);
+  };
 
   const panelStyle={position:'fixed',top:0,right:0,bottom:0,width:420,zIndex:600,
     display:'flex',flexDirection:'column',background:'var(--surface)',
     borderLeft:'3px solid var(--brutal)',boxShadow:'-6px 0 0 var(--brutal)',
     fontFamily:"'TheMurk',monospace",
   };
-  const TABS=[['chat','CHAT'],['refs','REFERENCES'],['key','API KEY']];
+  const TABS=[['chat','CHAT'],['refs','REFERENCES'],['history','HISTORY'],['key','API KEY']];
 
   return(
     <div style={panelStyle}>
@@ -1532,6 +2379,18 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
             </button>
           ))}
         </div>
+        {/* session status bar */}
+        {msgs.length>1&&(
+          <div style={{padding:'4px 10px',borderBottom:'1px solid var(--brutal)',display:'flex',alignItems:'center',gap:8,flexShrink:0,background:'var(--bg)'}}>
+            <span style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px',flex:1}}>
+              &#x25CF; {msgs.filter(m=>m.role==='user').length} exchange{msgs.filter(m=>m.role==='user').length!==1?'s':''} · auto-saved to history
+            </span>
+            <button onClick={newSession}
+              style={{background:'none',border:'1px solid var(--dim)',color:'var(--text2)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxt)',padding:'2px 7px',cursor:'pointer',letterSpacing:'1px'}}>
+              NEW SESSION
+            </button>
+          </div>
+        )}
         {/* messages */}
         <div style={{flex:1,overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:12,scrollbarWidth:'thin'}}>
           {msgs.map((m,i)=>(
@@ -1565,29 +2424,122 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
       {tab==='refs'&&(
         <div style={{flex:1,overflowY:'auto',padding:'14px 14px',display:'flex',flexDirection:'column',gap:12}}>
           <div style={{fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.7,letterSpacing:'0.5px'}}>
-            Upload .txt or .md files — books, scripts, worldbuilding docs, reference articles. The AI will use them as context when writing for your game. Large files are truncated to 6,000 characters per document.
+            Upload reference files — books, scripts, worldbuilding docs, articles, design documents. Text files are included as context excerpts. PDFs are sent to the AI natively and read in full.
           </div>
-          <input ref={fileRef} type="file" accept=".txt,.md,.csv" style={{display:'none'}} onChange={uploadFile}/>
-          <button onClick={()=>fileRef.current?.click()}
-            style={{background:'var(--raised)',border:'2px solid var(--accent2)',color:'var(--accent2)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'9px',cursor:'pointer',letterSpacing:1,boxShadow:'3px 3px 0 var(--accent2)',textAlign:'center'}}>
-            + UPLOAD FILE (.txt / .md)
-          </button>
+          <input ref={fileRef} type="file" accept=".txt,.md,.csv,.pdf" style={{display:'none'}} onChange={uploadFile}/>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={()=>fileRef.current?.click()}
+              style={{flex:1,background:'var(--raised)',border:'2px solid var(--accent2)',color:'var(--accent2)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'9px',cursor:'pointer',letterSpacing:1,boxShadow:'3px 3px 0 var(--accent2)',textAlign:'center'}}>
+              + ADD TO LIBRARY
+            </button>
+          </div>
+          <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px',marginTop:-4}}>
+            .txt · .md · .csv · .pdf — all saved to your local library
+          </div>
           {uploadStatus&&<div style={{fontSize:'var(--fxs)',color:'var(--accent)',letterSpacing:1}}>{uploadStatus}</div>}
-          {refs.length===0&&<div style={{color:'var(--muted)',fontSize:'var(--fxs)',letterSpacing:1}}>No reference files yet.</div>}
-          {refs.map(r=>(
-            <div key={r.id} style={{background:'var(--raised)',border:'2px solid var(--brutal)',padding:'10px 12px',display:'flex',alignItems:'flex-start',gap:8,boxShadow:'3px 3px 0 var(--brutal)'}}>
-              <div style={{flex:1}}>
-                <div style={{fontSize:'var(--fxb)',fontWeight:700,letterSpacing:1,marginBottom:3}}>{r.name}</div>
-                <div style={{fontSize:'var(--fxt)',color:'var(--text2)',letterSpacing:1}}>{Math.round(r.size/1024)}KB · {r.content.split(/\s+/).length.toLocaleString()} words</div>
-                {r.content.length>6000&&<div style={{fontSize:'var(--fxt)',color:'var(--accent2)',letterSpacing:1}}>⚠ truncated to 6KB in context</div>}
+          {refs.length===0&&<div style={{color:'var(--muted)',fontSize:'var(--fxs)',letterSpacing:1}}>Library is empty. Add files above.</div>}
+          {refs.map(r=>{
+            const isPdf=r.type==='pdf';
+            return(
+              <div key={r.id} style={{background:'var(--raised)',border:'2px solid var(--brutal)',padding:'10px 12px',display:'flex',alignItems:'flex-start',gap:8,boxShadow:'3px 3px 0 var(--brutal)'}}>
+                <div style={{flex:1}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                    <span style={{fontSize:'var(--fxt)',fontWeight:700,letterSpacing:'1px',padding:'1px 5px',
+                      background:isPdf?'#e05030':'var(--accent)',color:'var(--bg)',flexShrink:0}}>
+                      {isPdf?'PDF':'TXT'}
+                    </span>
+                    <span style={{fontSize:'var(--fxb)',fontWeight:700,letterSpacing:1}}>{r.name}</span>
+                  </div>
+                  {isPdf
+                    ?<div style={{fontSize:'var(--fxt)',color:'var(--text2)',letterSpacing:1}}>{Math.round(r.size/1024)}KB · sent to AI as native document</div>
+                    :<>
+                      <div style={{fontSize:'var(--fxt)',color:'var(--text2)',letterSpacing:1}}>{Math.round(r.size/1024)}KB · {(r.content||'').split(/\s+/).filter(Boolean).length.toLocaleString()} words</div>
+                      {(r.content||'').length>6000&&<div style={{fontSize:'var(--fxt)',color:'var(--accent2)',letterSpacing:1}}>&#x26A0; truncated to 6KB in context</div>}
+                    </>
+                  }
+                </div>
+                <span style={{cursor:'pointer',color:'var(--red)',fontSize:12,padding:'2px 4px',flexShrink:0}} onClick={()=>removeRef(r.id)}>&#x2715;</span>
               </div>
-              <span style={{cursor:'pointer',color:'var(--red)',fontSize:12,padding:'2px 4px',flexShrink:0}} onClick={()=>removeRef(r.id)}>✕</span>
-            </div>
-          ))}
-          {refs.length>0&&(
-            <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:1,marginTop:4}}>
-              {refs.length} file{refs.length!==1?'s':''} · ~{Math.round(refs.reduce((a,r)=>a+Math.min(r.content.length,6000),0)/1000)}KB in context
-            </div>
+            );
+          })}
+          {refs.length>0&&(()=>{
+            const textRefs2=refs.filter(r=>!r.type||r.type==='text');
+            const pdfRefs2=refs.filter(r=>r.type==='pdf');
+            return(
+              <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:1,marginTop:4,lineHeight:1.8}}>
+                {refs.length} file{refs.length!==1?'s':''} in library
+                {textRefs2.length>0&&<> · {textRefs2.length} text (~{Math.round(textRefs2.reduce((a,r)=>a+Math.min((r.content||'').length,6000),0)/1000)}KB in context)</>}
+                {pdfRefs2.length>0&&<> · {pdfRefs2.length} PDF{pdfRefs2.length!==1?'s':''} (native)</>}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* HISTORY tab */}
+      {tab==='history'&&(
+        <div style={{flex:1,overflowY:'auto',padding:'14px',display:'flex',flexDirection:'column',gap:10}}>
+          {histView?(
+            /* ── viewing a past conversation ── */
+            <>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
+                <button onClick={()=>setHistView(null)}
+                  style={{background:'var(--raised)',border:'2px solid var(--brutal)',color:'var(--text2)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxt)',padding:'4px 10px',cursor:'pointer',letterSpacing:'1px',boxShadow:'2px 2px 0 var(--brutal)'}}>
+                  &#x2190; BACK
+                </button>
+                <span style={{flex:1,fontSize:'var(--fxs)',letterSpacing:'1px',color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{histView.title}</span>
+                <button onClick={()=>{setMsgs(histView.messages);setHistView(null);setTab('chat');}}
+                  style={{background:'var(--accent)',border:'2px solid var(--accent)',color:'var(--bg)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxt)',padding:'4px 10px',cursor:'pointer',letterSpacing:'1px',boxShadow:'2px 2px 0 var(--brutal)',flexShrink:0}}>
+                  RESTORE
+                </button>
+              </div>
+              <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px'}}>
+                {new Date(histView.updatedAt).toLocaleString()} · {histView.messages.filter(m=>m.role==='user').length} exchanges
+              </div>
+              {histView.messages.map((m,i)=>(
+                <div key={i} style={{
+                  alignSelf:m.role==='user'?'flex-end':'flex-start',
+                  maxWidth:'92%',padding:'8px 11px',
+                  background:m.role==='user'?'var(--accent)':'var(--raised)',
+                  color:m.role==='user'?'var(--bg)':'var(--text)',
+                  border:'2px solid '+(m.role==='user'?'var(--accent)':'var(--brutal)'),
+                  fontSize:'var(--fxs)',lineHeight:1.7,whiteSpace:'pre-wrap',
+                  boxShadow:m.role==='user'?'none':'2px 2px 0 var(--brutal)',
+                }}>{m.content}</div>
+              ))}
+            </>
+          ):(
+            /* ── conversation list ── */
+            <>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{flex:1,fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'1px'}}>
+                  {chatHistory.length} saved session{chatHistory.length!==1?'s':''}
+                </span>
+                <button onClick={()=>{newSession();setTab('chat');}}
+                  style={{background:'var(--raised)',border:'2px solid var(--accent2)',color:'var(--accent2)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxt)',padding:'4px 10px',cursor:'pointer',letterSpacing:'1px',boxShadow:'2px 2px 0 var(--accent2)'}}>
+                  + NEW SESSION
+                </button>
+              </div>
+              {chatHistory.length===0&&(
+                <div style={{color:'var(--muted)',fontSize:'var(--fxs)',letterSpacing:'1px',padding:'12px 0'}}>No history yet. Start chatting and your sessions will be saved here automatically.</div>
+              )}
+              {chatHistory.map(conv=>(
+                <div key={conv.id}
+                  style={{background:'var(--raised)',border:'2px solid var(--brutal)',padding:'10px 12px',display:'flex',alignItems:'flex-start',gap:8,boxShadow:'3px 3px 0 var(--brutal)',cursor:'pointer'}}
+                  onClick={()=>setHistView(conv)}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:'var(--fxb)',fontWeight:700,letterSpacing:'1px',marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{conv.title}</div>
+                    <div style={{fontSize:'var(--fxt)',color:'var(--text2)',letterSpacing:'1px'}}>
+                      {new Date(conv.updatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+                      {' · '}{conv.messages.filter(m=>m.role==='user').length} exchange{conv.messages.filter(m=>m.role==='user').length!==1?'s':''}
+                      {conv.id===convId&&<span style={{color:'var(--accent)',marginLeft:6}}>● ACTIVE</span>}
+                    </div>
+                  </div>
+                  <span style={{cursor:'pointer',color:'var(--red)',fontSize:12,padding:'2px 4px',flexShrink:0}}
+                    onClick={e=>{e.stopPropagation();removeConv(conv.id);}}>&#x2715;</span>
+                </div>
+              ))}
+            </>
           )}
         </div>
       )}
@@ -1625,7 +2577,7 @@ When writing dialogue: use short, clipped lines. Characters speak from lived exp
 const THOUGHT_EMOTIONS=['FEAR','GRIEF','ANGER','HOPE','DOUBT','RESOLVE','ANXIETY','LONGING','SHAME','PRIDE','LOVE','CALM','NUMBNESS','GUILT','WONDER'];
 const STATEMENT_EMOTIONS=['NEUTRAL','WARM','COLD','TENSE','TIRED','URGENT','SARCASTIC','AFRAID','AMUSED','SUSPICIOUS'];
 
-function DialogueNodePopover({node,chars,onSave,onClose}){
+function DialogueNodePopover({node,chars,items,onSave,onClose}){
   const t=node.type;
   const [emotion,setEmotion]=useState(node.emotion||node.voice||'FEAR');
   const [text,setText]=useState(node.text||'');
@@ -1788,8 +2740,14 @@ function DialogueNodePopover({node,chars,onSave,onClose}){
               </select>
             </div>
             <div className="pf" style={{flex:2}}>
-              <label className="pfl">ITEM NAME</label>
-              <input className="pfi" value={item} placeholder="item name" onChange={e=>setItem(e.target.value)}/>
+              <label className="pfl">ITEM</label>
+              {(items||[]).length>0
+                ?<select className="pfi" value={item} onChange={e=>setItem(e.target.value)}>
+                    <option value="">— select item —</option>
+                    {(items||[]).map(i=><option key={i.id} value={i.key||i.name}>{i.name}</option>)}
+                  </select>
+                :<input className="pfi" value={item} placeholder="item name" onChange={e=>setItem(e.target.value)}/>
+              }
             </div>
           </div>
           <div className="pf">
@@ -1806,20 +2764,436 @@ function DialogueNodePopover({node,chars,onSave,onClose}){
   );
 }
 
+/* ── MEDIA PATH UTILITIES ────────────────────────────────────────── */
+// Converts absolute Windows paths → relative paths usable by the game.
+// Base: L:\Beauregarde_game\underneath\ (game root one level up from project\)
+const MEDIA_GAME_ROOT='L:\\Beauregarde_game\\underneath\\';
+
+function toRelPath(raw){
+  if(!raw)return'';
+  const norm=(raw||'').trim().replace(/\//g,'\\');
+  if(norm.toLowerCase().startsWith(MEDIA_GAME_ROOT.toLowerCase()))
+    return'../'+norm.slice(MEDIA_GAME_ROOT.length).replace(/\\/g,'/');
+  // already relative (starts with ../ or ./) — just normalise slashes
+  return raw.replace(/\\/g,'/');
+}
+function toPreviewUrl(relPath){
+  if(!relPath)return null;
+  try{return new URL(relPath.replace(/\\/g,'/'),document.baseURI).href;}catch{return null;}
+}
+
+/* ── MEDIA PICKER ─────────────────────────────────────────────────── */
+function MediaPicker({value,onChange,accept,label,hint}){
+  const [draft,setDraft]=useState(value||'');
+  const [objUrl,setObjUrl]=useState(null);
+  const fileRef=useRef(null);
+
+  useEffect(()=>{setDraft(value||'');setObjUrl(null);},[value]);
+
+  const ext=(draft||'').split('.').pop().toLowerCase();
+  const isVideo=['webm','mp4','mov'].includes(ext);
+  const isImage=['png','jpg','jpeg','gif','webp'].includes(ext);
+  const previewUrl=objUrl||(draft?toPreviewUrl(toRelPath(draft)):null);
+
+  const commit=raw=>{
+    setDraft(raw);
+    onChange(toRelPath(raw));
+    setObjUrl(null);
+  };
+
+  const browse=async()=>{
+    try{
+      const types=accept==='video'
+        ?[{description:'Video',accept:{'video/*':['.webm','.mp4','.mov']}}]
+        :accept==='image'
+        ?[{description:'Image',accept:{'image/*':['.png','.jpg','.jpeg','.webp','.gif']}}]
+        :[{description:'Media',accept:{'image/*':['.png','.jpg','.jpeg','.webp','.gif'],'video/*':['.webm','.mp4','.mov']}}];
+      const [handle]=await window.showOpenFilePicker({types});
+      const file=await handle.getFile();
+      setObjUrl(URL.createObjectURL(file));
+      // path input stays as-is — user pastes the full path separately,
+      // but the preview now shows the picked file so they can visually confirm.
+    }catch(e){/* cancelled or not supported */}
+  };
+
+  const convertedPath=draft?toRelPath(draft):'';
+  const showConverted=draft&&convertedPath!==draft.replace(/\\/g,'/');
+
+  return(
+    <div className="mpick">
+      {previewUrl&&isImage&&<img className="mpick-preview" src={previewUrl} alt="preview"/>}
+      {previewUrl&&isVideo&&<video className="mpick-preview" src={previewUrl} autoPlay loop muted playsInline/>}
+      {!previewUrl&&<div className="mpick-empty">{isVideo?'▶ VIDEO':isImage?'◻ IMAGE':'◻ '+(label||'NO FILE')}</div>}
+      <div className="mpick-row">
+        <input className="pfi" value={draft}
+          onChange={e=>commit(e.target.value)}
+          placeholder={hint||'L:\\Beauregarde_game\\underneath\\graphics\\...'}/>
+        <button type="button" className="mpick-browse" onClick={browse} title="Browse for file (preview only — paste the full path above)">&#128193;</button>
+      </div>
+      {showConverted&&<div className="mpick-hint">&#x2192; {convertedPath}</div>}
+    </div>
+  );
+}
+
+/* ── GUIDE ───────────────────────────────────────────────────────── */
+const SIDEBAR_TIPS={
+  graphs:'Each tab is a separate node canvas. Switch tabs to work on different graphs. Double-click a tab name to rename it. The TYPE badge (G/S/D/Q/T) cycles the graph category.',
+  chars:'Click a character to edit their full profile. Drag to the canvas to place a CHARACTER node. Click ↗ on a placed node to open their narrative sub-canvas.',
+  trees:'Each tree is one conversation. Click to enter its canvas and build the dialogue graph. The coloured badge cycles the outfit condition required to play this tree.',
+  convs:'These match hardcoded game conversation keys. ✓ means a kit version exists and will override the game\'s built-in dialogue on the next export.',
+  quests:'Double-click a QUEST node to edit metadata. Click ↗ to open the step graph canvas. Wire the QUEST node to characters and scenes on the master canvas to link it to the world.',
+  tools:'SCENE defines a location and its spawns. SPAWN_POINT sets a character\'s worldX position. LEVEL maps an entire area with background, scale, and exits. Drag any of these to the canvas.',
+  items:'The item registry tracks every key item in the game. Create items here then reference them in quest gates, dialogue conditions, and reward lists. Drag an ITEM node to the master canvas to map an item\'s full acquisition and use chain.',
+  vars:'Variables are the world\'s memory — flags (did X happen?), numbers (suspicion level), enums (faction standing), and keywords (Shadowrun topics you collect). Define them here, then gate any dialogue or quest on them. One variable = no new game code, ever.',
+  library:'Every node placed across all graphs lives here. Drag from the library to re-use a node on any canvas.',
+};
+
+const GUIDE_CHS=[
+  {id:'start',   lbl:'GET STARTED',    color:'#40e090'},
+  {id:'chars',   lbl:'CHARACTERS',     color:'#40c080'},
+  {id:'dialogue',lbl:'DIALOGUE',       color:'#c47a10'},
+  {id:'vars',    lbl:'VARIABLES',      color:'#40c080'},
+  {id:'quests',  lbl:'QUESTS',         color:'#d4a020'},
+  {id:'world',   lbl:'SCENES & WORLD', color:'#5090d0'},
+  {id:'export',  lbl:'EXPORT',         color:'#3ab0c0'},
+];
+
+function GuideModal({onClose}){
+  const [page,setPage]=useState('start');
+  useEffect(()=>{const h=e=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[onClose]);
+  const ci=GUIDE_CHS.findIndex(c=>c.id===page);
+  const ch=GUIDE_CHS[ci];
+
+  /* shared styles */
+  const H={fontSize:'var(--fxs)',fontWeight:700,letterSpacing:'2px',marginTop:12,marginBottom:4};
+  const P={fontSize:'var(--fxb)',lineHeight:1.85,letterSpacing:'0.5px',color:'var(--text)'};
+  const TIP={fontSize:'var(--fxs)',lineHeight:1.8,letterSpacing:'0.5px',color:'var(--text2)',background:'var(--raised)',border:'2px solid var(--brutal)',padding:'8px 10px',marginTop:6};
+  const SEP=<div style={{height:2,background:'var(--brutal)',margin:'12px 0'}}/>;
+  const tag=(lbl,col)=><span style={{display:'inline-block',padding:'1px 6px',fontSize:'var(--fxt)',fontWeight:700,letterSpacing:'1px',background:col||'var(--accent)',color:'var(--bg)',marginRight:5,verticalAlign:'middle',flexShrink:0}}>{lbl}</span>;
+  const steps=arr=>arr.map((s,i)=>(
+    <div key={i} style={{display:'flex',gap:8,padding:'4px 0'}}>
+      <span style={{color:'var(--accent)',fontWeight:700,flexShrink:0,fontSize:'var(--fxb)',width:16}}>{i+1}.</span>
+      <span style={{...P}}>{s}</span>
+    </div>
+  ));
+  const rows=arr=>arr.map(([lbl,col,desc],i)=>(
+    <div key={i} style={{display:'flex',gap:8,alignItems:'flex-start',padding:'5px 8px',background:'var(--raised)',border:'2px solid var(--brutal)',marginBottom:4}}>
+      {tag(lbl,col)}
+      <span style={{fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.7,letterSpacing:'0.5px'}}>{desc}</span>
+    </div>
+  ));
+
+  return(
+    <div className="popover-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:'var(--surface)',border:'3px solid var(--brutal)',boxShadow:'8px 8px 0 var(--brutal)',width:680,maxWidth:'96vw',maxHeight:'90vh',display:'flex',flexDirection:'column'}} onMouseDown={e=>e.stopPropagation()}>
+
+        {/* header */}
+        <div className="popover-header" style={{borderColor:ch.color}}>
+          <span className="popover-title" style={{color:ch.color}}>&#9673; CONSTRUCTION KIT — GUIDE</span>
+          <button className="popover-close" onClick={onClose}>&#x2715; CLOSE</button>
+        </div>
+
+        {/* chapter tabs */}
+        <div style={{display:'flex',flexWrap:'wrap',borderBottom:'2px solid var(--brutal)',flexShrink:0,background:'var(--surface)'}}>
+          {GUIDE_CHS.map(c=>(
+            <div key={c.id} style={{padding:'7px 13px',fontSize:'var(--fxs)',letterSpacing:'1px',cursor:'pointer',userSelect:'none',
+              color:page===c.id?c.color:'var(--text2)',
+              borderBottom:page===c.id?`3px solid ${c.color}`:'3px solid transparent',
+              marginBottom:'-2px',transition:'color .1s'}}
+              onClick={()=>setPage(c.id)}>{c.lbl}</div>
+          ))}
+        </div>
+
+        {/* body */}
+        <div className="pop-tab-body" style={{gap:0,fontSize:'var(--fxb)'}}>
+
+          {/* ── GET STARTED ── */}
+          {page==='start'&&(<>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>The Construction Kit is a node-based design tool for Beauregarde. Everything you build here writes to <strong style={{color:'var(--text)'}}>beauregarde_data.json</strong>, which the game reads at runtime.</div>
+            {SEP}
+            <div style={{...H,color:'#40e090'}}>QUICK START</div>
+            {steps([
+              'Add characters in the CHARACTERS sidebar. Every NPC and Octavia lives here.',
+              'Build dialogue in DIALOGUE TREES. Each tree is one conversation — drop nodes, wire them.',
+              'Create quests in QUESTS. Open a quest\'s sub-canvas (↗) to map its steps.',
+              'Drop SCENE nodes on the master canvas. Wire characters, dialogue, and quests to them.',
+              'Hit EXPORT TO GAME to write beauregarde_data.json.',
+            ])}
+            {SEP}
+            <div style={{...H,color:'var(--accent)'}}>HOW THE CANVAS WORKS</div>
+            <div style={{...P,marginBottom:8}}>Drag nodes from the sidebar onto the canvas. <strong>Drag a port dot → another port dot</strong> to wire them. Matching port colours connect — mismatches are blocked. Scroll to zoom, middle-click or Alt+drag to pan. Double-click any node to edit it.</div>
+            {rows([
+              ['MASTER CANVAS','#5090d0','Top-level graph — maps the whole world. Characters, quests, scenes, and levels all live here.'],
+              ['SUB-CANVAS','#c47a10','Characters, dialogue trees, and quests each have their own canvas. Open with the ↗ button on a node header.'],
+              ['PORT TYPES','#7a7090','Colour-coded by relationship type: teal = character, gold = dialogue, amber = quest, blue = location, red = trigger, grey = flow.'],
+              ['GRAPH TABS','#40e090','Each master tab is a separate canvas. Use multiple tabs to organise large projects.'],
+            ])}
+          </>)}
+
+          {/* ── CHARACTERS ── */}
+          {page==='chars'&&(<>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>Characters are the people Octavia interacts with — NPCs, enemies, and allies. They live in the sidebar and place as nodes on the master canvas.</div>
+            {SEP}
+            <div style={{...H,color:'#40c080'}}>CREATING A CHARACTER</div>
+            {steps([
+              'Click + ADD in the CHARACTERS sidebar, or drag a CHARACTER node from the library.',
+              'Double-click the node (or click in the sidebar) to open the full editor.',
+              'Set Name, Role, Handle (street alias), and Status (contact / missing / enemy / self).',
+              'Set Alignment: NEUTRAL, FRIEND, or FOE. FOE enables combat in COMBAT ZONE scenes.',
+              'Trust (0–4) is used in dialogue conditions and quest gates.',
+              'Use the COMBAT tab to set HP, loot drops, and pickpocket items.',
+            ])}
+            {SEP}
+            <div style={{...H,color:'#40c080'}}>CHARACTER SUB-CANVAS</div>
+            <div style={{...P}}>Click ↗ on a placed CHARACTER node to open their narrative graph. Use these nodes inside:</div>
+            <div style={{marginTop:6}}>
+              {rows([
+                ['CHAR DETAIL','#40c080','Root node — holds the character\'s identity. One per character.'],
+                ['DIALOGUE REF','#c47a10','Links this character to a specific dialogue tree.'],
+                ['QUEST REF','#d4a020','Links this character to a quest they\'re involved in.'],
+              ])}
+            </div>
+            <div style={{...TIP}}>◉ The OCTAVIA node is the protagonist. She\'s pre-seeded and works the same way as any character node.</div>
+          </>)}
+
+          {/* ── DIALOGUE ── */}
+          {page==='dialogue'&&(<>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>Dialogue trees are self-contained conversations. Each tree has a type, play conditions, and a graph of nodes that define the flow.</div>
+            {SEP}
+            <div style={{...H,color:'#c47a10'}}>BUILDING A TREE</div>
+            {steps([
+              'Click + ADD in DIALOGUE TREES or use GAME DIALOGUE to create/override a hardcoded key.',
+              'Click the tree in the sidebar to open its sub-canvas.',
+              'Drag a STATEMENT or QUESTION node onto the canvas — this is your entry point.',
+              'Wire outputs to inputs to build the conversation. Every path must end at END CONVO or DEAD END.',
+              'Set play conditions in the left sidebar: ALWAYS / ONCE / LIMIT, and optional condition rules.',
+            ])}
+            {SEP}
+            <div style={{...H,color:'#c47a10'}}>NODE TYPES</div>
+            {rows([
+              ['STATEMENT','#7a7090','NPC says a line. One path continues.'],
+              ['QUESTION','#c4a040','NPC prompts. Up to 3 player choices, each branching independently.'],
+              ['THOUGHTS','#40e090','Octavia\'s internal voice. Set the emotion channel (FEAR, ANGER, DOUBT…).'],
+              ['OUTFIT CHECK','#a060c0','Branches on Octavia\'s current outfit: Hoodie / Regular / Other.'],
+              ['ITEMS','#a06890','Gives or checks for an item. IF MET / IF NOT MET paths.'],
+              ['LOOP','#7a7090','Repeats a line while a condition holds.'],
+              ['DEAD END','#c43028','This branch goes nowhere. NPC won\'t continue.'],
+              ['END CONVO','#c43028','Closes the conversation. Set relationship change (+2 to −2) and an optional game action.'],
+            ])}
+            <div style={{...TIP,marginTop:8}}>◆ PLAY CONDITIONS (left sidebar when inside a tree): gate which conversations fire by VARIABLE, outfit, item, trust, scene, or quest state. Use LIMIT to cap how many times a tree plays.</div>
+          </>)}
+
+          {/* ── VARIABLES ── */}
+          {page==='vars'&&(<>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>Variables are the game world's memory. They are the single most important system for building a large, reactive narrative — Disco Elysium-style branching and Shadowrun-style keyword questing both run on them.</div>
+            {SEP}
+            <div style={{...H,color:'#40c080'}}>WHY THEY MATTER</div>
+            <div style={{...P,marginBottom:8}}>Without variables, every "did the player do X?" needs new game code. With them, you define a variable once in the sidebar and the game reads it forever — <strong style={{color:'var(--text)'}}>no new code per flag, ever.</strong> This is what lets the game scale to thousands of branches while the tool stays small.</div>
+            {SEP}
+            <div style={{...H,color:'#40c080'}}>THE FOUR TYPES</div>
+            {rows([
+              ['FLAG','#40c080','Boolean on/off. The workhorse: told_raymond_about_collette, met_charlie, chose_violence.'],
+              ['INT','#d4a020','A number: bureau_suspicion, signal_fragments. Compare with ≥ > ≤ < = ≠.'],
+              ['ENUM','#5090d0','One of a fixed set of named states: faction_standing = ally / neutral / hostile.'],
+              ['KEYWORD','#a060c0','A topic Octavia collects and can ask anyone about — Shadowrun-style. Just a flag with reach.'],
+            ])}
+            {SEP}
+            <div style={{...H,color:'#40c080'}}>HOW TO USE THEM</div>
+            {steps([
+              'Open the VARIABLES sidebar section. Click + ADD.',
+              'Name it in snake_case (told_raymond_about_collette). Pick a type and a starting value.',
+              'In any dialogue tree, open PLAY CONDITIONS and add a condition of type VAR — pick the variable and the test.',
+              'The game evaluates it at runtime against one shared state object. Pass = the conversation fires.',
+              'Effects (setting variables from dialogue choices) arrive in the next update — for now, scenes set them via window.setVar(key, value).',
+            ])}
+            <div style={{...TIP,marginTop:8}}>◆ KEYWORDS are the Shadowrun trick: mark a variable as KEYWORD and Octavia "collects" it. Any NPC can then gate an option on having that keyword — that's how topics spread across the whole cast from one flag.</div>
+            <div style={{...TIP,marginTop:6}}>◆ Keep names consistent and descriptive. A variable's key (the snake_case slug) is what the game stores — renaming the display name is safe, but the key is the permanent identity.</div>
+          </>)}
+
+          {/* ── QUESTS ── */}
+          {page==='quests'&&(<>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>Quests have three layers. You can work at any layer — each adds more depth to what exports.</div>
+            {SEP}
+            <div style={{...H,color:'#d4a020'}}>LAYER 1 — METADATA (always exports)</div>
+            {steps([
+              'Click + ADD in QUESTS or drop a QUEST node on the master canvas.',
+              'Double-click to edit: name, type (◆ Major / ◇ Minor), category, status.',
+              'Progress text shows in the HUD status line. Description shows in the HUD info panel.',
+            ])}
+            {SEP}
+            <div style={{...H,color:'#d4a020'}}>LAYER 2 — WORLD WIRING (exports as links)</div>
+            <div style={{...P,marginBottom:6}}>On the master canvas, wire the QUEST node to connect it to the world:</div>
+            {rows([
+              ['ASSIGNED BY','#40c080','← CHARACTER node: who gives this quest to Octavia.'],
+              ['DIALOGUE','#c47a10','→ DIALOGUE_TREE: the conversation that fires for this quest.'],
+              ['SCENE','#5090d0','→ SCENE node: where the quest takes place.'],
+              ['NEXT QUEST','#d4a020','→ another QUEST: what unlocks when this one completes.'],
+            ])}
+            {SEP}
+            <div style={{...H,color:'#d4a020'}}>LAYER 3 — STEP GRAPH (exports as steps array)</div>
+            {steps([
+              'Click ↗ on a QUEST node to open its sub-canvas.',
+              'Place QUEST_INFO (root — required, one per quest). Wire its FIRST STEP output to your first step.',
+              'Add QUEST_STEP nodes and chain them. Double-click each to set: step name, dialogue key, and place.',
+              'Use QUEST_CONDITION to branch paths (IF MET / IF NOT MET).',
+              'Use QUEST_COLLECTABLE when Octavia picks something up as part of the quest.',
+              'End every path with QUEST_END.',
+            ])}
+          </>)}
+
+          {/* ── SCENES & WORLD ── */}
+          {page==='world'&&(<>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>The world layer defines locations, spawn positions, and how areas connect. These export as separate keys in the game data.</div>
+            {SEP}
+            <div style={{...H,color:'#5090d0'}}>SCENE NODES</div>
+            {steps([
+              'Drag SCENE from the TOOLS sidebar onto the master canvas.',
+              'Double-click to edit: Scene ID (pick from known scenes or type custom), scene type, Octavia\'s worldX spawn.',
+              'CHARACTERS tab: add NPCs and set each worldX position. FOE alignment enables combat in COMBAT ZONE scenes.',
+              'STORE tab (store scenes only): add items with counter or clerk placement and worldX.',
+              'Wire QUEST → SCENE and CHARACTER → SCENE on the master canvas to link them semantically.',
+            ])}
+            {SEP}
+            <div style={{...H,color:'#4ab8d0'}}>SPAWN POINT NODES</div>
+            <div style={{...P}}>Standalone character spawn positions. Select a character and set worldX. Useful for free-roaming NPC placement outside of specific scenes. Wire CHARACTER → SPAWN_POINT → SCENE.</div>
+            {SEP}
+            <div style={{...H,color:'#3ab0c0'}}>LEVEL CONNECTOR NODES ⊞</div>
+            {steps([
+              'Drag LEVEL from the TOOLS sidebar. Double-click to open the 4-tab editor.',
+              'MAP: set background file, pixel dimensions, scale multiplier (resizes all characters proportionally), and collision mask.',
+              'SPAWNS: drag dots on the mini preview to position Octavia and NPCs. Each NPC has an individual size % override.',
+              'EXITS: define transition points — name, worldX, direction (left/right/up/down), and target level.',
+              'Wire LEVEL nodes together on the canvas to map your world topology.',
+            ])}
+          </>)}
+
+          {/* ── EXPORT ── */}
+          {page==='export'&&(<>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>EXPORT TO GAME writes beauregarde_data.json to a file you choose. The game reads that file on load. Re-export any time you make changes.</div>
+            {SEP}
+            <div style={{...H,color:'#3ab0c0'}}>TARGETING THE OUTPUT FILE</div>
+            {steps([
+              'Click EXPORT TO GAME. The first time, a file picker opens — navigate to your game\'s data folder.',
+              'Every subsequent export writes directly to that file without prompting.',
+              'The small 📄 button in the nav bar resets the target — use this if you move or rename the file.',
+            ])}
+            {SEP}
+            <div style={{...H,color:'#3ab0c0'}}>WHAT\'S IN THE JSON</div>
+            {[
+              ['"people"','#40c080','All non-Octavia characters: name, role, portrait path, trust, alignment, loot, pickpocket data.'],
+              ['"quests"','#d4a020','Major + minor quest lists, each with metadata, world links, and a serialised step graph.'],
+              ['"dialogue"','#c47a10','Every tree keyed by slugified name. Includes play conditions and the full serialised node flow.'],
+              ['"scenes"','#5090d0','SCENE nodes: spawn positions, NPC placements, store items, dialogue trigger worldX.'],
+              ['"levels"','#3ab0c0','LEVEL_CONNECTOR nodes: background, dimensions, scale, spawn coords, and exits.'],
+              ['"spawns"','#4ab8d0','SPAWN_POINT nodes: standalone NPC worldX positions.'],
+              ['"outfits"','#a060c0','Outfit definitions used by dialogue outfit-condition checks.'],
+              ['"audio"','#a030e0','Music and SFX track registry with loop and type flags.'],
+            ].map(([key,col,desc],i)=>(
+              <div key={i} style={{display:'flex',gap:8,padding:'5px 8px',background:'var(--raised)',border:'2px solid var(--brutal)',marginBottom:4}}>
+                <span style={{fontSize:'var(--fxs)',fontWeight:700,letterSpacing:'1px',color:col,flexShrink:0,width:82,fontFamily:'monospace'}}>{key}</span>
+                <span style={{fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.7,letterSpacing:'0.5px'}}>{desc}</span>
+              </div>
+            ))}
+            <div style={{...TIP,marginTop:8}}>◆ The kit auto-saves to localStorage on every change. Hit SAVE in the nav to force-save. Your data persists across browser sessions until you clear storage.</div>
+          </>)}
+
+        </div>
+
+        {/* prev / next navigation */}
+        <div style={{display:'flex',gap:8,padding:'10px 16px',borderTop:'2px solid var(--brutal)',background:'var(--raised)',flexShrink:0,alignItems:'center'}}>
+          {ci>0
+            ?<button onClick={()=>setPage(GUIDE_CHS[ci-1].id)} style={{background:'var(--raised)',border:'2px solid var(--brutal)',color:'var(--text2)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxb)',padding:'5px 12px',cursor:'pointer',letterSpacing:'1px',boxShadow:'2px 2px 0 var(--brutal)'}}>
+               &#x2190; {GUIDE_CHS[ci-1].lbl}
+             </button>
+            :<div style={{flex:1}}/>
+          }
+          <div style={{flex:1,textAlign:'center',fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px'}}>{ci+1} / {GUIDE_CHS.length}</div>
+          {ci<GUIDE_CHS.length-1
+            ?<button onClick={()=>setPage(GUIDE_CHS[ci+1].id)} style={{background:ch.color,border:'2px solid '+ch.color,color:'var(--bg)',fontFamily:"'TheMurk',monospace",fontSize:'var(--fxb)',fontWeight:700,padding:'5px 12px',cursor:'pointer',letterSpacing:'1px',boxShadow:'2px 2px 0 var(--brutal)'}}>
+               {GUIDE_CHS[ci+1].lbl} &#x2192;
+             </button>
+            :<div style={{flex:1}}/>
+          }
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+/* ── QUEST STEP SERIALIZER ───────────────────────────────────────── */
+function serializeQuestSteps(quest){
+  const {nodes:ns,conns:cs}=(quest.subCanvas||{nodes:[],conns:[]});
+  if(!ns.length)return[];
+  const adj={};
+  ns.forEach(n=>{adj[n.id]={};});
+  cs.forEach(c=>{if(adj[c.src])adj[c.src][c.srcPort]=c.dst;});
+  const hasPredecessor=new Set(cs.map(c=>c.dst));
+  const root=ns.find(n=>n.type==='QUEST_INFO')||ns.find(n=>!hasPredecessor.has(n.id))||ns[0];
+  if(!root)return[];
+  const visited=new Set();
+  const ordered=[];
+  const queue=[root];
+  while(queue.length){
+    const n=queue.shift();
+    if(!n||visited.has(n.id))continue;
+    visited.add(n.id);
+    ordered.push(n);
+    const outs=adj[n.id]||{};
+    ['first_step','out','if_met','if_not'].forEach(p=>{
+      if(outs[p]){const nxt=ns.find(x=>x.id===outs[p]);if(nxt&&!visited.has(nxt.id))queue.push(nxt);}
+    });
+  }
+  return ordered.map(n=>{
+    const outs=adj[n.id]||{};
+    const nxt=id=>id||null;
+    if(n.type==='QUEST_INFO')return null;
+    if(n.type==='QUEST_STEP')return{id:n.id,type:'step',label:n.label||'',notes:n.notes||'',dialogue:n.dialogueKey||null,atPlace:n.atPlace||null,next:nxt(outs.out)};
+    if(n.type==='QUEST_COLLECTABLE')return{id:n.id,type:'collectable',item:n.item||n.label||'',notes:n.notes||'',next:nxt(outs.out)};
+    if(n.type==='QUEST_CONDITION')return{id:n.id,type:'condition',condition:n.condition||n.label||'',notes:n.notes||'',ifMet:nxt(outs.if_met),ifNot:nxt(outs.if_not)};
+    if(n.type==='QUEST_END')return{id:n.id,type:'end',notes:n.notes||''};
+    return null;
+  }).filter(Boolean);
+}
+
 /* ── CONDITION ROW ───────────────────────────────────────────────── */
-function ConditionRow({cond,outfits,chars,onChange,onRemove}){
+function ConditionRow({cond,outfits,chars,items,quests,vars,onChange,onRemove}){
   const btn={fontFamily:"'TheMurk',monospace",fontSize:'var(--fxt)',fontWeight:700,padding:'2px 6px',cursor:'pointer',letterSpacing:'1px',border:'2px solid',flexShrink:0};
+  const selVar=(vars||[]).find(v=>v.id===cond.varId);
   return(
     <div style={{display:'flex',gap:5,alignItems:'center',padding:'5px 0',borderBottom:'1px solid var(--dimmer)',flexWrap:'wrap'}}>
       <button style={{...btn,background:cond.negate?'var(--red)':'var(--raised)',borderColor:cond.negate?'var(--red)':'var(--brutal)',color:cond.negate?'var(--bg)':'var(--text)'}}
         onClick={()=>onChange({negate:!cond.negate})}>NOT</button>
-      <select className="pfi" style={{flex:'0 0 auto',width:88,fontSize:'var(--fxt)',padding:'2px 4px'}}
-        value={cond.type} onChange={e=>onChange({type:e.target.value,value:'',op:'is',charId:''})}>
+      <select className="pfi" style={{flex:'0 0 auto',width:74,fontSize:'var(--fxt)',padding:'2px 4px'}}
+        value={cond.type} onChange={e=>onChange({type:e.target.value,value:'',op:'is',charId:'',questId:'',questState:'complete',varId:''})}>
+        <option value="var">VAR</option>
         <option value="outfit">OUTFIT</option>
         <option value="item">ITEM</option>
         <option value="trust">TRUST</option>
         <option value="scene">SCENE</option>
+        <option value="quest">QUEST</option>
       </select>
+      {cond.type==='var'&&(<>
+        <select className="pfi" style={{flex:2,fontSize:'var(--fxt)',padding:'2px 4px',minWidth:80}}
+          value={cond.varId||''} onChange={e=>{const v=(vars||[]).find(x=>x.id===e.target.value);const ops=VAR_OPS[v?.type||'flag'];onChange({varId:e.target.value,op:ops[0][0],value:v?.type==='enum'?(v.enumValues[0]||''):''});}}>
+          <option value="">— variable —</option>
+          {(vars||[]).map(v=><option key={v.id} value={v.id}>{v.name||v.key}</option>)}
+        </select>
+        {selVar&&(<select className="pfi" style={{width:64,fontSize:'var(--fxt)',padding:'2px 3px'}}
+          value={cond.op||VAR_OPS[selVar.type][0][0]} onChange={e=>onChange({op:e.target.value})}>
+          {VAR_OPS[selVar.type].map(([v,l])=><option key={v} value={v}>{l}</option>)}
+        </select>)}
+        {selVar&&selVar.type==='int'&&(
+          <input className="pfi" type="number" style={{width:48,fontSize:'var(--fxt)',padding:'2px 4px'}}
+            value={cond.value||0} onChange={e=>onChange({value:parseInt(e.target.value)||0})}/>
+        )}
+        {selVar&&selVar.type==='enum'&&(
+          <select className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
+            value={cond.value||''} onChange={e=>onChange({value:e.target.value})}>
+            {(selVar.enumValues||[]).map(v=><option key={v} value={v}>{v}</option>)}
+          </select>
+        )}
+      </>)}
       {cond.type==='outfit'&&(
         <select className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
           value={cond.value||''} onChange={e=>onChange({value:e.target.value})}>
@@ -1828,8 +3202,14 @@ function ConditionRow({cond,outfits,chars,onChange,onRemove}){
         </select>
       )}
       {cond.type==='item'&&(
-        <input className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
-          placeholder="item name" value={cond.value||''} onChange={e=>onChange({value:e.target.value})}/>
+        (items||[]).length>0
+          ?<select className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
+              value={cond.value||''} onChange={e=>onChange({value:e.target.value})}>
+              <option value="">— item —</option>
+              {(items||[]).map(i=><option key={i.id} value={i.key||i.id}>{i.name}</option>)}
+            </select>
+          :<input className="pfi" style={{flex:1,fontSize:'var(--fxt)',padding:'2px 4px'}}
+              placeholder="item name" value={cond.value||''} onChange={e=>onChange({value:e.target.value})}/>
       )}
       {cond.type==='trust'&&(<>
         <select className="pfi" style={{width:40,fontSize:'var(--fxt)',padding:'2px 3px'}}
@@ -1851,6 +3231,19 @@ function ConditionRow({cond,outfits,chars,onChange,onRemove}){
           {KNOWN_SCENES.map(s=><option key={s} value={s}>{s}</option>)}
         </select>
       )}
+      {cond.type==='quest'&&(<>
+        <select className="pfi" style={{flex:2,fontSize:'var(--fxt)',padding:'2px 4px'}}
+          value={cond.questId||''} onChange={e=>onChange({questId:e.target.value})}>
+          <option value="">— quest —</option>
+          {(quests||[]).map(q=><option key={q.id} value={q.id}>{q.name}</option>)}
+        </select>
+        <select className="pfi" style={{width:76,fontSize:'var(--fxt)',padding:'2px 3px'}}
+          value={cond.questState||'complete'} onChange={e=>onChange({questState:e.target.value})}>
+          <option value="complete">DONE</option>
+          <option value="active">ACTIVE</option>
+          <option value="locked">LOCKED</option>
+        </select>
+      </>)}
       <span style={{color:'var(--red)',cursor:'pointer',fontSize:'11px',padding:'0 4px',flexShrink:0}} onClick={onRemove}>✕</span>
     </div>
   );
@@ -1871,9 +3264,9 @@ function App(){
   /* entity state */
   const init=useMemo(()=>{
     const s=loadState();
-    if(s)return{chars:s.chars,dtrees:s.dtrees,quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT};
+    if(s)return{chars:s.chars,dtrees:s.dtrees,quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT,items:s.items||[],vars:s.vars||[]};
     return{chars:SEED_CHARS,dtrees:SEED_TREES,quests:SEED_QUESTS,
-      mt:[{id:'m1',name:'Main Graph',treeType:'general',nodes:[],conns:[]}],amid:'m1',outfits:OUTFITS_DEFAULT,audio:AUDIO_DEFAULT};
+      mt:[{id:'m1',name:'Main Graph',treeType:'general',nodes:[],conns:[]}],amid:'m1',outfits:OUTFITS_DEFAULT,audio:AUDIO_DEFAULT,items:[],vars:[]};
   },[]);
   const [chars,setChars]=useState(init.chars);
   const [dtrees,setDtrees]=useState(init.dtrees);
@@ -1882,8 +3275,12 @@ function App(){
   const [amid,setAmid]=useState(init.amid); /* active master tree id */
   const [outfits,setOutfits]=useState(init.outfits||OUTFITS_DEFAULT);
   const [audio,setAudio]=useState(init.audio||AUDIO_DEFAULT);
+  const [items,setItems]=useState(init.items||[]);
+  const [itemEdit,setItemEdit]=useState(null); /* {item, isNew} */
+  const [vars,setVars]=useState(init.vars||[]);
+  const [varEdit,setVarEdit]=useState(null); /* {variable, isNew} */
 
-  useEffect(()=>{ saveState({chars,dtrees,quests,mt,amid,outfits,audio}); },[chars,dtrees,quests,mt,amid,outfits,audio]);
+  useEffect(()=>{ saveState({chars,dtrees,quests,mt,amid,outfits,audio,items,vars}); },[chars,dtrees,quests,mt,amid,outfits,audio,items,vars]);
 
   /* view stack */
   const [vStack,setVStack]=useState([{type:'master',id:null}]);
@@ -1895,6 +3292,8 @@ function App(){
   const [openAcc,setOpenAcc]=useState('chars');
   const [openOutfits,setOpenOutfits]=useState(false);
   const [openAudio,setOpenAudio]=useState(false);
+  const [showGuide,setShowGuide]=useState(false);
+  const [openTip,setOpenTip]=useState(null);
 
   /* popover */
   const [popover,setPopover]=useState(null);
@@ -2107,10 +3506,14 @@ function App(){
     else if(nodeType==='INVENTORY') setPopover({type:'inventory',nodeId});
     else if(nodeType==='SCENE') setPopover({type:'scene',nodeId});
     else if(nodeType==='SPAWN_POINT') setPopover({type:'spawn',nodeId});
+    else if(nodeType==='LEVEL_CONNECTOR') setPopover({type:'level',nodeId});
     else if(nodeType==='QUEST') setPopover({type:'quest',nodeId,entityId});
     else if(nodeType==='DIALOGUE_TREE') setVStack(p=>[...p,{type:'dialogue',id:entityId}]);
     else if(['THOUGHTS','STATEMENT','QUESTION','DEAD_END','END_CONVO','LOOP','ITEMS'].includes(nodeType))
       setPopover({type:'dialoguenode',nodeId});
+    else if(['QUEST_INFO','QUEST_STEP','QUEST_COLLECTABLE','QUEST_CONDITION','QUEST_END'].includes(nodeType))
+      setPopover({type:'questnode',nodeId});
+    else if(nodeType==='ITEM') setPopover({type:'itemnode',nodeId});
   },[]);
 
   /* ── DIALOGUE SERIALIZER ── converts kit node graph → game flat format */
@@ -2215,7 +3618,9 @@ function App(){
     const people=chars.filter(c=>c.id!=='c1').map(c=>({
       id:c.id, name:(c.name||'').toUpperCase(), role:c.role||'',
       handle:c.handle||'', status:(c.status||'contact').toUpperCase(),
-      portrait:c.portrait?('../graphics/portraits/npc/'+c.portrait):'',
+      // portrait: if it already contains a path separator use as-is; otherwise apply legacy prefix
+      portrait:c.portrait?(c.portrait.includes('/')||c.portrait.includes('\\')?c.portrait:'../graphics/portraits/npc/'+c.portrait):'',
+      portrait360:c.portrait360||'',
       info:c.info||'', discovered:c.discovered!==false,
       category:c.category||null,
       // gameplay-only fields (not in PEOPLE_DB but used by game logic)
@@ -2227,21 +3632,45 @@ function App(){
       pickpocketItems:c.pickpocketItems||[],
       caughtConsequence:c.caughtConsequence||'',
     }));
-    // 2. QUESTS (mapped to game's QUESTS_DB format)
-    const questsOut={
-      major:quests.filter(q=>q.major).map(q=>({id:q.id,name:q.name,status:(q.status||'active').toUpperCase(),progress:q.progress||'',info:q.info||'',category:q.category||''})),
-      minor:quests.filter(q=>!q.major).map(q=>({id:q.id,name:q.name,status:(q.status||'active').toUpperCase(),progress:q.progress||'',info:q.info||'',category:q.category||''})),
+    // pre-compute master tree nodes + connections (used by quests, scenes, levels)
+    const allMtConns=mt.flatMap(t=>(t.conns||[]));
+    const allMtNodes=mt.flatMap(t=>(t.nodes||[]));
+    // 2. QUESTS — metadata + step graph + master-canvas wire connections
+    const serQ=q=>{
+      const qn=allMtNodes.find(n=>n.type==='QUEST'&&n.entityId===q.id);
+      let assignedBy=null,linkedScene=null,linkedDialogue=null,nextQuest=null;
+      if(qn){
+        const ac=allMtConns.find(c=>c.dst===qn.id&&c.dstPort==='from_char');
+        const an=allMtNodes.find(n=>n.id===ac?.src);assignedBy=an?.entityId||null;
+        const sc=allMtConns.find(c=>c.src===qn.id&&c.srcPort==='to_scene');
+        const sn=allMtNodes.find(n=>n.id===sc?.dst);linkedScene=sn?.label||null;
+        const dc=allMtConns.find(c=>c.src===qn.id&&c.srcPort==='to_dialogue');
+        const dn=allMtNodes.find(n=>n.id===dc?.dst);
+        linkedDialogue=dn?(dn.label||'').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''):null;
+        const nc=allMtConns.find(c=>c.src===qn.id&&c.srcPort==='next_quest');
+        const nn=allMtNodes.find(n=>n.id===nc?.dst);nextQuest=nn?.entityId||null;
+      }
+      const mkItemRef=id=>{const r=items.find(x=>x.id===id);return{id,key:r?.key||id,name:r?.name||id};};
+      return{id:q.id,name:q.name,status:(q.status||'active').toUpperCase(),progress:q.progress||'',info:q.info||'',category:q.category||'',assignedBy,linkedScene,linkedDialogue,nextQuest,requiredItems:(q.requiredItems||[]).map(mkItemRef),rewardItems:(q.rewardItems||[]).map(mkItemRef),steps:serializeQuestSteps(q)};
     };
+    const questsOut={
+      major:quests.filter(q=>q.major).map(serQ),
+      minor:quests.filter(q=>!q.major).map(serQ),
+    };
+    // resolve var conditions → attach stable varKey so the game can look them up
+    const resolveConds=conds=>(conds||[]).map(c=>{
+      if(c.type!=='var')return c;
+      const v=vars.find(x=>x.id===c.varId);
+      return{...c,varKey:v?(v.key||slugifyKey(v.name)):'',varType:v?.type||'flag'};
+    });
     // 3. DIALOGUE (serialized node graphs)
     const dialogueOut={};
     dtrees.forEach(t=>{
       const key=t.name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
-      dialogueOut[key]={id:t.id,name:t.name,treeType:t.treeType,outfitCondition:t.outfitCondition||'any',nodes:serializeDialogueTree(t),playCount:t.playCount||'always',playLimit:t.playLimit||1,conditions:t.conditions||[]};
+      dialogueOut[key]={id:t.id,name:t.name,treeType:t.treeType,outfitCondition:t.outfitCondition||'any',nodes:serializeDialogueTree(t),playCount:t.playCount||'always',playLimit:t.playLimit||1,conditions:resolveConds(t.conditions)};
     });
     // 4. SCENES (from SCENE nodes in all master trees)
-    const allMtConns=mt.flatMap(t=>(t.conns||[]));
-    const sceneNodes=mt.flatMap(t=>(t.nodes||[]).filter(n=>n.type==='SCENE'));
-    const allMtNodes=mt.flatMap(t=>(t.nodes||[]));
+    const sceneNodes=allMtNodes.filter(n=>n.type==='SCENE');
     const scenesOut=sceneNodes.map(n=>{
       // find any DIALOGUE_TREE wired from this scene's to_dialogue output
       const dlgConn=allMtConns.find(c=>c.src===n.id&&c.srcPort==='to_dialogue');
@@ -2263,10 +3692,26 @@ function App(){
       };
     });
     // 5. SPAWN POINTS
-    const spawnNodes=mt.flatMap(t=>(t.nodes||[]).filter(n=>n.type==='SPAWN_POINT'));
+    const spawnNodes=allMtNodes.filter(n=>n.type==='SPAWN_POINT');
     const spawnsOut=spawnNodes.map(n=>({id:n.id,charId:n.charId||null,worldX:n.worldX||400}));
+    // 6. LEVELS (from LEVEL_CONNECTOR nodes)
+    const levelNodes=allMtNodes.filter(n=>n.type==='LEVEL_CONNECTOR');
+    const levelsOut={};
+    levelNodes.forEach(n=>{
+      if(!n.label)return;
+      levelsOut[n.label]={
+        background:n.mapFile||'',
+        mapWidth:n.mapW||3200,mapHeight:n.mapH||900,scale:n.mapScale||1.0,
+        sceneType:n.sceneType||'neutral',atmosphere:n.atmosphere||'',musicCue:n.musicCue||'',
+        playerSpawn:n.playerSpawn||{x:400,y:620,facing:'right'},
+        npcSpawns:(n.npcSpawns||[]).map(s=>({charId:s.charId,x:s.x,y:s.y,facing:s.facing||'left',scale:(s.scaleOverride||100)/100})),
+        exits:(n.exits||[]).map(ex=>({id:ex.id,label:ex.label,x:ex.x,direction:ex.direction,linksTo:ex.linksTo||null})),
+      };
+    });
     // assemble
-    const payload={people,quests:questsOut,dialogue:dialogueOut,scenes:scenesOut,spawns:spawnsOut,outfits:outfits.filter(o=>o.id!=='any'),audio};
+    const itemsOut=items.map(i=>({id:i.id,name:i.name,key:i.key||i.name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''),category:i.category||'misc',unique:i.unique||false,description:i.description||'',source:i.source||'scene',icon:i.icon||'',restore:i.restore||0,equippable:i.equippable||false}));
+    const varsOut=vars.map(v=>({id:v.id,key:v.key||slugifyKey(v.name),name:v.name,type:v.type||'flag',category:v.category||'story',initial:v.type==='int'?(parseInt(v.initial)||0):v.initial,enumValues:v.enumValues||[],description:v.description||''}));
+    const payload={people,quests:questsOut,dialogue:dialogueOut,scenes:scenesOut,spawns:spawnsOut,levels:levelsOut,items:itemsOut,vars:varsOut,outfits:outfits.filter(o=>o.id!=='any'),audio};
     const json=JSON.stringify(payload,null,2);
     try{
       const name=await writePayload(json);
@@ -2301,6 +3746,8 @@ function App(){
     {key:'SPAWN_POINT', label:'SPAWN POINTS'},
     {key:'INVENTORY',   label:'INVENTORY'},
     {key:'TRIGGER',     label:'TRIGGERS'},
+    {key:'LEVEL_CONNECTOR',label:'LEVELS'},
+    {key:'ITEM',        label:'ITEMS'},
     {key:'OCTAVIA',     label:'OCTAVIA'},
   ];
   const libNodeExtra=n=>{const{id,x,y,type,label,...rest}=n;return rest;};
@@ -2358,7 +3805,9 @@ function App(){
             <span className="acc-arrow" style={{transform:openAcc==='graphs'?'rotate(90deg)':''}}>&#9658;</span>
             <span className="acc-label">NODE GRAPHS</span>
             <button className="acc-add" onClick={e=>{e.stopPropagation();newMT();}}>+ NEW</button>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='graphs'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='graphs'?null:'graphs');}}>?</span>
           </div>
+          {openTip==='graphs'&&<div style={{padding:'8px 12px 10px',background:'var(--bg)',borderBottom:'2px solid var(--brutal)',fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.75,letterSpacing:'0.5px'}}>{SIDEBAR_TIPS.graphs}</div>}
           {openAcc==='graphs'&&<div className="acc-body">
             {mt.map(t=>{
               const tc=TTC[t.treeType||'general'];
@@ -2396,7 +3845,9 @@ function App(){
             <span className="acc-arrow" style={{transform:openAcc==='chars'?'rotate(90deg)':''}}>&#9658;</span>
             <span className="acc-label">CHARACTERS</span>
             <button className="acc-add" onClick={e=>{e.stopPropagation();const id=uid();const c={id,name:'New Character',role:'',trust:0,tags:[],notes:'',subCanvas:mkC()};setChars(p=>[...p,c]);placeNode('CHARACTER','New Character',{entityId:id,role:''});}}>+ ADD</button>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='chars'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='chars'?null:'chars');}}>?</span>
           </div>
+          {openTip==='chars'&&<div style={{padding:'8px 12px 10px',background:'var(--bg)',borderBottom:'2px solid var(--brutal)',fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.75,letterSpacing:'0.5px'}}>{SIDEBAR_TIPS.chars}</div>}
           {openAcc==='chars'&&<div className="acc-body">
             {npcs.map(c=>(<div key={c.id} className="sb-item" onClick={()=>setPopover({type:'character',nodeId:null,entityId:c.id})}>
               <span className="sb-item-icon" style={{color:'#40c080'}}>&#9673;</span>
@@ -2411,7 +3862,9 @@ function App(){
             <span className="acc-arrow" style={{transform:openAcc==='trees'?'rotate(90deg)':''}}>&#9658;</span>
             <span className="acc-label">DIALOGUE TREES</span>
             <button className="acc-add" onClick={e=>{e.stopPropagation();const id=uid();setDtrees(prev=>[...prev,{id,name:'New Tree',treeType:'quest',outfitCondition:'any',subCanvas:mkC()}]);placeNode('DIALOGUE_TREE','New Tree',{entityId:id});}}>+ ADD</button>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='trees'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='trees'?null:'trees');}}>?</span>
           </div>
+          {openTip==='trees'&&<div style={{padding:'8px 12px 10px',background:'var(--bg)',borderBottom:'2px solid var(--brutal)',fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.75,letterSpacing:'0.5px'}}>{SIDEBAR_TIPS.trees}</div>}
           {openAcc==='trees'&&<div className="acc-body">
             {dtrees.map(t=>{
               const oc=t.outfitCondition||'any';
@@ -2478,7 +3931,9 @@ function App(){
             <span className="acc-arrow" style={{transform:openAcc==='quests'?'rotate(90deg)':''}}>&#9658;</span>
             <span className="acc-label">QUESTS</span>
             <button className="acc-add" onClick={e=>{e.stopPropagation();const id=uid();setQuests(prev=>[...prev,{id,name:'New Quest',major:false,category:'',subCanvas:mkC()}]);placeNode('QUEST','New Quest',{entityId:id,major:false});}}>+ ADD</button>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='quests'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='quests'?null:'quests');}}>?</span>
           </div>
+          {openTip==='quests'&&<div style={{padding:'8px 12px 10px',background:'var(--bg)',borderBottom:'2px solid var(--brutal)',fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.75,letterSpacing:'0.5px'}}>{SIDEBAR_TIPS.quests}</div>}
           {openAcc==='quests'&&<div className="acc-body">
             {quests.map(q=>(<div key={q.id} className="sb-item" draggable onDragStart={sbDragStart('QUEST',q.name,{entityId:q.id,major:q.major})} onClick={()=>placeNode('QUEST',q.name,{entityId:q.id,major:q.major})}>
               <span className="sb-item-icon" style={{color:q.major?'#d4a020':'#a08060'}}>{q.major?'◆':'◇'}</span>
@@ -2488,14 +3943,66 @@ function App(){
             </div>))}
           </div>}
         </div>
+        {/* ITEMS REGISTRY */}
+        <div className="acc-section">
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='items'?null:'items')}>
+            <span className="acc-arrow" style={{transform:openAcc==='items'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label">ITEMS</span>
+            <span className="acc-count">{items.length}</span>
+            <button className="acc-add" onClick={e=>{e.stopPropagation();const id=uid();setItemEdit({item:{id,name:'',key:'',category:'misc',unique:false,description:'',source:'scene'},isNew:true});}}>+ ADD</button>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='items'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='items'?null:'items');}}>?</span>
+          </div>
+          {openTip==='items'&&<div style={{padding:'8px 12px 10px',background:'var(--bg)',borderBottom:'2px solid var(--brutal)',fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.75,letterSpacing:'0.5px'}}>{SIDEBAR_TIPS.items}</div>}
+          {openAcc==='items'&&<div className="acc-body">
+            {items.length===0&&<div style={{padding:'10px 12px',fontSize:'var(--fxs)',color:'var(--muted)',letterSpacing:'1px',lineHeight:1.7}}>No items yet. Add items to track them across quests, dialogue conditions, and rewards.</div>}
+            {items.map(item=>{
+              const cc=ITEM_CAT_COLOR[item.category]||'#7a7090';
+              const sc=ITEM_SRC_COLOR[item.source]||'#7a7090';
+              return(
+                <div key={item.id} className="sb-item" onClick={()=>setItemEdit({item,isNew:false})}>
+                  <span style={{fontSize:'var(--fxt)',fontWeight:700,padding:'1px 5px',background:cc,color:'var(--bg)',letterSpacing:'0.5px',flexShrink:0}}>{(item.category||'?').toUpperCase().slice(0,3)}</span>
+                  <span className="sb-item-name">{item.name}</span>
+                  <span style={{fontSize:'var(--fxt)',fontWeight:700,padding:'1px 5px',background:sc,color:'var(--bg)',letterSpacing:'0.5px',flexShrink:0,opacity:0.75}}>{(item.source||'?').toUpperCase().slice(0,3)}</span>
+                  <span className="node-del" style={{marginLeft:'auto'}} onClick={e=>{e.stopPropagation();setItems(p=>p.filter(x=>x.id!==item.id));}}>&#x2715;</span>
+                </div>
+              );
+            })}
+          </div>}
+        </div>
+        {/* VARIABLES REGISTRY */}
+        <div className="acc-section">
+          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='vars'?null:'vars')}>
+            <span className="acc-arrow" style={{transform:openAcc==='vars'?'rotate(90deg)':''}}>&#9658;</span>
+            <span className="acc-label">VARIABLES</span>
+            <span className="acc-count">{vars.length}</span>
+            <button className="acc-add" onClick={e=>{e.stopPropagation();setVarEdit({variable:mkVar({}),isNew:true});}}>+ ADD</button>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='vars'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='vars'?null:'vars');}}>?</span>
+          </div>
+          {openTip==='vars'&&<div style={{padding:'8px 12px 10px',background:'var(--bg)',borderBottom:'2px solid var(--brutal)',fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.75,letterSpacing:'0.5px'}}>{SIDEBAR_TIPS.vars}</div>}
+          {openAcc==='vars'&&<div className="acc-body">
+            {vars.length===0&&<div style={{padding:'10px 12px',fontSize:'var(--fxs)',color:'var(--muted)',letterSpacing:'1px',lineHeight:1.7}}>No variables yet. Add flags, counters, and keywords to gate dialogue and quests on world state.</div>}
+            {vars.map(v=>{
+              const tc=VAR_TYPE_COLOR[v.type]||'#7a7090';
+              return(
+                <div key={v.id} className="sb-item" onClick={()=>setVarEdit({variable:v,isNew:false})}>
+                  <span style={{fontSize:'var(--fxt)',fontWeight:700,padding:'1px 5px',background:tc,color:'var(--bg)',letterSpacing:'0.5px',flexShrink:0}}>{(v.type||'?').toUpperCase().slice(0,3)}</span>
+                  <span className="sb-item-name" title={v.key}>{v.name||v.key}</span>
+                  <span className="node-del" style={{marginLeft:'auto'}} onClick={e=>{e.stopPropagation();setVars(p=>p.filter(x=>x.id!==v.id));}}>&#x2715;</span>
+                </div>
+              );
+            })}
+          </div>}
+        </div>
         {/* TOOLS — SCENE / INVENTORY / TRIGGER */}
         <div className="acc-section">
           <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='tools'?null:'tools')}>
             <span className="acc-arrow" style={{transform:openAcc==='tools'?'rotate(90deg)':''}}>&#9658;</span>
             <span className="acc-label">TOOLS</span>
+            <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='tools'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='tools'?null:'tools');}}>?</span>
           </div>
+          {openTip==='tools'&&<div style={{padding:'8px 12px 10px',background:'var(--bg)',borderBottom:'2px solid var(--brutal)',fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.75,letterSpacing:'0.5px'}}>{SIDEBAR_TIPS.tools}</div>}
           {openAcc==='tools'&&<div className="acc-body">
-            {[{type:'SPAWN_POINT',label:'Spawn Point',extra:{worldX:0}},{type:'SCENE',label:'Scene',extra:{atmosphere:''}},{type:'INVENTORY',label:'Inventory',extra:{action:''}},{type:'TRIGGER',label:'Trigger',extra:{condition:''}}].map(({type,label,extra})=>{
+            {[{type:'SPAWN_POINT',label:'Spawn Point',extra:{worldX:0}},{type:'SCENE',label:'Scene',extra:{atmosphere:''}},{type:'INVENTORY',label:'Inventory',extra:{action:''}},{type:'TRIGGER',label:'Trigger',extra:{condition:''}},{type:'ITEM',label:'Item',extra:{itemId:'',itemKey:'',itemCategory:'',itemSource:''}},{type:'LEVEL_CONNECTOR',label:'Level',extra:{mapW:3200,mapH:900,mapScale:1.0,playerSpawn:{x:400,y:620,facing:'right'},npcSpawns:[],exits:[]}}].map(({type,label,extra})=>{
               const m=NM[type];
               return(<div key={type} className="sb-item" draggable
                 onDragStart={sbDragStart(type,label,extra)}
@@ -2623,13 +4130,13 @@ function App(){
             <div className="pf" style={{marginTop:8}}>
               <label className="pfl">CONDITIONS (all must pass)</label>
               {conds.map(c=>(
-                <ConditionRow key={c.id} cond={c} outfits={outfits} chars={chars}
+                <ConditionRow key={c.id} cond={c} outfits={outfits} chars={chars} items={items} quests={quests} vars={vars}
                   onChange={f=>updTree({conditions:conds.map(x=>x.id===c.id?{...x,...f}:x)})}
                   onRemove={()=>updTree({conditions:conds.filter(x=>x.id!==c.id)})}/>
               ))}
               {conds.length===0&&<div style={{fontSize:'var(--fxs)',color:'var(--muted)',letterSpacing:'1px',padding:'4px 0'}}>no conditions — always fires</div>}
               <button className="acc-add" style={{marginTop:6,width:'100%',textAlign:'center'}}
-                onClick={()=>updTree({conditions:[...conds,{id:uid(),negate:false,type:'outfit',op:'is',value:''}]})}>
+                onClick={()=>updTree({conditions:[...conds,{id:uid(),negate:false,type:'var',op:'is_true',value:'',varId:'',questId:'',questState:'complete'}]})}>
                 + ADD CONDITION
               </button>
             </div>
@@ -2723,6 +4230,8 @@ function App(){
           <option value="sm">TEXT SM</option>
           <option value="md">TEXT MD</option>
           <option value="lg">TEXT LG</option>
+          <option value="xl">TEXT XL</option>
+          <option value="xxl">TEXT XXL</option>
         </select>
         <select className="pal-sel" value={pal} onChange={e=>setPal(e.target.value)}>
           <option value="void">VOID</option>
@@ -2730,8 +4239,9 @@ function App(){
           <option value="northside">NORTHSIDE</option>
           <option value="chromakopia">CHROMAKOPIA</option>
         </select>
+        <button className="nav-btn" style={{borderColor:'var(--accent2)',color:'var(--accent2)',boxShadow:'3px 3px 0 var(--accent2)'}} onClick={()=>setShowGuide(p=>!p)}>◉ GUIDE</button>
         <button className="nav-btn" style={{borderColor:'var(--accent)',color:'var(--accent)',boxShadow:'3px 3px 0 var(--accent)'}} onClick={()=>setShowAI(p=>!p)}>✦ AI</button>
-        <button className="nav-btn save-btn" onClick={()=>{saveState({chars,dtrees,quests,mt,amid,outfits,audio});showToast('SAVED');}}>SAVE</button>
+        <button className="nav-btn save-btn" onClick={()=>{saveState({chars,dtrees,quests,mt,amid,outfits,audio,items,vars});showToast('SAVED');}}>SAVE</button>
         <button className="nav-btn export-btn" onClick={exportGame}>EXPORT TO GAME</button>
         <button className="nav-btn back-btn" style={{fontSize:'var(--fxt)',padding:'4px 8px'}}
           title="Change the target file for next export"
@@ -2861,12 +4371,50 @@ function App(){
       )}
       {popover?.type==='quest' && quests.find(x=>x.id===popover.entityId) && (
         <QuestPopover quest={quests.find(x=>x.id===popover.entityId)}
+          items={items}
           onSave={q=>setQuests(p=>p.map(x=>x.id===q.id?{...x,...q}:x))}
           onOpen={pushView} onClose={()=>setPopover(null)}/>
       )}
       {popover?.type==='dialoguenode' && nodes.find(x=>x.id===popover.nodeId) && (
         <DialogueNodePopover node={nodes.find(x=>x.id===popover.nodeId)}
-          chars={chars}
+          chars={chars} items={items}
+          onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onClose={()=>setPopover(null)}/>
+      )}
+      {popover?.type==='itemnode' && nodes.find(x=>x.id===popover.nodeId) && (
+        <ItemNodePopover node={nodes.find(x=>x.id===popover.nodeId)}
+          items={items}
+          onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onClose={()=>setPopover(null)}/>
+      )}
+      {itemEdit&&(
+        <ItemPopover item={itemEdit.item}
+          onSave={saved=>{
+            if(itemEdit.isNew)setItems(p=>[...p,saved]);
+            else setItems(p=>p.map(x=>x.id===saved.id?saved:x));
+            setItemEdit(null);
+          }}
+          onClose={()=>setItemEdit(null)}/>
+      )}
+      {varEdit&&(
+        <VarPopover variable={varEdit.variable}
+          onSave={saved=>{
+            if(varEdit.isNew)setVars(p=>[...p,saved]);
+            else setVars(p=>p.map(x=>x.id===saved.id?saved:x));
+            setVarEdit(null);
+          }}
+          onClose={()=>setVarEdit(null)}/>
+      )}
+      {popover?.type==='level' && nodes.find(x=>x.id===popover.nodeId) && (
+        <LevelPopover node={nodes.find(x=>x.id===popover.nodeId)}
+          chars={chars} audio={audio}
+          allLevelNodes={nodes.filter(n=>n.type==='LEVEL_CONNECTOR')}
+          onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onClose={()=>setPopover(null)}/>
+      )}
+      {popover?.type==='questnode' && nodes.find(x=>x.id===popover.nodeId) && (
+        <QuestNodePopover node={nodes.find(x=>x.id===popover.nodeId)}
+          dtrees={dtrees}
           onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
           onClose={()=>setPopover(null)}/>
       )}
@@ -2884,6 +4432,9 @@ function App(){
             {nodes.find(n=>n.id===ctx.nodeId)?.type==='SPAWN_POINT'&&(
               <div className="ctx-item" onClick={()=>{setPopover({type:'spawn',nodeId:ctx.nodeId});setCtx(null);}}>EDIT SPAWN POINT</div>
             )}
+            {nodes.find(n=>n.id===ctx.nodeId)?.type==='LEVEL_CONNECTOR'&&(
+              <div className="ctx-item" onClick={()=>{setPopover({type:'level',nodeId:ctx.nodeId});setCtx(null);}}>EDIT LEVEL</div>
+            )}
             {view.type==='master'&&NM[nodes.find(n=>n.id===ctx.nodeId)?.type]?.canOpen&&(
               <div className="ctx-item" onClick={()=>{const n=nodes.find(x=>x.id===ctx.nodeId);if(n){const m=NM[n.type];pushView(m.ot,n.entityId||n.id);}setCtx(null);}}>OPEN CANVAS</div>
             )}
@@ -2894,6 +4445,7 @@ function App(){
       )}
 
       {toast&&<div className="toast">{toast}</div>}
+      {showGuide&&<GuideModal onClose={()=>setShowGuide(false)}/>}
       {showAI&&<AIAssistant chars={chars} dtrees={dtrees} quests={quests} onClose={()=>setShowAI(false)}/>}
     </div>
   );

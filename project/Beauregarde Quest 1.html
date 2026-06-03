@@ -4589,6 +4589,36 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
       const stat1=selected.unread?['UNREAD',selected.unread]:selected.count?['COUNT',selected.count]:selected.areas?['AREAS',selected.areas]:selected.photos?['PHOTOS',selected.photos]:selected.notes?['NOTES',selected.notes]:['STATUS','AVAILABLE'];
       stats=[stat1];
       body=selected.info||'';
+    } else if(actualSource==='quests'){
+      const qStatus=(selected.status||'ACTIVE').toUpperCase();
+      const statusCol=qStatus==='COMPLETE'?'#40c080':qStatus==='LOCKED'?'#c43028':'#d4a020';
+      title=selected.name;
+      subtitle=(selected.category||'QUEST').toUpperCase();
+      stats=[['STATUS',qStatus],['PROGRESS',selected.progress||'—']];
+      // locked reason
+      if(qStatus==='LOCKED'&&(selected.requiredItems||[]).length>0){
+        stats.push(['REQUIRES',(selected.requiredItems).map(i=>i.name||i.key).join(' + ')]);
+      }
+      // compose rich body
+      const stepsBlock=(selected.steps||[]).filter(s=>s.type!=='end');
+      body=React.createElement('div',null,
+        React.createElement('div',{style:{color:statusCol,fontWeight:700,letterSpacing:1,marginBottom:4}},qStatus),
+        selected.info?React.createElement('div',{style:{marginBottom:stepsBlock.length?6:0,lineHeight:1.5}},selected.info):null,
+        stepsBlock.length>0?React.createElement('div',{style:{borderTop:'1px solid rgba(255,255,255,0.12)',paddingTop:5,marginTop:4}},
+          stepsBlock.map((s,i)=>{
+            const stepLabel=(s.label||(s.type==='collectable'?'COLLECT: '+s.item:s.type)).toUpperCase();
+            const placeTag=s.atPlace?' ['+s.atPlace.toUpperCase()+']':'';
+            const condTag=s.condition?' ['+s.condition.toUpperCase()+']':'';
+            return React.createElement('div',{key:i,style:{display:'flex',gap:4,marginBottom:2,opacity:0.85}},
+              React.createElement('span',{style:{color:'#d4a020',flexShrink:0}},'▷'),
+              React.createElement('span',null,stepLabel+placeTag+condTag)
+            );
+          })
+        ):null,
+        (selected.rewardItems||[]).length>0?React.createElement('div',{style:{marginTop:6,color:'#40c080',fontSize:'0.9em'}},
+          'REWARDS: '+(selected.rewardItems).map(i=>i.name||i.key).join(', ')
+        ):null
+      );
     }
     return(
       <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace"}}>
@@ -5205,16 +5235,19 @@ function Root(){
       const d=await r.json();
       // store full payload on window so scene scripts can access dialogue/scenes/spawns
       window.BEAUREGARDE_DATA=d;
-      // merge people → PEOPLE_DB (preserve format: id,name,role,handle,status,portrait,info,discovered,category)
+      // merge people → PEOPLE_DB
       if(d.people&&d.people.length){
         PEOPLE_DB.splice(0,PEOPLE_DB.length,...d.people.map(p=>({
           id:p.id, name:(p.name||'').toUpperCase(), role:p.role||'',
           handle:p.handle||'', status:(p.status||'CONTACT').toUpperCase(),
-          portrait:p.portrait||'', info:p.info||'',
-          discovered:p.discovered!==false, category:p.category||null,
+          portrait:p.portrait||'', portrait360:p.portrait360||'',
+          info:p.info||'', discovered:p.discovered!==false, category:p.category||null,
         })));
+        // seed trust values from character data (won't overwrite existing session trust)
+        if(!window.__beau_trust)window.__beau_trust={};
+        d.people.forEach(p=>{if(p.trust!==undefined&&window.__beau_trust[p.id]===undefined)window.__beau_trust[p.id]=p.trust||0;});
       }
-      // merge quests → QUESTS_DB buckets
+      // merge quests → QUESTS_DB buckets — preserve all gate/reward/step data
       if(d.quests){
         ['major','minor','personal','opp'].forEach(bucket=>{
           if(d.quests[bucket]&&d.quests[bucket].length){
@@ -5222,7 +5255,42 @@ function Root(){
               id:q.id, name:(q.name||'').toUpperCase(),
               status:(q.status||'ACTIVE').toUpperCase(),
               progress:q.progress||'', info:q.info||'',
+              requiredItems:q.requiredItems||[], rewardItems:q.rewardItems||[],
+              steps:q.steps||[], prerequisites:q.prerequisites||[],
+              assignedBy:q.assignedBy||null, nextQuest:q.nextQuest||null,
+              category:q.category||bucket,
             })));
+          }
+        });
+      }
+      // seed variable store from kit registry — one flat state object the game reads/writes.
+      // Existing session values are preserved; only unseen vars get their initial value.
+      if(d.vars&&d.vars.length){
+        if(!window.__beau_vars)window.__beau_vars={};
+        d.vars.forEach(v=>{
+          if(v.key&&window.__beau_vars[v.key]===undefined){
+            window.__beau_vars[v.key]=v.initial!==undefined?v.initial:(v.type==='int'?0:v.type==='enum'?(v.enumValues?.[0]||''):false);
+          }
+          // keywords also surface in a quick-lookup set for Shadowrun-style "ask about"
+          if(v.type==='keyword'&&v.initial){
+            window.__beau_keywords=window.__beau_keywords||new Set();
+            window.__beau_keywords.add(v.key);
+          }
+        });
+      }
+      // merge items → ITEM_DEFS (kit registry items become game inventory items)
+      if(d.items&&d.items.length){
+        d.items.forEach(item=>{
+          if(item.key&&!ITEM_DEFS[item.key]){
+            ITEM_DEFS[item.key]={
+              name:(item.name||'').toUpperCase(),
+              category:item.category||'misc',
+              desc:item.description||'',
+              restore:item.restore||0,
+              icon:item.icon||'',
+              equippable:item.equippable||false,
+              unique:item.unique||false,
+            };
           }
         });
       }
@@ -5251,7 +5319,7 @@ function Root(){
         });
         window.__beau_scene_triggers=trigMap;
       }
-      console.log('[Beauregarde] Loaded beauregarde_data.json — people:',d.people?.length||0,'quests:',Object.values(d.quests||{}).flat().length,'dialogue:',Object.keys(d.dialogue||{}).length,'triggers:',Object.keys(window.__beau_scene_triggers||{}).length);
+      console.log('[Beauregarde] Loaded beauregarde_data.json — people:',d.people?.length||0,'quests:',Object.values(d.quests||{}).flat().length,'items:',d.items?.length||0,'dialogue:',Object.keys(d.dialogue||{}).length,'triggers:',Object.keys(window.__beau_scene_triggers||{}).length);
     }
   }catch(e){
     console.log('[Beauregarde] No beauregarde_data.json — using hardcoded defaults.');
@@ -5286,15 +5354,37 @@ function Root(){
     // evaluate each condition
     const outfit=window.__beau_outfit||'';
     const inv=window.__beau_inventory||[];
+    const V=window.__beau_vars||{};
     return conditions.every(c=>{
       let result=false;
       if(c.type==='outfit')     result=outfit===c.value;
       else if(c.type==='item')  result=inv.includes(c.value);
       else if(c.type==='trust') {const t=(window.__beau_trust||{})[c.charId]||0;result=c.op==='gte'?t>=c.value:t<c.value;}
       else if(c.type==='scene') result=(window.__beau_visited_scenes||new Set()).has(c.value);
+      else if(c.type==='quest') {const q=window.__beau_quest_status?.[c.questId]||'active';result=q===(c.questState||'complete');}
+      else if(c.type==='var')   {
+        // generic variable check — one branch covers every author-defined flag/int/enum/keyword.
+        // NEW VARIABLES NEVER NEED NEW CODE HERE.
+        const v=V[c.varKey];
+        switch(c.op){
+          case 'is_true':  result=!!v; break;
+          case 'is_false': result=!v;  break;
+          case 'eq':  result=String(v)===String(c.value); break;
+          case 'neq': result=String(v)!==String(c.value); break;
+          case 'gte': result=(+v)>=(+c.value); break;
+          case 'gt':  result=(+v)>(+c.value);  break;
+          case 'lte': result=(+v)<=(+c.value); break;
+          case 'lt':  result=(+v)<(+c.value);  break;
+          default:    result=!!v;
+        }
+      }
       return c.negate?!result:result;
     });
   };
+
+  // helper for scene/dialogue scripts to mutate variables (effects come from the kit in step #2)
+  window.setVar=(key,val)=>{window.__beau_vars=window.__beau_vars||{};window.__beau_vars[key]=val;};
+  window.getVar=key=>(window.__beau_vars||{})[key];
 
   ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
 })();

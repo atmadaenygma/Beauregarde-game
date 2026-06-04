@@ -1,0 +1,9 @@
+[    1317ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://codepen.io/gh-o-st/pen/raWyooG:3067
+[    1317ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://codepen.io/gh-o-st/pen/raWyooG:3067
+[    3681ms] [ERROR] Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin @ https://cpwebassets.codepen.io/assets/settings/algolia-9e1c0c887f4db420704b2a79926864019ef156bcecc9d5774a7e4eaa731fc5b5.svg:0
+[    4425ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://codepen.io/cf-fonts/s/lato/5.2.7/latin/400/normal.woff2:0
+[    4549ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://codepen.io/cf-fonts/s/lato/5.2.7/latin/700/normal.woff2:0
+[    5656ms] [ERROR] Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin @ https://assets.codepen.io/3436190/potato.gif:0
+[    5985ms] [ERROR] Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin @ https://assets.codepen.io/3436190/potato.gif:0
+[   27648ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://codepen.io/gh-o-st/pen/raWyooG:0
+[   28131ms] [ERROR] Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin @ https://cpwebassets.codepen.io/assets/favicon/favicon-aec34940fbc1a6e787974dcd360f2c6b63348d4b1f4e06c77743096d55480f33.ico:0

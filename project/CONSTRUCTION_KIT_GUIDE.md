@@ -218,19 +218,89 @@ locked), and REWARDS.
 
 ---
 
-## 11. ROADMAP (agreed direction)
+## 11. CUTSCENE SYSTEM
+
+Cutscenes are dialogue trees with `treeType:'cutscene'`. Create one by:
+1. Adding a Dialogue Tree in the sidebar and cycling its badge (type) to **C** (CUTSCENE).
+2. Opening it with ↗ to enter the cutscene sub-canvas.
+3. Placing **CUT_START** first (the entry point), then chaining nodes.
+
+### Node types
+
+| Node | Purpose |
+|---|---|
+| `CUT_START` | Entry point. Sets default background colour or looping video. |
+| `CUT_LINE` | A spoken or narrated line. Speaker + voice channel colour + text. |
+| `CUT_CHOICE` | Up to 3 player options, with muted (greyed-out lore) support. |
+| `CUT_VIDEO` | Full-screen or background video clip. |
+| `CUT_TITLE` | Full-screen title card (e.g. "THE VEIL — 4:17 AM"). |
+| `CUT_WAIT` | Timed pause — holds the current frame. |
+| `CUT_ACTION` | Fires a game event: goto_scene, set_var, play_music, wake, etc. |
+
+### Effects (all dropdowns, grouped by category: basic / cinematic / unusual)
+
+**Text effects** (16): Instant, Typewriter, Fade In, Word by Word, Glitch, Data Scramble,
+Flicker, Declassified (redacted wipe), Broadcast Static, Echo, Whisper, Corruption,
+Slide Up, Slide Left, Zoom In, Condense.
+
+**Video effects** (15): Cut, Fade from Black, Burn In, Dissolve, VHS Glitch, Static/Snow,
+Zoom Punch, Film Grain, Desaturate, CRT Scanlines, Vignette, Chromatic Aberration,
+Pixelate Dissolve, Iris, Venetian Blind.
+
+**Fade/transition effects** (20): None, Fade to Black, Fade from Black, Fade to White,
+Fade from White, Flash, Cross-Fade, Dip to Color, Blur Out, Blur In, Static Burst Cut,
+Glitch Cut, Iris Close, Iris Open, Venetian Blind Close, Swipe Left, Swipe Right, Shatter.
+
+### Presets (★ SAVE PRESET)
+
+In any node's editor, click **★ SAVE PRESET**, name it, and it appears in the **PRESETS**
+accordion in the cutscene sidebar. Drag or click to place a copy instantly. Delete with ✕.
+This is how you build a library of favourite node configurations for reuse across scenes.
+
+### Export
+
+Cutscenes export under `"cutscenes"` in `beauregarde_data.json`:
+```jsonc
+"cutscenes": {
+  "opening": {
+    "nodes": [
+      {"id":"n1","type":"start","background":"#060a08"},
+      {"id":"n2","type":"line","speaker":"FEAR","voiceChannel":"FEAR",
+       "text":"Sound: water. Loud. Cold.","textEffect":"glitch","autoAdvance":0,"next":"n3"},
+      {"id":"n3","type":"choice","opts":[{"t":"Where.","next":"n4"},{"t":"(Not yet.)","next":"n4","muted":true}]},
+      {"id":"n4","type":"action","action":"wake"}
+    ]
+  }
+}
+```
+
+The game reads this with a `CutscenePlayer` component (planned) that walks the node array
+using the same `next` pointer system as dialogue trees, using the existing typewriter,
+glitch, fade, and video rendering already built into the game.
+
+---
+
+## 12. AI ASSISTANT (✦ AI)
+
+*(same as §10 above — renumbered)*
+
+---
+
+## 13. ROADMAP (agreed direction)
 
 The goal: Disco Elysium-scale conversations + Shadowrun-style keyword questing, kept
 minimalist. Order matters — each depends on the last.
 
-1. ✅ **Variable / flag system + condition grammar** ← *this update*
-2. **Per-option & per-statement conditions + effects** (DE skill-voice lines, gated
+1. ✅ **Variable / flag system + condition grammar**
+2. ✅ **Cutscene system** — 7 node types, 47 effects, presets, export
+3. **CutscenePlayer component in game** — walk the JSON, replace hardcoded Opening/Nightmare
+4. **Per-option & per-statement conditions + effects** (DE skill-voice lines, gated
    replies, choices that *set* variables)
-3. **CHECK node** (White/Red skill checks, difficulty, modifiers) — the DE core
-4. **Inline text editing in dialogue nodes + Tab-to-create** (authoring at scale)
-5. **Viewport culling + memo** (10× node capacity)
-6. **List/outline view toggle** (writing prose at volume)
-7. **Generalise OUTFIT → Thoughts/modifiers**; retire absorbed node types
+5. **CHECK node** (White/Red skill checks, difficulty, modifiers) — the DE core
+6. **Inline text editing in dialogue nodes + Tab-to-create** (authoring at scale)
+7. **Viewport culling + memo** (10× node capacity)
+8. **List/outline view toggle** (writing prose at volume)
+9. **Generalise OUTFIT → Thoughts/modifiers**; retire absorbed node types
 
 > When tempted to add a node type, ask: *"Is this a new field or condition on an existing
 > node?"* Usually yes. The tool should get **smaller** as it gets more capable.

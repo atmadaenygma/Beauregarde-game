@@ -1,0 +1,198 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "CodePen Home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: CodePen Home
+      - generic [ref=e10]:
+        - heading "Smoky Text" [level=1] [ref=e11]:
+          - generic [ref=e12]: Smoky Text
+        - generic [ref=e13]:
+          - link "Bennett Feely" [ref=e14] [cursor=pointer]:
+            - /url: /bennettfeely
+          - button "Follow" [ref=e15] [cursor=pointer]:
+            - img
+            - text: Follow
+      - button "Love" [ref=e16] [cursor=pointer]:
+        - img
+        - generic [ref=e17]: Love
+      - generic [ref=e19]:
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+          - text: Settings
+        - button "Change View" [ref=e22] [cursor=pointer]:
+          - img
+      - link "Sign Up" [ref=e23] [cursor=pointer]:
+        - /url: /accounts/signup/user/free
+      - link "Log In" [ref=e24] [cursor=pointer]:
+        - /url: /login
+  - option "None" [selected]
+  - option "Haml"
+  - option "Markdown"
+  - option "Slim"
+  - option "Pug"
+  - generic [ref=e26]:
+    - generic [ref=e27]:
+      - generic "Double-click to expand." [ref=e28]:
+        - heading "HTML" [level=2]:
+          - img
+          - generic: HTML
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - heading [level=2] [ref=e32]
+            - generic:
+              - text: 0 unsaved changes
+              - generic:
+                - img
+          - generic [ref=e33]:
+            - button "Open HTML Settings" [ref=e34] [cursor=pointer]:
+              - img
+            - button "HTML Options" [ref=e35] [cursor=pointer]:
+              - generic [ref=e36]: HTML Options
+              - img
+        - generic [ref=e38]:
+          - textbox "HTML Code Editor" [active] [ref=e39]
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]: "1"
+              - generic [ref=e48] [cursor=pointer]: ▾
+              - text: <span>C</span><span>S</span><span>S</span><span>&nbsp;</span><span>S</span><span>m</span><span>o</span><span>k</span><span>y</span><span>&nbsp;</span><span>T</span><span>e</span><span>x</span><span>t</span><span>&nbsp;</span><span>E</span><span>f</span><span>f</span><span>e</span><span>c</span><span>t</span>
+            - generic [ref=e50]: "2"
+      - generic "Double-click to expand." [ref=e55]:
+        - heading "CSS (SCSS)" [level=2]:
+          - img
+          - generic: CSS
+          - generic: (SCSS)
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - heading [level=2] [ref=e59]
+          - generic [ref=e60]:
+            - button "Open CSS Settings" [ref=e61] [cursor=pointer]:
+              - img
+            - button "CSS Options" [ref=e62] [cursor=pointer]:
+              - generic [ref=e63]: CSS Options
+              - img
+        - generic [ref=e65]:
+          - textbox "CSS Code Editor" [ref=e66]
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - generic [ref=e73]: "1"
+              - text: "@import \"compass/css3\";"
+            - generic [ref=e75]: "2"
+            - generic [ref=e76]:
+              - generic [ref=e77]: "3"
+              - text: "@import url(https://fonts.googleapis.com/css?family=Finger+Paint);"
+            - generic [ref=e79]: "4"
+            - generic [ref=e80]:
+              - generic [ref=e81]: "5"
+              - generic [ref=e83] [cursor=pointer]: ▾
+              - text: "body {"
+            - generic [ref=e84]:
+              - generic [ref=e85]: "6"
+              - text: "background: black;"
+            - generic [ref=e86]:
+              - generic [ref=e87]: "7"
+              - text: "overflow: hidden;"
+            - generic [ref=e88]:
+              - generic [ref=e89]: "8"
+              - text: "font: 5vw/100vh \"Finger Paint\";"
+            - generic [ref=e90]:
+              - generic [ref=e91]: "9"
+              - text: "text-align: center;"
+            - generic [ref=e92]:
+              - generic [ref=e93]: "10"
+              - text: "color: transparent;"
+            - generic [ref=e94]:
+              - generic [ref=e95]: "11"
+              - text: "backface-visibility: hidden;"
+            - generic [ref=e96]:
+              - generic [ref=e97]: "12"
+              - text: "}"
+            - generic [ref=e99]: "13"
+            - generic [ref=e100]:
+              - generic [ref=e101]: "14"
+              - generic [ref=e103] [cursor=pointer]: ▾
+              - text: "span {"
+            - generic [ref=e104]:
+              - generic [ref=e105]: "15"
+              - text: "display: inline-block;"
+            - generic [ref=e106]:
+              - generic [ref=e107]: "16"
+              - text: "text-shadow: 0 0 0 whitesmoke;"
+            - generic [ref=e108]:
+              - generic [ref=e109]: "17"
+              - text: "animation: smoky 5s 3s both;"
+            - generic [ref=e110]:
+              - generic [ref=e111]: "18"
+              - text: "}"
+            - generic [ref=e113]: "19"
+            - generic [ref=e114]:
+              - generic [ref=e115]: "20"
+              - generic [ref=e117] [cursor=pointer]: ▾
+              - text: "span:nth-child(even){"
+            - generic [ref=e118]:
+              - generic [ref=e119]: "21"
+              - text: "animation-name: smoky-mirror;"
+            - generic [ref=e120]:
+              - generic [ref=e121]: "22"
+              - text: "}"
+            - generic [ref=e123]: "23"
+            - generic [ref=e124]:
+              - generic [ref=e125]: "24"
+              - generic [ref=e127] [cursor=pointer]: ▾
+              - text: "@keyframes smoky {"
+      - generic "Double-click to expand." [ref=e132]:
+        - heading "JS" [level=2]:
+          - img
+          - generic: JS
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - heading [level=2] [ref=e136]
+          - generic [ref=e137]:
+            - button "Open JS Settings" [ref=e138] [cursor=pointer]:
+              - img
+            - button "JS Options" [ref=e139] [cursor=pointer]:
+              - generic [ref=e140]: JS Options
+              - img
+        - generic [ref=e142]:
+          - textbox "JavaScript Code Editor" [ref=e143]
+          - generic [ref=e148]: "1"
+    - generic [ref=e155]:
+      - iframe [ref=e157]:
+        - generic [active] [ref=f1e1]:
+          - generic [ref=f1e2]: C
+          - generic [ref=f1e3]: S
+          - generic [ref=f1e4]: S
+          - generic [ref=f1e6]: S
+          - generic [ref=f1e7]: m
+          - generic [ref=f1e8]: o
+          - generic [ref=f1e9]: k
+          - generic [ref=f1e10]: "y"
+          - generic [ref=f1e12]: T
+          - generic [ref=f1e13]: e
+          - generic [ref=f1e14]: x
+          - generic [ref=f1e15]: t
+          - generic [ref=f1e17]: E
+          - generic [ref=f1e18]: f
+          - generic [ref=f1e19]: f
+          - generic [ref=f1e20]: e
+          - generic [ref=f1e21]: c
+          - generic [ref=f1e22]: t
+      - text: ">"
+  - contentinfo [ref=e158]:
+    - generic [ref=e159]:
+      - img [ref=e161]
+      - button "Fork" [ref=e162] [cursor=pointer]:
+        - img
+        - text: Fork
+      - button "Embed" [ref=e163] [cursor=pointer]
+      - button "Export" [ref=e165] [cursor=pointer]
+      - button "Share" [ref=e167] [cursor=pointer]
+    - generic [ref=e168]:
+      - button "Console" [ref=e169] [cursor=pointer]
+      - button "Assets" [ref=e170] [cursor=pointer]
+      - button "Comments" [ref=e171] [cursor=pointer]
+      - button "Shortcuts" [ref=e172] [cursor=pointer]
+  - text: Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl

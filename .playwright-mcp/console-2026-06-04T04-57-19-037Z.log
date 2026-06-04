@@ -1,0 +1,3 @@
+[     573ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://cdpn.io/Valgo/fullpage/PowZaNY:275
+[     573ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://cdpn.io/Valgo/fullpage/PowZaNY:275
+[     582ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0

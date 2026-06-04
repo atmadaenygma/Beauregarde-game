@@ -1,0 +1,385 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "CodePen Home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: CodePen Home
+      - generic [ref=e10]:
+        - heading "Realistic Living Rainy Window Generator 🌧️ Rainy Glass Background (WebGL Raindrops + Video/Image Presets) + + Weather/Clock HUD (PWA Ready)" [level=1] [ref=e11]:
+          - generic [ref=e12]: Realistic Living Rainy Window Generator 🌧️ Rainy Glass Background (WebGL Raindrops + Video/Image Presets) + + Weather/Clock HUD (PWA Ready)
+        - generic [ref=e13]:
+          - link "Fatih YILDIZ" [ref=e14] [cursor=pointer]:
+            - /url: /fyildiz1974
+          - button "Follow" [ref=e15] [cursor=pointer]:
+            - img
+            - text: Follow
+      - button "Love" [ref=e16] [cursor=pointer]:
+        - img
+        - generic [ref=e17]: Love
+      - generic [ref=e19]:
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+          - text: Settings
+        - button "Change View" [ref=e22] [cursor=pointer]:
+          - img
+      - link "Sign Up" [ref=e23] [cursor=pointer]:
+        - /url: /accounts/signup/user/free
+      - link "Log In" [ref=e24] [cursor=pointer]:
+        - /url: /login
+  - option "None" [selected]
+  - option "Haml"
+  - option "Markdown"
+  - option "Slim"
+  - option "Pug"
+  - generic [ref=e26]:
+    - generic [ref=e27]:
+      - generic "Double-click to expand." [ref=e28]:
+        - heading "HTML" [level=2]:
+          - img
+          - generic: HTML
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - heading [level=2] [ref=e32]
+            - generic:
+              - text: 0 unsaved changes
+              - generic:
+                - img
+          - generic [ref=e33]:
+            - button "Open HTML Settings" [ref=e34] [cursor=pointer]:
+              - img
+            - button "HTML Options" [ref=e35] [cursor=pointer]:
+              - generic [ref=e36]: HTML Options
+              - img
+        - generic [ref=e38]:
+          - textbox "HTML Code Editor" [active] [ref=e39]
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]: "1"
+              - generic [ref=e48] [cursor=pointer]: ▾
+              - text: <!-- Skip Link for Accessibility -->
+            - generic [ref=e49]:
+              - generic [ref=e50]: "2"
+              - generic [ref=e52] [cursor=pointer]: ▾
+              - text: <a href="#panel" class="skip-link">Skip to settings</a>
+            - generic [ref=e54]: "3"
+            - generic [ref=e55]:
+              - generic [ref=e56]: "4"
+              - generic [ref=e58] [cursor=pointer]: ▾
+              - text: <!-- Background Image -->
+            - generic [ref=e59]:
+              - generic [ref=e60]: "5"
+              - text: <img id="custom-bg" src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1920&q=80" onerror="this.onerror=null; this.src='assets/images/bg/city.jpg';" alt="Rainy cityscape background">
+            - generic [ref=e62]: "6"
+            - generic [ref=e63]:
+              - generic [ref=e64]: "7"
+              - generic [ref=e66] [cursor=pointer]: ▾
+              - text: <!-- Background Video -->
+            - generic [ref=e67]:
+              - generic [ref=e68]: "8"
+              - generic [ref=e70] [cursor=pointer]: ▾
+              - text: <video id="custom-video" class="hidden" muted loop playsinline webkit-playsinline preload="metadata" aria-hidden="true">
+            - generic [ref=e71]:
+              - generic [ref=e72]: "9"
+              - text: </video>
+            - generic [ref=e74]: "10"
+            - generic [ref=e75]:
+              - generic [ref=e76]: "11"
+              - generic [ref=e78] [cursor=pointer]: ▾
+              - text: <!-- Color Overlay -->
+            - generic [ref=e79]:
+              - generic [ref=e80]: "12"
+              - text: <div id="color-overlay" aria-hidden="true"></div>
+            - generic [ref=e82]: "13"
+            - generic [ref=e83]:
+              - generic [ref=e84]: "14"
+              - generic [ref=e86] [cursor=pointer]: ▾
+              - text: <!-- Raindrops Canvas -->
+            - generic [ref=e87]:
+              - generic [ref=e88]: "15"
+              - text: <canvas id="bg-canvas" aria-hidden="true"></canvas>
+            - generic [ref=e90]: "16"
+            - generic [ref=e91]:
+              - generic [ref=e92]: "17"
+              - generic [ref=e94] [cursor=pointer]: ▾
+              - text: <!-- Loading Overlay -->
+            - generic [ref=e95]:
+              - generic [ref=e96]: "18"
+              - generic [ref=e98] [cursor=pointer]: ▾
+              - text: <div id="loading-overlay" role="alert" aria-live="polite">
+            - generic [ref=e99]:
+              - generic [ref=e100]: "19"
+              - text: <div class="loader-spinner"></div>
+            - generic [ref=e101]:
+              - generic [ref=e102]: "20"
+              - generic [ref=e104] [cursor=pointer]: ▾
+              - text: <span class="loader-text">Loading...</span>
+            - generic [ref=e105]:
+              - generic [ref=e106]: "21"
+              - text: </div>
+      - generic "Double-click to expand." [ref=e111]:
+        - heading "CSS" [level=2]:
+          - img
+          - generic: CSS
+      - generic [ref=e112]:
+        - generic [ref=e113]:
+          - heading [level=2] [ref=e115]
+          - generic [ref=e116]:
+            - button "Open CSS Settings" [ref=e117] [cursor=pointer]:
+              - img
+            - button "CSS Options" [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: CSS Options
+              - img
+        - generic [ref=e121]:
+          - textbox "CSS Code Editor" [ref=e122]
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - generic [ref=e129]: "1"
+              - generic [ref=e131] [cursor=pointer]: ▾
+              - text: "* {"
+            - generic [ref=e132]:
+              - generic [ref=e133]: "2"
+              - text: "margin: 0;"
+            - generic [ref=e134]:
+              - generic [ref=e135]: "3"
+              - text: "padding: 0;"
+            - generic [ref=e136]:
+              - generic [ref=e137]: "4"
+              - text: "box-sizing: border-box;"
+            - generic [ref=e138]:
+              - generic [ref=e139]: "5"
+              - text: "}"
+            - generic [ref=e141]: "6"
+            - generic [ref=e142]:
+              - generic [ref=e143]: "7"
+              - text: html,
+            - generic [ref=e144]:
+              - generic [ref=e145]: "8"
+              - generic [ref=e147] [cursor=pointer]: ▾
+              - text: "body {"
+            - generic [ref=e148]:
+              - generic [ref=e149]: "9"
+              - text: "width: 100%;"
+            - generic [ref=e150]:
+              - generic [ref=e151]: "10"
+              - text: "height: 100%;"
+            - generic [ref=e152]:
+              - generic [ref=e153]: "11"
+              - text: "overflow: hidden;"
+            - generic [ref=e154]:
+              - generic [ref=e155]: "12"
+              - text: "background: #000;"
+            - generic [ref=e156]:
+              - generic [ref=e157]: "13"
+              - text: "font-family: \"Segoe UI\", system-ui, sans-serif;"
+            - generic [ref=e158]:
+              - generic [ref=e159]: "14"
+              - text: "touch-action: manipulation;"
+            - generic [ref=e160]:
+              - generic [ref=e161]: "15"
+              - text: "}"
+            - generic [ref=e163]: "16"
+            - generic [ref=e164]:
+              - generic [ref=e165]: "17"
+              - generic [ref=e167] [cursor=pointer]: ▾
+              - text: /* Skip Link for Accessibility */
+            - generic [ref=e168]:
+              - generic [ref=e169]: "18"
+              - generic [ref=e171] [cursor=pointer]: ▾
+              - text: ".skip-link {"
+            - generic [ref=e172]:
+              - generic [ref=e173]: "19"
+              - text: "position: absolute;"
+            - generic [ref=e174]:
+              - generic [ref=e175]: "20"
+              - text: "top: -40px;"
+            - generic [ref=e176]:
+              - generic [ref=e177]: "21"
+              - text: "left: 0;"
+            - generic [ref=e178]:
+              - generic [ref=e179]: "22"
+              - text: "background: #6cf;"
+            - generic [ref=e180]:
+              - generic [ref=e181]: "23"
+              - text: "color: #000;"
+            - generic [ref=e182]:
+              - generic [ref=e183]: "24"
+              - text: "padding: 8px 16px;"
+      - generic "Double-click to expand." [ref=e188]:
+        - heading "JS" [level=2]:
+          - img
+          - generic: JS
+      - generic [ref=e189]:
+        - generic [ref=e190]:
+          - heading [level=2] [ref=e192]
+          - generic [ref=e193]:
+            - button "Open JS Settings" [ref=e194] [cursor=pointer]:
+              - img
+            - button "JS Options" [ref=e195] [cursor=pointer]:
+              - generic [ref=e196]: JS Options
+              - img
+        - generic [ref=e198]:
+          - textbox "JavaScript Code Editor" [ref=e199]
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - generic [ref=e206]: "1"
+              - text: // =====================================================================
+            - generic [ref=e207]:
+              - generic [ref=e208]: "2"
+              - text: // GLOBAL ERROR HANDLING (Error Boundary)
+            - generic [ref=e209]:
+              - generic [ref=e210]: "3"
+              - text: // =====================================================================
+            - generic [ref=e211]:
+              - generic [ref=e212]: "4"
+              - generic [ref=e214] [cursor=pointer]: ▾
+              - text: "(function () {"
+            - generic [ref=e215]:
+              - generic [ref=e216]: "5"
+              - text: let errorCount = 0;
+            - generic [ref=e217]:
+              - generic [ref=e218]: "6"
+              - text: const MAX_ERRORS = 5;
+            - generic [ref=e219]:
+              - generic [ref=e220]: "7"
+              - text: const ERROR_RESET_TIME = 60000;
+            - generic [ref=e222]: "8"
+            - generic [ref=e223]:
+              - generic [ref=e224]: "9"
+              - generic [ref=e226] [cursor=pointer]: ▾
+              - text: "setInterval(() => {"
+            - generic [ref=e227]:
+              - generic [ref=e228]: "10"
+              - text: errorCount = 0;
+            - generic [ref=e229]:
+              - generic [ref=e230]: "11"
+              - text: "}, ERROR_RESET_TIME);"
+            - generic [ref=e232]: "12"
+            - generic [ref=e233]:
+              - generic [ref=e234]: "13"
+              - generic [ref=e236] [cursor=pointer]: ▾
+              - text: "window.addEventListener(\"error\", (event) => {"
+            - generic [ref=e237]:
+              - generic [ref=e238]: "14"
+              - text: errorCount++;
+            - generic [ref=e239]:
+              - generic [ref=e240]: "15"
+              - generic [ref=e242] [cursor=pointer]: ▾
+              - text: "if (errorCount <= MAX_ERRORS) {"
+            - generic [ref=e243]:
+              - generic [ref=e244]: "16"
+              - generic [ref=e246] [cursor=pointer]: ▾
+              - text: "console.error(\"Application Error:\", {"
+            - generic [ref=e247]:
+              - generic [ref=e248]: "17"
+              - text: "message: event.message,"
+            - generic [ref=e249]:
+              - generic [ref=e250]: "18"
+              - text: "filename: event.filename,"
+            - generic [ref=e251]:
+              - generic [ref=e252]: "19"
+              - text: "lineno: event.lineno,"
+            - generic [ref=e253]:
+              - generic [ref=e254]: "20"
+              - text: "colno: event.colno,"
+            - generic [ref=e255]:
+              - generic [ref=e256]: "21"
+              - text: "error: event.error"
+            - generic [ref=e257]:
+              - generic [ref=e258]: "22"
+              - text: "});"
+            - generic [ref=e259]:
+              - generic [ref=e260]: "23"
+              - generic [ref=e262] [cursor=pointer]: ▾
+              - text: "if (event.error && event.error.stack) {"
+            - generic [ref=e263]:
+              - generic [ref=e264]: "24"
+              - text: const toastEl = document.getElementById("toast");
+    - generic [ref=e271]:
+      - iframe [ref=e273]:
+        - generic [active] [ref=f7e1]:
+          - link "Skip to settings" [ref=f7e2] [cursor=pointer]:
+            - /url: "#panel"
+          - img "Rainy cityscape background" [ref=f7e3]
+          - button "Open the settings panel." [ref=f7e5] [cursor=pointer]: ⚙️
+          - button "Mute / Unmute" [ref=f7e6] [cursor=pointer]: 🔇
+          - button "Copy link" [ref=f7e7] [cursor=pointer]: 🔗
+          - button "Enter full-screen mode" [ref=f7e8] [cursor=pointer]: ⛶
+          - dialog [ref=f7e9]:
+            - button [ref=f7e10] [cursor=pointer]: ✕
+            - heading [level=3] [ref=f7e11]: 🖼️ Background
+            - listbox [ref=f7e12]:
+              - option [selected] [ref=f7e13] [cursor=pointer]: City
+              - option [ref=f7e14] [cursor=pointer]: Forest
+              - option [ref=f7e15] [cursor=pointer]: Mountain
+              - option [ref=f7e16] [cursor=pointer]: Towers
+              - option [ref=f7e17] [cursor=pointer]: Future
+              - option [ref=f7e18] [cursor=pointer]: Sky
+              - option [ref=f7e19] [cursor=pointer]: ▶ Hurricane
+              - option [ref=f7e20] [cursor=pointer]: ▶ River
+              - option [ref=f7e21] [cursor=pointer]: ▶ Beach
+            - generic [ref=f7e22]:
+              - generic [ref=f7e23]:
+                - generic [ref=f7e24]: Image or Video URL
+                - textbox [ref=f7e25]:
+                  - /placeholder: Image or Video URL...
+                - button [ref=f7e26] [cursor=pointer]: Load
+              - button [ref=f7e27] [cursor=pointer]: 📁 Choose file from computer (Image/Video)
+            - heading [level=3] [ref=f7e28]: 🎛️ Visual Effects
+            - generic [ref=f7e29]:
+              - generic [ref=f7e30]:
+                - generic [ref=f7e31]: Blur
+                - generic [ref=f7e32]: 5px
+              - slider [ref=f7e33] [cursor=pointer]: "5"
+            - generic [ref=f7e34]:
+              - generic [ref=f7e35]:
+                - generic [ref=f7e36]: Brightness
+                - generic [ref=f7e37]: 30%
+              - slider [ref=f7e38] [cursor=pointer]: "30"
+            - generic [ref=f7e39]:
+              - generic [ref=f7e40]:
+                - generic [ref=f7e41]: Rain Intensity
+                - generic [ref=f7e42]: 70%
+              - slider [ref=f7e43] [cursor=pointer]: "70"
+            - heading [level=3] [ref=f7e44]: 🎨 Hue
+            - radiogroup [ref=f7e45]:
+              - radio [checked] [ref=f7e46] [cursor=pointer]
+              - radio [ref=f7e47] [cursor=pointer]
+              - radio [ref=f7e48] [cursor=pointer]
+              - radio [ref=f7e49] [cursor=pointer]
+              - radio [ref=f7e50] [cursor=pointer]
+              - radio [ref=f7e51] [cursor=pointer]
+              - radio [ref=f7e52] [cursor=pointer]
+              - radio [ref=f7e53] [cursor=pointer]
+            - generic [ref=f7e54]:
+              - generic [ref=f7e55]:
+                - generic [ref=f7e56]: Color Intensity
+                - generic [ref=f7e57]: 0%
+              - slider [ref=f7e58] [cursor=pointer]: "0"
+            - heading [level=3] [ref=f7e59]: 🔊 Ambient Sound
+            - generic [ref=f7e60]:
+              - button [ref=f7e61] [cursor=pointer]: 🔇
+              - generic [ref=f7e62]: Volume
+              - slider [ref=f7e63] [cursor=pointer]: "50"
+              - generic [ref=f7e64]: 50%
+            - heading [level=3] [ref=f7e65]: ⚙️ Other
+            - button [ref=f7e66] [cursor=pointer]: 💾 Save Settings
+            - button [ref=f7e67] [cursor=pointer]: 🔄 Reset to Default
+          - alert: 🔇 Autoplay audio blocked — click to enable
+      - text: ">"
+  - contentinfo [ref=e274]:
+    - generic [ref=e275]:
+      - img [ref=e277]
+      - button "Fork" [ref=e278] [cursor=pointer]:
+        - img
+        - text: Fork
+      - button "Embed" [ref=e279] [cursor=pointer]
+      - button "Export" [ref=e281] [cursor=pointer]
+      - button "Share" [ref=e283] [cursor=pointer]
+    - generic [ref=e284]:
+      - button "Console" [ref=e285] [cursor=pointer]
+      - button "Assets" [ref=e286] [cursor=pointer]
+      - button "Comments" [ref=e287] [cursor=pointer]
+      - button "Shortcuts" [ref=e288] [cursor=pointer]
+  - text: Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl

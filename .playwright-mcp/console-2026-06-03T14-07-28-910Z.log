@@ -1,0 +1,12 @@
+[     482ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://codepen.io/fyildiz1974/pen/RNRgjpj:5440
+[     482ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://codepen.io/fyildiz1974/pen/RNRgjpj:5440
+[    1315ms] [LOG] Audio successfully loaded: https://fyildiz1974.github.io/web/files/rain.mp3 @ pen.js:430
+[    1315ms] [LOG] Audio is ready to play @ pen.js:436
+[    1517ms] [LOG] Waiting for Raindrops... (1/10) @ pen.js:143
+[    1603ms] [LOG] ✓ Raindrops.js loaded: https://fyildiz1974.github.io/web/files/raindrops.js @ pen.js:97
+[    1819ms] [LOG] Waiting for Raindrops... (2/10) @ pen.js:143
+[    1961ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://codepen.io/fyildiz1974/pen/RNRgjpj:0
+[    2865ms] [ERROR] A bad HTTP response code (404) was received when fetching the script. @ :0
+[    2865ms] [WARNING] ServiceWorker registration failed: TypeError: Failed to register a ServiceWorker for scope ('https://cdpn.io/fyildiz1974/fullpage/') with script ('https://cdpn.io/fyildiz1974/fullpage/sw.js'): A bad HTTP response code (404) was received when fetching the script. @ pen.js:628
+[    3222ms] [LOG] Raindrops: Maximum retry limit exceeded, effect may be running in manual mode @ pen.js:135
+[    3339ms] [LOG] Raindrops: Maximum retry limit exceeded, effect may be running in manual mode @ pen.js:135

@@ -1,0 +1,305 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "CodePen Home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: CodePen Home
+      - generic [ref=e10]:
+        - heading "Text Morph" [level=1] [ref=e11]:
+          - generic [ref=e12]: Text Morph
+        - generic [ref=e13]:
+          - link "Valgo" [ref=e14] [cursor=pointer]:
+            - /url: /Valgo
+          - button "Follow" [ref=e15] [cursor=pointer]:
+            - img
+            - text: Follow
+      - button "Love" [ref=e16] [cursor=pointer]:
+        - img
+        - generic [ref=e17]: Love
+      - generic [ref=e19]:
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+          - text: Settings
+        - button "Change View" [ref=e22] [cursor=pointer]:
+          - img
+      - link "Sign Up" [ref=e23] [cursor=pointer]:
+        - /url: /accounts/signup/user/free
+      - link "Log In" [ref=e24] [cursor=pointer]:
+        - /url: /login
+  - option "None" [selected]
+  - option "Haml"
+  - option "Markdown"
+  - option "Slim"
+  - option "Pug"
+  - generic [ref=e26]:
+    - generic [ref=e27]:
+      - generic "Double-click to expand." [ref=e28]:
+        - heading "HTML" [level=2]:
+          - img
+          - generic: HTML
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - heading [level=2] [ref=e32]
+            - generic:
+              - text: 0 unsaved changes
+              - generic:
+                - img
+          - generic [ref=e33]:
+            - button "Open HTML Settings" [ref=e34] [cursor=pointer]:
+              - img
+            - button "HTML Options" [ref=e35] [cursor=pointer]:
+              - generic [ref=e36]: HTML Options
+              - img
+        - generic [ref=e38]:
+          - textbox "HTML Code Editor" [active] [ref=e39]
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]: "1"
+              - generic [ref=e48] [cursor=pointer]: ▾
+              - text: <!-- Explanation in JS tab -->
+            - generic [ref=e50]: "2"
+            - generic [ref=e51]:
+              - generic [ref=e52]: "3"
+              - generic [ref=e54] [cursor=pointer]: ▾
+              - text: <!-- The two texts -->
+            - generic [ref=e55]:
+              - generic [ref=e56]: "4"
+              - generic [ref=e58] [cursor=pointer]: ▾
+              - text: <div id="container">
+            - generic [ref=e59]:
+              - generic [ref=e60]: "5"
+              - text: <span id="text1"></span>
+            - generic [ref=e61]:
+              - generic [ref=e62]: "6"
+              - text: <span id="text2"></span>
+            - generic [ref=e63]:
+              - generic [ref=e64]: "7"
+              - text: </div>
+            - generic [ref=e66]: "8"
+            - generic [ref=e67]:
+              - generic [ref=e68]: "9"
+              - generic [ref=e70] [cursor=pointer]: ▾
+              - text: <!-- The SVG filter used to create the merging effect -->
+            - generic [ref=e71]:
+              - generic [ref=e72]: "10"
+              - generic [ref=e74] [cursor=pointer]: ▾
+              - text: <svg id="filters">
+            - generic [ref=e75]:
+              - generic [ref=e76]: "11"
+              - generic [ref=e78] [cursor=pointer]: ▾
+              - text: <defs>
+            - generic [ref=e79]:
+              - generic [ref=e80]: "12"
+              - generic [ref=e82] [cursor=pointer]: ▾
+              - text: <filter id="threshold">
+            - generic [ref=e83]:
+              - generic [ref=e84]: "13"
+              - generic [ref=e86] [cursor=pointer]: ▾
+              - text: <!-- Basically just a threshold effect - pixels with a high enough opacity are set to full opacity, and all other pixels are set to completely transparent. -->
+            - generic [ref=e87]:
+              - generic [ref=e88]: "14"
+              - text: <feColorMatrix in="SourceGraphic"
+            - generic [ref=e89]:
+              - generic [ref=e90]: "15"
+              - text: type="matrix"
+            - generic [ref=e91]:
+              - generic [ref=e92]: "16"
+              - text: values="1 0 0 0 0
+            - generic [ref=e93]:
+              - generic [ref=e94]: "17"
+              - text: 0 1 0 0 0
+            - generic [ref=e95]:
+              - generic [ref=e96]: "18"
+              - text: 0 0 1 0 0
+            - generic [ref=e97]:
+              - generic [ref=e98]: "19"
+              - text: 0 0 0 255 -140" />
+            - generic [ref=e99]:
+              - generic [ref=e100]: "20"
+              - text: </filter>
+            - generic [ref=e101]:
+              - generic [ref=e102]: "21"
+              - text: </defs>
+            - generic [ref=e103]:
+              - generic [ref=e104]: "22"
+              - text: </svg>
+      - generic "Double-click to expand." [ref=e109]:
+        - heading "CSS" [level=2]:
+          - img
+          - generic: CSS
+      - generic [ref=e110]:
+        - generic [ref=e111]:
+          - heading [level=2] [ref=e113]
+          - generic [ref=e114]:
+            - button "Open CSS Settings" [ref=e115] [cursor=pointer]:
+              - img
+            - button "CSS Options" [ref=e116] [cursor=pointer]:
+              - generic [ref=e117]: CSS Options
+              - img
+        - generic [ref=e119]:
+          - textbox "CSS Code Editor" [ref=e120]
+          - generic [ref=e125]:
+            - generic [ref=e126]:
+              - generic [ref=e127]: "1"
+              - generic [ref=e129] [cursor=pointer]: ▾
+              - text: /* Explanation in JS tab */
+            - generic [ref=e131]: "2"
+            - generic [ref=e132]:
+              - generic [ref=e133]: "3"
+              - generic [ref=e135] [cursor=pointer]: ▾
+              - text: /* Cool font from Google Fonts! */
+            - generic [ref=e136]:
+              - generic [ref=e137]: "4"
+              - text: "@import url('https://fonts.googleapis.com/css?family=Raleway:900&display=swap');"
+            - generic [ref=e139]: "5"
+            - generic [ref=e140]:
+              - generic [ref=e141]: "6"
+              - generic [ref=e143] [cursor=pointer]: ▾
+              - text: "body {"
+            - generic [ref=e144]:
+              - generic [ref=e145]: "7"
+              - text: "margin: 0px;"
+            - generic [ref=e146]:
+              - generic [ref=e147]: "8"
+              - text: "}"
+            - generic [ref=e149]: "9"
+            - generic [ref=e150]:
+              - generic [ref=e151]: "10"
+              - generic [ref=e153] [cursor=pointer]: ▾
+              - text: "#container {"
+            - generic [ref=e154]:
+              - generic [ref=e155]: "11"
+              - generic [ref=e157] [cursor=pointer]: ▾
+              - text: /* Center the text in the viewport. */
+            - generic [ref=e158]:
+              - generic [ref=e159]: "12"
+              - text: "position: absolute;"
+            - generic [ref=e160]:
+              - generic [ref=e161]: "13"
+              - text: "margin: auto;"
+            - generic [ref=e162]:
+              - generic [ref=e163]: "14"
+              - text: "width: 100vw;"
+            - generic [ref=e164]:
+              - generic [ref=e165]: "15"
+              - text: "height: 80pt;"
+            - generic [ref=e166]:
+              - generic [ref=e167]: "16"
+              - text: "top: 0;"
+            - generic [ref=e168]:
+              - generic [ref=e169]: "17"
+              - text: "bottom: 0;"
+            - generic [ref=e171]: "18"
+            - generic [ref=e172]:
+              - generic [ref=e173]: "19"
+              - generic [ref=e175] [cursor=pointer]: ▾
+              - text: /* This filter is a lot of the magic, try commenting it out to see how the morphing works! */
+            - generic [ref=e176]:
+              - generic [ref=e177]: "20"
+              - text: "filter: url(#threshold) blur(0.6px);"
+            - generic [ref=e178]:
+              - generic [ref=e179]: "21"
+              - text: "}"
+            - generic [ref=e181]: "22"
+            - generic [ref=e182]:
+              - generic [ref=e183]: "23"
+              - generic [ref=e185] [cursor=pointer]: ▾
+              - text: /* Your average text styling */
+      - generic "Double-click to expand." [ref=e190]:
+        - heading "JS (Babel)" [level=2]:
+          - img
+          - generic: JS
+          - generic: (Babel)
+      - generic [ref=e191]:
+        - generic [ref=e192]:
+          - heading [level=2] [ref=e194]
+          - generic [ref=e195]:
+            - button "Open JS Settings" [ref=e196] [cursor=pointer]:
+              - img
+            - button "JS Options" [ref=e197] [cursor=pointer]:
+              - generic [ref=e198]: JS Options
+              - img
+        - generic [ref=e200]:
+          - textbox "JavaScript Code Editor" [ref=e201]
+          - generic [ref=e206]:
+            - generic [ref=e207]:
+              - generic [ref=e208]: "1"
+              - generic [ref=e210] [cursor=pointer]: ▾
+              - text: /*
+            - generic [ref=e211]:
+              - generic [ref=e212]: "2"
+              - generic [ref=e213]: "This pen cleverly utilizes SVG filters to create a \"Morphing Text\" effect. Essentially, it layers 2 text elements on top of each other, and blurs them depending on which text element should be more visible. Once the blurring is applied, both texts are fed through a threshold filter together, which produces the \"gooey\" effect. Check the CSS - Comment the #container rule's filter out to see how the blurring works!"
+            - generic [ref=e214]:
+              - generic [ref=e215]: "3"
+              - text: "*/"
+            - generic [ref=e217]: "4"
+            - generic [ref=e218]:
+              - generic [ref=e219]: "5"
+              - generic [ref=e221] [cursor=pointer]: ▾
+              - text: "const elts = {"
+            - generic [ref=e222]:
+              - generic [ref=e223]: "6"
+              - text: "text1: document.getElementById(\"text1\"),"
+            - generic [ref=e224]:
+              - generic [ref=e225]: "7"
+              - text: "text2: document.getElementById(\"text2\")"
+            - generic [ref=e226]:
+              - generic [ref=e227]: "8"
+              - text: "};"
+            - generic [ref=e229]: "9"
+            - generic [ref=e230]:
+              - generic [ref=e231]: "10"
+              - text: // The strings to morph between. You can change these to anything you want!
+            - generic [ref=e232]:
+              - generic [ref=e233]: "11"
+              - generic [ref=e235] [cursor=pointer]: ▾
+              - text: const texts = [
+            - generic [ref=e236]:
+              - generic [ref=e237]: "12"
+              - text: "\"Why\","
+            - generic [ref=e238]:
+              - generic [ref=e239]: "13"
+              - text: "\"is\","
+            - generic [ref=e240]:
+              - generic [ref=e241]: "14"
+              - text: "\"this\","
+            - generic [ref=e242]:
+              - generic [ref=e243]: "15"
+              - text: "\"so\","
+            - generic [ref=e244]:
+              - generic [ref=e245]: "16"
+              - text: "\"satisfying\","
+            - generic [ref=e246]:
+              - generic [ref=e247]: "17"
+              - text: "\"to\","
+            - generic [ref=e248]:
+              - generic [ref=e249]: "18"
+              - text: "\"watch?\""
+            - generic [ref=e250]:
+              - generic [ref=e251]: "19"
+              - text: "];"
+    - generic [ref=e258]:
+      - iframe [ref=e260]:
+        - generic [active] [ref=f1e1]:
+          - generic [ref=f1e2]:
+            - generic [ref=f1e3]: Why
+            - generic [ref=f1e4]: is
+          - img [ref=f1e5]
+      - text: ">"
+  - contentinfo [ref=e261]:
+    - generic [ref=e262]:
+      - img [ref=e264]
+      - button "Fork" [ref=e265] [cursor=pointer]:
+        - img
+        - text: Fork
+      - button "Embed" [ref=e266] [cursor=pointer]
+      - button "Export" [ref=e268] [cursor=pointer]
+      - button "Share" [ref=e270] [cursor=pointer]
+    - generic [ref=e271]:
+      - button "Console" [ref=e272] [cursor=pointer]
+      - button "Assets" [ref=e273] [cursor=pointer]
+      - button "Comments" [ref=e274] [cursor=pointer]
+      - button "Shortcuts" [ref=e275] [cursor=pointer]
+  - text: Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl

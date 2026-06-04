@@ -228,6 +228,22 @@
     .lfield-b:focus { border-color:var(--accent); outline:none; }
     .psec { font-size:var(--fxs); letter-spacing:2px; color:var(--dim); font-weight:700; margin-top:6px; }
 
+    /* ZONE TILES */
+    .zone-tile { display:flex; align-items:center; gap:9px; padding:8px 10px 8px 0; cursor:pointer; -webkit-user-select:none; user-select:none; border-bottom:1px solid var(--border); border-left:3px solid transparent; }
+    .zone-tile:hover { background:var(--raised); }
+    .zone-tile.zone-active { background:var(--raised); }
+    .zone-badge { width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--bg); flex-shrink:0; letter-spacing:0.5px; cursor:pointer; margin-left:8px; }
+    .zone-badge:hover { opacity:0.75; }
+    .zone-indicator { display:flex; align-items:center; gap:8px; padding:0 14px; height:100%; border-right:2px solid var(--brutal); flex-shrink:0; }
+
+    /* LOCATIONS SECTION */
+    .loc-level { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--dimmer); border-bottom:1px solid var(--border); }
+    .loc-level-badge { font-size:7px; font-weight:700; padding:2px 6px; background:#3ab0c0; color:var(--bg); letter-spacing:1px; flex-shrink:0; }
+    .loc-scene-row { display:flex; align-items:center; gap:7px; padding:5px 10px; cursor:pointer; border-bottom:1px solid var(--border); }
+    .loc-scene-row:hover { background:var(--raised); }
+    .loc-type-badge { font-size:7px; font-weight:700; padding:1px 5px; color:var(--bg); letter-spacing:0.5px; flex-shrink:0; }
+    .loc-worldx { font-size:var(--fxt); color:#40e090; letter-spacing:0.5px; flex-shrink:0; font-weight:700; }
+
     /* CONTEXT MENU */
     .ctx-menu { position:fixed; background:var(--surface); border:2px solid var(--brutal); box-shadow:4px 4px 0 var(--brutal); z-index:1000; min-width:140px; }
     .ctx-item { padding:7px 14px; font-size:var(--fxb); cursor:pointer; letter-spacing:1px; }
@@ -250,7 +266,7 @@
     .acc-count { font-size:var(--fxs); color:var(--muted); background:var(--dimmer); padding:1px 5px; border:1px solid var(--brutal); flex-shrink:0; }
 
     /* OUTFIT SUB-ACCORDION */
-    .outfit-acc-hdr { display:flex; align-items:center; gap:7px; padding:7px 12px; cursor:pointer; user-select:none; border-top:2px solid var(--brutal); }
+    .outfit-acc-hdr { display:flex; align-items:center; gap:7px; padding:7px 12px; cursor:pointer; -webkit-user-select:none; user-select:none; border-top:2px solid var(--brutal); }
     .outfit-acc-hdr:hover { background:var(--raised); }
 
     /* MEDIA PICKER */
@@ -475,6 +491,39 @@ const NP={
     inputs: [{id:'in',  label:'FROM',        pt:'flow'}],
     outputs:[]
   },
+  /* CUTSCENE SUB-CANVAS */
+  CUT_START:{
+    inputs:[],
+    outputs:[{id:'first',label:'FIRST',       pt:'flow'}]
+  },
+  CUT_LINE:{
+    inputs: [{id:'in',  label:'FROM',         pt:'flow'}],
+    outputs:[{id:'out', label:'NEXT',         pt:'flow'}]
+  },
+  CUT_CHOICE:{
+    inputs: [{id:'in',  label:'FROM',         pt:'flow'}],
+    outputs:[
+      {id:'a',          label:'OPT A',        pt:'flow'},
+      {id:'b',          label:'OPT B',        pt:'flow'},
+      {id:'c',          label:'OPT C',        pt:'flow'},
+    ]
+  },
+  CUT_VIDEO:{
+    inputs: [{id:'in',  label:'FROM',         pt:'flow'}],
+    outputs:[{id:'out', label:'NEXT',         pt:'flow'}]
+  },
+  CUT_TITLE:{
+    inputs: [{id:'in',  label:'FROM',         pt:'flow'}],
+    outputs:[{id:'out', label:'NEXT',         pt:'flow'}]
+  },
+  CUT_WAIT:{
+    inputs: [{id:'in',  label:'FROM',         pt:'flow'}],
+    outputs:[{id:'out', label:'NEXT',         pt:'flow'}]
+  },
+  CUT_ACTION:{
+    inputs: [{id:'in',  label:'FROM',         pt:'flow'}],
+    outputs:[]
+  },
 };
 
 /* ── NODE META ───────────────────────────────────────────────────── */
@@ -505,6 +554,13 @@ const NM={
   QUEST_END:        {icon:'◼', lbl:'QUEST END',      color:'#c43028'},
   LEVEL_CONNECTOR:  {icon:'⊞', lbl:'LEVEL',          color:'#3ab0c0'},
   ITEM:             {icon:'📦',lbl:'ITEM',            color:'#a06890'},
+  CUT_START:        {icon:'▶', lbl:'CUT START',       color:'#e05030'},
+  CUT_LINE:         {icon:'💬',lbl:'LINE',            color:'#c47a10'},
+  CUT_CHOICE:       {icon:'?', lbl:'CHOICE',          color:'#c4a040'},
+  CUT_VIDEO:        {icon:'⊡', lbl:'VIDEO',           color:'#5090d0'},
+  CUT_TITLE:        {icon:'◈', lbl:'TITLE CARD',      color:'#40e090'},
+  CUT_WAIT:         {icon:'◷', lbl:'WAIT',            color:'#7a7090'},
+  CUT_ACTION:       {icon:'⚡',lbl:'ACTION',          color:'#e05030'},
 };
 
 /* node types available per view context */
@@ -513,6 +569,7 @@ const VIEW_NODES={
   character: ['CHAR_DETAIL','CHAR_DIALOGUE_REF','CHAR_QUEST_REF'],
   dialogue:  ['THOUGHTS','STATEMENT','QUESTION','ITEMS','DEAD_END','LOOP','END_CONVO','OUTFIT_CHECK'],
   quest:     ['QUEST_INFO','QUEST_STEP','QUEST_COLLECTABLE','QUEST_CONDITION','QUEST_END'],
+  cutscene:  ['CUT_START','CUT_LINE','CUT_CHOICE','CUT_VIDEO','CUT_TITLE','CUT_WAIT','CUT_ACTION'],
 };
 
 /* ── SEED DATA ───────────────────────────────────────────────────── */
@@ -542,14 +599,18 @@ const SEED_QUESTS=[
 /* ── STORAGE ─────────────────────────────────────────────────────── */
 const LS='beauregarde_kit_v4';
 const migrateTree=t=>({playCount:'always',playLimit:1,conditions:[],...t});
-const loadState=()=>{try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s&&s.chars)return{chars:s.chars,dtrees:(s.dtrees||[]).map(migrateTree),quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT,items:s.items||[],vars:s.vars||[]};}catch(e){}return null;};
+const loadState=()=>{try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s&&s.chars)return{chars:s.chars,dtrees:(s.dtrees||[]).map(migrateTree),quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT,items:s.items||[],vars:s.vars||[],cutPresets:s.cutPresets||[]};}catch(e){}return null;};
 const saveState=s=>{try{localStorage.setItem(LS,JSON.stringify(s));}catch(e){}};
 
 /* ── TREE TYPES ──────────────────────────────────────────────────── */
-const TREE_TYPES=['general','scene','dialogue','quest','thoughts'];
-const TTC={general:'#7a7090',scene:'#5090d0',dialogue:'#c47a10',quest:'#d4a020',thoughts:'#40e090'};
-const TTL={general:'G',scene:'S',dialogue:'D',quest:'Q',thoughts:'T'};
-const TTF={general:'GENERAL',scene:'SCENE',dialogue:'DIALOGUE',quest:'QUEST',thoughts:'THOUGHTS'};
+const TREE_TYPES=['general','scene','dialogue','quest','thoughts','cutscene'];
+const TTC={general:'#7a7090',scene:'#5090d0',dialogue:'#c47a10',quest:'#d4a020',thoughts:'#40e090',cutscene:'#e05030'};
+const TTL={general:'G',scene:'S',dialogue:'D',quest:'Q',thoughts:'T',cutscene:'C'};
+const TTF={general:'GENERAL',scene:'SCENE',dialogue:'DIALOGUE',quest:'QUEST',thoughts:'THOUGHTS',cutscene:'CUTSCENE'};
+
+/* ── ZONE PALETTE ────────────────────────────────────────────────── */
+const ZONE_PALETTE=['#5090d0','#e05030','#1a7870','#d4a020','#a030e0','#c47a10','#40c080','#e09030','#c43028','#4ab8d0'];
+const mkZoneColor=mt=>{const used=mt.map(t=>t.zoneColor).filter(Boolean);return ZONE_PALETTE.find(c=>!used.includes(c))||ZONE_PALETTE[mt.length%ZONE_PALETTE.length];};
 
 /* ── OUTFIT CONDITIONS ───────────────────────────────────────────── */
 const OUTFITS_DEFAULT=[
@@ -696,6 +757,23 @@ function NodeFields({node}){
     {node.itemCategory&&<div className="nf"><span className="nfl">TYPE</span><span className="nfv">{node.itemCategory.toUpperCase()}</span></div>}
     {node.itemSource&&<div className="nf"><span className="nfl">SOURCE</span><span className="nfv" style={{color:'#a06890',opacity:0.8}}>{node.itemSource}</span></div>}
   </>);
+  if(t==='CUT_START')return(<div className="nf"><span className="nfl">START</span><span className="nfv" style={{color:'#e05030'}}>entry point</span></div>);
+  if(t==='CUT_LINE')return(<>
+    <div className="nf"><span className="nfl">VOICE</span><span className="nfv" style={{color:'#c47a10'}}>{node.speaker||'NARRATOR'}</span></div>
+    <div className="nf"><span className="nfl">TEXT</span><span className="nfv">{trunc(node.text,24)}</span></div>
+    {node.textEffect&&node.textEffect!=='instant'&&<div className="nf"><span className="nfl">FX</span><span className="nfv" style={{color:'#a060c0'}}>{node.textEffect}</span></div>}
+  </>);
+  if(t==='CUT_CHOICE')return(<><div className="nf"><span className="nfl">CHOICES</span><span className="nfv">{(node.options||[]).filter(o=>o.text).length}</span></div></>);
+  if(t==='CUT_VIDEO')return(<>
+    <div className="nf"><span className="nfl">FILE</span><span className="nfv" style={{color:'#5090d0'}}>{node.videoFile?(node.videoFile.split('/').pop()):'—'}</span></div>
+    {node.videoEffect&&node.videoEffect!=='none'&&<div className="nf"><span className="nfl">FX</span><span className="nfv" style={{color:'#a060c0'}}>{node.videoEffect}</span></div>}
+  </>);
+  if(t==='CUT_TITLE')return(<>
+    <div className="nf"><span className="nfl">TITLE</span><span className="nfv" style={{color:'#40e090'}}>{node.titleText||'—'}</span></div>
+    {node.titleSub&&<div className="nf"><span className="nfl">SUB</span><span className="nfv">{node.titleSub}</span></div>}
+  </>);
+  if(t==='CUT_WAIT')return(<div className="nf"><span className="nfl">WAIT</span><span className="nfv">{node.waitMs||1000}ms{node.fadeEffect&&node.fadeEffect!=='none'?' · '+node.fadeEffect:''}</span></div>);
+  if(t==='CUT_ACTION')return(<div className="nf"><span className="nfl">ACT</span><span className="nfv" style={{color:'#e05030'}}>{node.action||'—'}{node.actionValue?' → '+node.actionValue:''}</span></div>);
   return null;
 }
 
@@ -2845,6 +2923,7 @@ const SIDEBAR_TIPS={
   tools:'SCENE defines a location and its spawns. SPAWN_POINT sets a character\'s worldX position. LEVEL maps an entire area with background, scale, and exits. Drag any of these to the canvas.',
   items:'The item registry tracks every key item in the game. Create items here then reference them in quest gates, dialogue conditions, and reward lists. Drag an ITEM node to the master canvas to map an item\'s full acquisition and use chain.',
   vars:'Variables are the world\'s memory — flags (did X happen?), numbers (suspicion level), enums (faction standing), and keywords (Shadowrun topics you collect). Define them here, then gate any dialogue or quest on them. One variable = no new game code, ever.',
+  cutscene:'Create a cutscene by adding a Dialogue Tree (sidebar) and cycling its badge to C. Open it with ↗. Place CUT_START first, then chain LINE / VIDEO / TITLE / CHOICE / WAIT / ACTION nodes. Each exports to the cutscenes key in beauregarde_data.json.',
   library:'Every node placed across all graphs lives here. Drag from the library to re-use a node on any canvas.',
 };
 
@@ -3121,6 +3200,156 @@ function GuideModal({onClose}){
   );
 }
 
+/* ── CUTSCENE EFFECTS LIBRARY ────────────────────────────────────── */
+/* All effects are drop-down choices in the popover. The game renderer reads the
+   id string and applies the matching CSS animation / canvas effect. */
+const TEXT_EFFECTS=[
+  // BASIC
+  {id:'instant',      cat:'basic',    label:'Instant',            desc:'Text appears immediately — no animation.'},
+  {id:'typewriter',   cat:'basic',    label:'Typewriter',         desc:'Character by character at configurable speed. The default.'},
+  {id:'fade_in',      cat:'basic',    label:'Fade In',            desc:'Opacity 0 → 1 over the duration.'},
+  {id:'word_reveal',  cat:'basic',    label:'Word by Word',       desc:'Each word appears in sequence with a small delay.'},
+  // CINEMATIC
+  {id:'glitch',       cat:'cinematic',label:'Glitch',             desc:'Chromatic aberration + noise scramble then settles. (Used in the Opening.)'},
+  {id:'scramble',     cat:'cinematic',label:'Data Scramble',      desc:'Random chars flow through each position before the real letter locks in. Matrix-style.'},
+  {id:'flicker',      cat:'cinematic',label:'Flicker',            desc:'Opacity pulses 3× before the text stabilises.'},
+  {id:'redacted',     cat:'cinematic',label:'Declassified',       desc:'████ redaction bars wipe away left-to-right to reveal the text.'},
+  {id:'broadcast',    cat:'cinematic',label:'Broadcast Static',   desc:'Radio / TV interference bursts, then the text locks in.'},
+  {id:'echo',         cat:'cinematic',label:'Echo',               desc:'Two ghost copies slightly offset behind the text, then collapse into one.'},
+  {id:'whisper',      cat:'cinematic',label:'Whisper',            desc:'Text appears, fades out, appears again faster, fades, then locks in permanently.'},
+  {id:'corrupt',      cat:'cinematic',label:'Corruption',         desc:'Text arrives with wrong/garbled characters then self-corrects one pass.'},
+  // MOTION
+  {id:'slide_up',     cat:'motion',   label:'Slide Up',           desc:'Text slides in from below.'},
+  {id:'slide_left',   cat:'motion',   label:'Slide Left',         desc:'Text slides in from the right edge.'},
+  {id:'zoom_in',      cat:'motion',   label:'Zoom In',            desc:'Text starts large and scales down to reading size.'},
+  {id:'condense',     cat:'motion',   label:'Condense',           desc:'Letters start spread across the width, then compress to the final line position.'},
+];
+
+const VIDEO_EFFECTS=[
+  // BASIC
+  {id:'none',         cat:'basic',    label:'Cut (instant)',       desc:'Hard cut — no transition.'},
+  {id:'fade_black',   cat:'basic',    label:'Fade from Black',     desc:'Video fades in from a black hold.'},
+  {id:'burn_white',   cat:'basic',    label:'Burn In (from white)',desc:'Bright white overexposure fades to reveal the video.'},
+  {id:'dissolve',     cat:'basic',    label:'Dissolve',            desc:'Previous image fades as the new one reveals underneath.'},
+  // CINEMATIC
+  {id:'vhs',          cat:'cinematic',label:'VHS Glitch',          desc:'Horizontal distortion bands scan across on entry.'},
+  {id:'static',       cat:'cinematic',label:'Static / Snow',       desc:'TV static noise resolves into the video.'},
+  {id:'zoom_punch',   cat:'cinematic',label:'Zoom Punch',          desc:'Video snaps in with a brief aggressive zoom.'},
+  {id:'grain',        cat:'cinematic',label:'Film Grain',          desc:'Persistent grain overlay throughout the clip.'},
+  {id:'desaturate',   cat:'cinematic',label:'Desaturate',          desc:'Color drains out on entry, then gradually returns.'},
+  {id:'scanlines',    cat:'cinematic',label:'CRT Scanlines',       desc:'Horizontal scanline overlay — old monitor look.'},
+  {id:'vignette',     cat:'cinematic',label:'Vignette',            desc:'Dark edges crush in, keeping the center bright.'},
+  {id:'chroma',       cat:'cinematic',label:'Chromatic Aberration',desc:'RGB channels split apart then slam back together.'},
+  // UNUSUAL
+  {id:'pixelate',     cat:'unusual',  label:'Pixelate Dissolve',   desc:'Scene pixelates into large blocks then resolves into the next.'},
+  {id:'iris',         cat:'unusual',  label:'Iris Close / Open',   desc:'Circle closes on old scene, opens on new scene.'},
+  {id:'blind_wipe',   cat:'unusual',  label:'Venetian Blind',      desc:'Horizontal strips peel away to reveal the next scene.'},
+];
+
+const FADE_EFFECTS=[
+  // BASIC
+  {id:'none',         cat:'basic',    label:'None',                desc:'No fade — instant.'},
+  {id:'fade_black',   cat:'basic',    label:'Fade to Black',       desc:'Scene darkens to black.'},
+  {id:'from_black',   cat:'basic',    label:'Fade from Black',     desc:'Scene reveals from black.'},
+  {id:'fade_white',   cat:'basic',    label:'Fade to White',       desc:'Scene bleaches to white.'},
+  {id:'from_white',   cat:'basic',    label:'Fade from White',     desc:'Scene reveals from white.'},
+  {id:'flash',        cat:'basic',    label:'Flash (white)',       desc:'Quick bright white pop.'},
+  {id:'cross',        cat:'basic',    label:'Cross-Fade',          desc:'Both scenes visible simultaneously during transition.'},
+  {id:'dip_color',    cat:'basic',    label:'Dip to Color',        desc:'Dips to a custom hex colour — set in the value field.'},
+  // CINEMATIC
+  {id:'blur_out',     cat:'cinematic',label:'Blur Out',            desc:'Scene blurs to unrecognizable before cutting.'},
+  {id:'blur_in',      cat:'cinematic',label:'Blur In',             desc:'Scene starts blurred and sharpens in.'},
+  {id:'static_cut',   cat:'cinematic',label:'Static Burst Cut',    desc:'TV static flash on the cut point.'},
+  {id:'glitch_cut',   cat:'cinematic',label:'Glitch Cut',          desc:'Brief glitch artifact on the cut point.'},
+  {id:'iris_close',   cat:'cinematic',label:'Iris Close',          desc:'Circle contracts from centre to black.'},
+  {id:'iris_open',    cat:'cinematic',label:'Iris Open',           desc:'Circle expands from a point to reveal full frame.'},
+  // UNUSUAL
+  {id:'blind_close',  cat:'unusual',  label:'Venetian Blind Close',desc:'Horizontal strips close like blinds.'},
+  {id:'swipe_left',   cat:'unusual',  label:'Swipe Left',          desc:'Frame slides out to the left.'},
+  {id:'swipe_right',  cat:'unusual',  label:'Swipe Right',         desc:'Frame slides out to the right.'},
+  {id:'shatter',      cat:'unusual',  label:'Shatter',             desc:'Frame fractures and falls away.'},
+];
+
+/* Voice channels — match the game's VOICE_C palette */
+const VOICE_CHANNELS=[
+  {id:'NARRATOR',   color:'#c8c0b0'},
+  {id:'FEAR',       color:'#e04040'},
+  {id:'MEMORY',     color:'#4080c0'},
+  {id:'DENIAL',     color:'#a0c040'},
+  {id:'PAIN',       color:'#c06080'},
+  {id:'ANGER',      color:'#e08030'},
+  {id:'EMPATHY',    color:'#40c090'},
+  {id:'REASON',     color:'#8060c0'},
+  {id:'AUTHORITY',  color:'#c0a040'},
+  {id:'CUSTOM',     color:'#888888'},
+];
+
+/* CUT ACTIONS */
+const CUT_ACTIONS=[
+  {id:'goto_scene', label:'Go to Scene',       hasValue:true,  valuePlaceholder:'scene name'},
+  {id:'wake',       label:'Wake (end opening)',hasValue:false},
+  {id:'fade_out',   label:'Fade Out to Black', hasValue:false},
+  {id:'fade_in',    label:'Fade In from Black',hasValue:false},
+  {id:'set_var',    label:'Set Variable',       hasValue:true,  valuePlaceholder:'varKey=value'},
+  {id:'play_music', label:'Play Music',         hasValue:true,  valuePlaceholder:'../audio/track.mp3'},
+  {id:'stop_music', label:'Stop Music',         hasValue:false},
+  {id:'custom',     label:'Custom (freeform)',  hasValue:true,  valuePlaceholder:'custom action string'},
+];
+
+/* ── EFFECT SELECT helper ────────────────────────────────────────── */
+function EffectSelect({value,onChange,effects,label,compact}){
+  const groups=[...new Set(effects.map(e=>e.cat))];
+  const sel=effects.find(e=>e.id===value);
+  return(
+    <div className="pf">
+      {label&&<label className="pfl">{label}</label>}
+      <select className="pfi" value={value||''} onChange={e=>onChange(e.target.value)}
+        style={{borderColor:value&&value!=='none'&&value!=='instant'?'var(--accent)':'var(--brutal)'}}>
+        {groups.map(g=>(
+          <optgroup key={g} label={'— '+g.toUpperCase()+' —'}>
+            {effects.filter(e=>e.cat===g).map(e=>(
+              <option key={e.id} value={e.id}>{e.label}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      {!compact&&sel?.desc&&<div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'0.5px',marginTop:2}}>{sel.desc}</div>}
+    </div>
+  );
+}
+
+/* ── CUTSCENE SERIALIZER ─────────────────────────────────────────── */
+function serializeCutscene(tree){
+  const{nodes:ns,conns:cs}=(tree.subCanvas||{nodes:[],conns:[]});
+  if(!ns.length)return[];
+  const adj={};
+  ns.forEach(n=>{adj[n.id]={};});
+  cs.forEach(c=>{if(adj[c.src])adj[c.src][c.srcPort]=c.dst;});
+  const hasPred=new Set(cs.map(c=>c.dst));
+  const root=ns.find(n=>n.type==='CUT_START')||ns.find(n=>!hasPred.has(n.id))||ns[0];
+  if(!root)return[];
+  const visited=new Set();const ordered=[];const queue=[root];
+  while(queue.length){
+    const n=queue.shift();if(!n||visited.has(n.id))continue;
+    visited.add(n.id);ordered.push(n);
+    const outs=adj[n.id]||{};
+    ['first','out','a','b','c'].forEach(p=>{
+      if(outs[p]){const nxt=ns.find(x=>x.id===outs[p]);if(nxt&&!visited.has(nxt.id))queue.push(nxt);}
+    });
+  }
+  return ordered.map(n=>{
+    const outs=adj[n.id]||{};const nxt=id=>id||null;
+    if(n.type==='CUT_START')return{id:n.id,type:'start',background:n.background||'#060a08',backgroundVideo:n.backgroundVideo||''};
+    if(n.type==='CUT_LINE')return{id:n.id,type:'line',speaker:n.speaker||'NARRATOR',voiceChannel:n.voiceChannel||'NARRATOR',text:n.text||'',textEffect:n.textEffect||'typewriter',effectSpeed:n.effectSpeed||34,autoAdvance:n.autoAdvance||0,fadeEffect:n.fadeEffect||'none',next:nxt(outs.out)};
+    if(n.type==='CUT_CHOICE')return{id:n.id,type:'choice',opts:(n.options||[]).map((o,i)=>({t:o.text||'',muted:!!o.muted,next:nxt(outs[['a','b','c'][i]])})).filter(o=>o.t)};
+    if(n.type==='CUT_VIDEO')return{id:n.id,type:'video',file:n.videoFile||'',videoEffect:n.videoEffect||'none',fadeEffect:n.fadeEffect||'none',loop:!!n.loop,duration:n.duration||0,overlayText:n.overlayText||'',overlayEffect:n.overlayEffect||'instant',next:nxt(outs.out)};
+    if(n.type==='CUT_TITLE')return{id:n.id,type:'title',title:n.titleText||'',sub:n.titleSub||'',textEffect:n.textEffect||'fade_in',background:n.background||'#000000',duration:n.duration||3000,next:nxt(outs.out)};
+    if(n.type==='CUT_WAIT')return{id:n.id,type:'wait',ms:n.waitMs||1000,fadeEffect:n.fadeEffect||'none',next:nxt(outs.out)};
+    if(n.type==='CUT_ACTION')return{id:n.id,type:'action',action:n.action||'',actionValue:n.actionValue||''};
+    return null;
+  }).filter(Boolean);
+}
+
 /* ── QUEST STEP SERIALIZER ───────────────────────────────────────── */
 function serializeQuestSteps(quest){
   const {nodes:ns,conns:cs}=(quest.subCanvas||{nodes:[],conns:[]});
@@ -3154,6 +3383,266 @@ function serializeQuestSteps(quest){
     if(n.type==='QUEST_END')return{id:n.id,type:'end',notes:n.notes||''};
     return null;
   }).filter(Boolean);
+}
+
+/* ── CUTSCENE NODE POPOVER ───────────────────────────────────────── */
+function CutsceneNodePopover({node,onSave,onClose,onSavePreset}){
+  const t=node.type;
+  const meta=NM[t]||{color:'#e05030',lbl:t};
+  const TABS_LINE=['CONTENT','EFFECTS'];
+  const TABS_VIDEO=['MEDIA','EFFECTS'];
+  const [tab,setTab]=useState('CONTENT');
+  // --- shared fields ---
+  const [text,setText]=useState(node.text||'');
+  const [speaker,setSpeaker]=useState(node.speaker||'NARRATOR');
+  const [voiceChannel,setVoiceChannel]=useState(node.voiceChannel||'NARRATOR');
+  const [textEffect,setTextEffect]=useState(node.textEffect||'typewriter');
+  const [effectSpeed,setEffectSpeed]=useState(node.effectSpeed||34);
+  const [autoAdvance,setAutoAdvance]=useState(node.autoAdvance||0);
+  const [fadeEffect,setFadeEffect]=useState(node.fadeEffect||'none');
+  // --- CUT_START ---
+  const [background,setBackground]=useState(node.background||'#060a08');
+  const [backgroundVideo,setBackgroundVideo]=useState(node.backgroundVideo||'');
+  // --- CUT_CHOICE ---
+  const [options,setOptions]=useState(node.options||[{text:'',muted:false},{text:'',muted:false},{text:'',muted:true}]);
+  const uOpt=(i,f)=>setOptions(p=>p.map((o,j)=>j===i?{...o,...f}:o));
+  // --- CUT_VIDEO ---
+  const [videoFile,setVideoFile]=useState(node.videoFile||'');
+  const [videoEffect,setVideoEffect]=useState(node.videoEffect||'none');
+  const [loop,setLoop]=useState(node.loop||false);
+  const [duration,setDuration]=useState(node.duration||0);
+  const [overlayText,setOverlayText]=useState(node.overlayText||'');
+  const [overlayEffect,setOverlayEffect]=useState(node.overlayEffect||'instant');
+  // --- CUT_TITLE ---
+  const [titleText,setTitleText]=useState(node.titleText||'');
+  const [titleSub,setTitleSub]=useState(node.titleSub||'');
+  // --- CUT_WAIT ---
+  const [waitMs,setWaitMs]=useState(node.waitMs||1000);
+  // --- CUT_ACTION ---
+  const [action,setAction]=useState(node.action||'goto_scene');
+  const [actionValue,setActionValue]=useState(node.actionValue||'');
+  // --- preset naming ---
+  const [presetNameMode,setPresetNameMode]=useState(false);
+  const [presetName,setPresetName]=useState('');
+
+  const vc=VOICE_CHANNELS.find(v=>v.id===voiceChannel)||VOICE_CHANNELS[0];
+  const actDef=CUT_ACTIONS.find(a=>a.id===action)||CUT_ACTIONS[0];
+
+  const gather=()=>{
+    const base={...node};
+    if(t==='CUT_START')  return{...base,background,backgroundVideo};
+    if(t==='CUT_LINE')   return{...base,text,speaker,voiceChannel,textEffect,effectSpeed,autoAdvance,fadeEffect};
+    if(t==='CUT_CHOICE') return{...base,options};
+    if(t==='CUT_VIDEO')  return{...base,videoFile,videoEffect,fadeEffect,loop,duration,overlayText,overlayEffect};
+    if(t==='CUT_TITLE')  return{...base,titleText,titleSub,textEffect,background,duration,fadeEffect};
+    if(t==='CUT_WAIT')   return{...base,waitMs,fadeEffect};
+    if(t==='CUT_ACTION') return{...base,action,actionValue};
+    return base;
+  };
+  const save=()=>{onSave(gather());onClose();};
+  const savePreset=()=>{if(presetName.trim()){onSavePreset(presetName.trim(),gather());setPresetNameMode(false);setPresetName('');}};
+
+  const titleMap={CUT_START:'▶ CUT START',CUT_LINE:'💬 LINE',CUT_CHOICE:'? CHOICE',CUT_VIDEO:'⊡ VIDEO',CUT_TITLE:'◈ TITLE CARD',CUT_WAIT:'◷ WAIT',CUT_ACTION:'⚡ ACTION'};
+
+  return(
+    <PopoverModal title={titleMap[t]||meta.lbl} color={meta.color} onClose={onClose}>
+
+      {/* tab bar for multi-section nodes */}
+      {(t==='CUT_LINE')&&(
+        <div className="pop-tabs">
+          {TABS_LINE.map(tb=><div key={tb} className={'pop-tab'+(tab===tb?' active':'')} onClick={()=>setTab(tb)}>{tb}</div>)}
+        </div>
+      )}
+      {(t==='CUT_VIDEO')&&(
+        <div className="pop-tabs">
+          {TABS_VIDEO.map(tb=><div key={tb} className={'pop-tab'+(tab===tb?' active':'')} onClick={()=>setTab(tb)}>{tb}</div>)}
+        </div>
+      )}
+
+      <div className="pop-tab-body" style={{gap:8}}>
+
+        {/* ── CUT_START ── */}
+        {t==='CUT_START'&&(<>
+          <div className="pf-row">
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">BACKGROUND COLOUR</label>
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <input type="color" value={background} onChange={e=>setBackground(e.target.value)}
+                  style={{width:40,height:32,border:'2px solid var(--brutal)',cursor:'pointer',background:'none',padding:2}}/>
+                <input className="pfi" value={background} onChange={e=>setBackground(e.target.value)} style={{flex:1}}/>
+              </div>
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">BACKGROUND VIDEO (optional)</label>
+            <MediaPicker value={backgroundVideo} onChange={setBackgroundVideo} accept="video" label="BG VIDEO" hint="L:\Beauregarde_game\underneath\graphics\..."/>
+          </div>
+          <div style={{fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'0.5px',lineHeight:1.7}}>This is the entry point for the cutscene. Set the default background here — individual LINE and VIDEO nodes can override it.</div>
+        </>)}
+
+        {/* ── CUT_LINE content ── */}
+        {t==='CUT_LINE'&&tab==='CONTENT'&&(<>
+          <div className="pf-row">
+            <div className="pf" style={{flex:3}}>
+              <label className="pfl">SPEAKER / NAME (shown above text)</label>
+              <input className="pfi" value={speaker} onChange={e=>setSpeaker(e.target.value)} placeholder="NARRATOR, leave blank for no label"/>
+            </div>
+            <div className="pf" style={{flex:2}}>
+              <label className="pfl">VOICE CHANNEL (colour)</label>
+              <div style={{display:'flex',gap:4,alignItems:'center'}}>
+                <div style={{width:16,height:16,background:vc.color,flexShrink:0,border:'2px solid var(--brutal)'}}/>
+                <select className="pfi" style={{flex:1}} value={voiceChannel} onChange={e=>setVoiceChannel(e.target.value)}>
+                  {VOICE_CHANNELS.map(v=><option key={v.id} value={v.id}>{v.id}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">DIALOGUE TEXT</label>
+            <textarea className="pfi" rows={5} style={{resize:'vertical',minHeight:90,color:vc.color}} value={text} onChange={e=>setText(e.target.value)} placeholder="Enter the line spoken or narrated…"/>
+          </div>
+        </>)}
+
+        {/* ── CUT_LINE effects ── */}
+        {t==='CUT_LINE'&&tab==='EFFECTS'&&(<>
+          <EffectSelect value={textEffect} onChange={setTextEffect} effects={TEXT_EFFECTS} label="TEXT EFFECT"/>
+          {(textEffect==='typewriter'||textEffect==='scramble'||textEffect==='glitch')&&(
+            <div className="pf">
+              <label className="pfl">EFFECT SPEED (ms per character)</label>
+              <input className="pfi" type="number" min={5} max={200} value={effectSpeed} onChange={e=>setEffectSpeed(parseInt(e.target.value)||34)}/>
+            </div>
+          )}
+          <div className="pf">
+            <label className="pfl">AUTO-ADVANCE (ms — 0 = wait for input)</label>
+            <input className="pfi" type="number" min={0} value={autoAdvance} onChange={e=>setAutoAdvance(parseInt(e.target.value)||0)}/>
+          </div>
+          <EffectSelect value={fadeEffect} onChange={setFadeEffect} effects={FADE_EFFECTS} label="FADE / TRANSITION OUT"/>
+        </>)}
+
+        {/* ── CUT_CHOICE ── */}
+        {t==='CUT_CHOICE'&&(<>
+          <div style={{fontSize:'var(--fxs)',color:'var(--text2)',letterSpacing:'0.5px',lineHeight:1.7,marginBottom:4}}>
+            Up to 3 options. Wire each output port (OPT A / B / C) to the next node. MUTED options are visible but greyed out — useful for lore hints the player can't quite reach yet.
+          </div>
+          {options.slice(0,3).map((o,i)=>(
+            <div key={i} style={{background:'var(--raised)',border:'2px solid var(--brutal)',padding:'8px 10px',display:'flex',gap:8,alignItems:'flex-start',flexDirection:'column'}}>
+              <div style={{display:'flex',gap:6,alignItems:'center',width:'100%'}}>
+                <span style={{fontSize:'var(--fxs)',fontWeight:700,color:'var(--accent)',width:46,flexShrink:0}}>OPT {['A','B','C'][i]}</span>
+                <input className="pfi" style={{flex:1}} value={o.text} placeholder={'Option '+(i+1)+' text…'} onChange={e=>uOpt(i,{text:e.target.value})}/>
+                <label style={{display:'flex',alignItems:'center',gap:4,fontSize:'var(--fxs)',cursor:'pointer',flexShrink:0}}>
+                  <input type="checkbox" checked={!!o.muted} onChange={e=>uOpt(i,{muted:e.target.checked})}/> muted
+                </label>
+              </div>
+            </div>
+          ))}
+        </>)}
+
+        {/* ── CUT_VIDEO media ── */}
+        {t==='CUT_VIDEO'&&tab==='MEDIA'&&(<>
+          <div className="pf">
+            <label className="pfl">VIDEO FILE</label>
+            <MediaPicker value={videoFile} onChange={setVideoFile} accept="video" label="VIDEO CLIP" hint="L:\Beauregarde_game\underneath\graphics\..."/>
+          </div>
+          <div className="pf-row">
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">DURATION (ms — 0 = full length)</label>
+              <input className="pfi" type="number" min={0} value={duration} onChange={e=>setDuration(parseInt(e.target.value)||0)}/>
+            </div>
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">LOOP</label>
+              <label style={{display:'flex',alignItems:'center',gap:6,fontSize:'var(--fxs)',cursor:'pointer',marginTop:6,letterSpacing:'1px'}}>
+                <input type="checkbox" checked={loop} onChange={e=>setLoop(e.target.checked)}/> LOOP VIDEO
+              </label>
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">OVERLAY TEXT (optional — appears over the video)</label>
+            <input className="pfi" value={overlayText} onChange={e=>setOverlayText(e.target.value)} placeholder="THE VEIL — 4:17 AM"/>
+          </div>
+          {overlayText&&<EffectSelect value={overlayEffect} onChange={setOverlayEffect} effects={TEXT_EFFECTS} label="OVERLAY TEXT EFFECT" compact/>}
+        </>)}
+
+        {/* ── CUT_VIDEO effects ── */}
+        {t==='CUT_VIDEO'&&tab==='EFFECTS'&&(<>
+          <EffectSelect value={videoEffect} onChange={setVideoEffect} effects={VIDEO_EFFECTS} label="VIDEO ENTRY EFFECT"/>
+          <EffectSelect value={fadeEffect} onChange={setFadeEffect} effects={FADE_EFFECTS} label="EXIT / TRANSITION OUT"/>
+        </>)}
+
+        {/* ── CUT_TITLE ── */}
+        {t==='CUT_TITLE'&&(<>
+          <div className="pf-row">
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">BACKGROUND COLOUR</label>
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <input type="color" value={background} onChange={e=>setBackground(e.target.value)}
+                  style={{width:40,height:32,border:'2px solid var(--brutal)',cursor:'pointer',padding:2}}/>
+                <input className="pfi" value={background} onChange={e=>setBackground(e.target.value)} style={{flex:1}}/>
+              </div>
+            </div>
+          </div>
+          <div className="pf">
+            <label className="pfl">TITLE TEXT</label>
+            <input className="pfi" value={titleText} onChange={e=>setTitleText(e.target.value)} placeholder="THE VEIL — FOUR YEARS EARLIER"/>
+          </div>
+          <div className="pf">
+            <label className="pfl">SUBTITLE (optional)</label>
+            <input className="pfi" value={titleSub} onChange={e=>setTitleSub(e.target.value)} placeholder="4:17 AM"/>
+          </div>
+          <div className="pf-row">
+            <EffectSelect value={textEffect} onChange={setTextEffect} effects={TEXT_EFFECTS} label="TEXT EFFECT"/>
+            <div className="pf" style={{flex:1}}>
+              <label className="pfl">DISPLAY DURATION (ms)</label>
+              <input className="pfi" type="number" min={500} value={duration} onChange={e=>setDuration(parseInt(e.target.value)||3000)}/>
+            </div>
+          </div>
+          <EffectSelect value={fadeEffect} onChange={setFadeEffect} effects={FADE_EFFECTS} label="EXIT TRANSITION"/>
+        </>)}
+
+        {/* ── CUT_WAIT ── */}
+        {t==='CUT_WAIT'&&(<>
+          <div className="pf">
+            <label className="pfl">PAUSE DURATION (ms)</label>
+            <input className="pfi" type="number" min={100} value={waitMs} onChange={e=>setWaitMs(parseInt(e.target.value)||1000)}/>
+            <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'0.5px',marginTop:2}}>Use to breathe between beats — holds on the current frame before the next node fires.</div>
+          </div>
+          <EffectSelect value={fadeEffect} onChange={setFadeEffect} effects={FADE_EFFECTS} label="FADE DURING WAIT (optional)"/>
+        </>)}
+
+        {/* ── CUT_ACTION ── */}
+        {t==='CUT_ACTION'&&(<>
+          <div className="pf">
+            <label className="pfl">ACTION TYPE</label>
+            <select className="pfi" value={action} onChange={e=>setAction(e.target.value)}>
+              {CUT_ACTIONS.map(a=><option key={a.id} value={a.id}>{a.label}</option>)}
+            </select>
+          </div>
+          {actDef.hasValue&&(
+            <div className="pf">
+              <label className="pfl">VALUE</label>
+              <input className="pfi" value={actionValue} placeholder={actDef.valuePlaceholder} onChange={e=>setActionValue(e.target.value)}/>
+              {action==='set_var'&&<div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'0.5px',marginTop:2}}>Format: varKey=value (e.g. met_charlie=true)</div>}
+              {action==='dip_color'&&<div style={{display:'flex',gap:6,marginTop:4}}><input type="color" value={actionValue||'#000000'} onChange={e=>setActionValue(e.target.value)} style={{width:40,height:28,border:'2px solid var(--brutal)',padding:1}}/></div>}
+            </div>
+          )}
+        </>)}
+
+        {/* ── save / preset controls ── */}
+        <div style={{display:'flex',gap:8,marginTop:4,paddingTop:6,borderTop:'2px solid var(--brutal)'}}>
+          <button className="isave" style={{flex:2}} onClick={save}>SAVE NODE</button>
+          {!presetNameMode
+            ?<button className="isave" style={{flex:1,borderColor:'#d4a020',color:'#d4a020'}} onClick={()=>setPresetNameMode(true)}>&#9733; SAVE PRESET</button>
+            :<>
+              <input className="pfi" style={{flex:2}} value={presetName} placeholder="Preset name…"
+                autoFocus onChange={e=>setPresetName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')savePreset();if(e.key==='Escape')setPresetNameMode(false);}}/>
+              <button className="isave" style={{flex:1,borderColor:'#d4a020',color:'#d4a020'}} onClick={savePreset}>SAVE</button>
+              <button className="ep-close" onClick={()=>setPresetNameMode(false)}>&#x2715;</button>
+            </>
+          }
+        </div>
+
+      </div>
+    </PopoverModal>
+  );
 }
 
 /* ── CONDITION ROW ───────────────────────────────────────────────── */
@@ -3249,6 +3738,141 @@ function ConditionRow({cond,outfits,chars,items,quests,vars,onChange,onRemove}){
   );
 }
 
+/* ── NPC DIALOGUE PREBUILDS ──────────────────────────────────────── */
+function buildNPCDialogue(key,npc,lines){
+  let c=0;
+  const did=()=>'npc_'+key+'_'+(Date.now()+c++).toString(36);
+  const cn=(s,sp,d,dp)=>({id:did(),src:s,srcPort:sp,dst:d,dstPort:dp});
+  const ids=lines.map(()=>did());
+  const nodes=lines.map((text,i)=>{
+    const isLast=i===lines.length-1;
+    return{id:ids[i],type:isLast?'END_CONVO':'STATEMENT',label:'L'+(i+1),x:100,y:80+i*130,text,speaker:npc,relDelta:'+0',emotion:'',voice:''};
+  });
+  const conns=ids.slice(0,-1).map((id,i)=>cn(id,'out',ids[i+1],'in'));
+  const pid=did();
+  return{id:pid,name:key,treeType:'dialogue',outfitCondition:'any',playCount:'always',playLimit:1,conditions:[],subCanvas:{nodes,conns}};
+}
+
+const NPC_PREBUILDS={
+  raymond_browse:   ()=>buildNPCDialogue('raymond_browse','RAYMOND',["What can I get you?","Network moves quiet. Bureau's been two blocks over asking questions. Keep your head down and stay covered.","They don't ask names. They ask descriptions. Come here if you need anything. We take care of our own.","Take your time. Rain's good cover."]),
+  raymond_pay:      ()=>buildNPCDialogue('raymond_pay','RAYMOND',["__TOTAL__ Stay warm.","Then you're on the network. Come here, eat something.","Network covers you. But — without money in the Veil you're desperate. Desperate people make mistakes. Find Diego, vendor two doors down. He'll set you up.","Move slow. Head down. You know what you are out here."]),
+  raymond_caught:   ()=>buildNPCDialogue('raymond_caught','RAYMOND',["Hey. Where you going with that?","Counter.","Stay safe out there."]),
+  raymond_broke:    ()=>buildNPCDialogue('raymond_broke','RAYMOND',["You don't have money, do you?","That's okay. Let me make you something.","Here. Sandwich, water. This is on the network — you're part of us now. Without money in the Veil, you're desperate. Desperate gets you caught.","Diego. Street vendor nearby. He'll set you up with work, food, connections. Tell him Raymond sent you.","People who watch and stay quiet. People who don't cooperate with the Bureau. People who remember what was taken from this neighborhood. The whole block, mostly.","You're why some of us are still here. We knew someone like you would come through eventually.","She's been gone a long time. Longer than you remember. That's all I can say right now — this isn't the place.","The network knows. But you have to move carefully to find out. Find Diego first.","Bureau. Asking questions two blocks over. Descriptions, not names. Keep the hoodie on. Don't run. Move like you belong.","Yeah. Move slow. You belong here. Because you do.","Go find Diego. He'll take care of you."]),
+  store_cant_pay:   ()=>buildNPCDialogue('store_cant_pay','RAYMOND',["You don't have enough for that.","No problem. Come back when you're ready."]),
+  street_passerby:  ()=>buildNPCDialogue('street_passerby','PASSERBY',["Watch yourself out here tonight. Bureau's been moving through."]),
+  street_elder:     ()=>buildNPCDialogue('street_elder','ELDER',["Rain's coming hard, baby. Don't stay out too long."]),
+  guard_talk:       ()=>buildNPCDialogue('guard_talk','GUARD',["Keep it moving."]),
+  guard_blocked:    ()=>buildNPCDialogue('guard_blocked','GUARD',["You look suspicious. You can't enter.","The Bureau watches for anything unusual. Octopus mutations, neural integrations — all flagged on sight. If you walk in there like that, you're putting everyone here at risk.","Find a disguise. A hoodie, a coat, anything to cover the mutations. This is rule one in the Veil: cover what they're looking for. Come back when you're covered."]),
+  pharmacist_browse:()=>buildNPCDialogue('pharmacist_browse','PHARMACIST',["What do you need today?","Four dollars for the painkillers.","Three dollars for the bandages.","Seven dollars — painkillers and bandages.","Come back when you can. Pharmacy is always open.","Of course. Anything else?","Keep those close. Stay safe out there.","You're safe here. No questions asked. There's a doctor three blocks up — Dr. Chen. Runs a clinic from her apartment. Knows about modifications.","Don't lose that. Could save your life."]),
+  diego_browse:     ()=>buildNPCDialogue('diego_browse','DIEGO',["Come, child. Get warm. You look like you need real food, yeah?","I make something special. Come, eat.","Eat. First bowl is free. You need strength.","You new to the Veil? First time on the street?","I'm Diego. I been here twenty years. I seen things. I seen people like you — modifications, integration, all that. The network takes care of them. We take care of them.","Bureau raids two blocks away last week. Looking for someone. Someone modified. Looking for a girl with... something on her head.","Maybe. Maybe not. But you need to know: you're not the first. Others came before you. Lived in the Veil. Some stayed. Some moved on. Some got caught.","You need a safe place tonight? I got a friend. Runs a hostel. Hidden. Safe. Network protected. You want, I write down the address.","What's your name? Or do you not remember?","That's okay. They do that. They take memories. Names are first to go. You just remember: you're alive. You survived. That's your name right now — Survivor.","Hostel is safe. They got showers. They got food. They got quiet. You need to recover, you go there. Tell them Diego sent you. They'll know.","Come back tomorrow. I make you special food. Ingredients to help with healing. Help with integration. The network has knowledge about this.","The apartment you're in. There's a computer. Desktop. Old thing. It's locked — password protected. The woman who set up that place, she left the password with people she trusted. She trusted me.","The password is: COLLETTE","Don't write it down. Don't say it out loud once you're inside. Just use it and keep it in your head."]),
+  chef_browse:      ()=>buildNPCDialogue('chef_browse','CHEF',["Kitchen's busy."]),
+  charlie_first_meeting:()=>buildNPCDialogue('charlie_first_meeting','CHARLIE',["Don't see many new faces down this alley.","Mm. You know this neighborhood's name?","Most people just call it the Veil now. MOVE is the old name. This whole block is named after something that happened here. Long time ago.","I got footage. Real footage. You want to see it?","Check your phone. I'm sending it now."]),
+};
+
+/* ── OPENING TEMPLATES ───────────────────────────────────────────── */
+function buildOpeningTemplates(){
+  let _c=0;
+  const tid=()=>'tpl_'+(Date.now()+_c++).toString(36);
+  const conn=(src,sp,dst,dp)=>({id:tid(),src,srcPort:sp,dst,dstPort:dp});
+  const line=(id,label,text,vc,x,y,aa=0)=>({
+    id,type:'CUT_LINE',label,x,y,
+    text,speaker:vc==='NARRATOR'?'':vc,
+    voiceChannel:vc,textEffect:'typewriter',effectSpeed:28,autoAdvance:aa,fadeEffect:'none'
+  });
+
+  /* ── OPENING SEQUENCE (o0–o10) ── */
+  const os0=tid();
+  const os=[tid(),tid(),tid(),tid(),tid(),tid(),tid(),tid(),tid(),tid(),tid()];
+  const osd=[
+    ['NARRATOR','Sound: water. Loud. Cold. Already running.'],
+    ['FEAR',    'Cold. You are cold. The water has been running for a while. You are standing in it.'],
+    ['NARRATOR','Hypothermia is not a metaphor. Your clothes are soaked through. You are cooling.'],
+    ['NARRATOR','That question has no answer yet. There is something else. Something on you. Warm. Moving. Alive.'],
+    ['FEAR',    'Something alive. On your body. On your head. You can feel it — warm against the cold water. You do not know what it is.'],
+    ['NARRATOR','It is not yours. But it is on your nervous system. You feel what it feels. Right now it feels the water. It needs the water.'],
+    ['NARRATOR','Hunger but for water. Suffocation but in air. The closest word is need. Which is why you are standing fully clothed in a cold shower.'],
+    ['FEAR',    'The cold is yours. The need for water belongs to whatever is on you. Both are real. Both are demanding something.'],
+    ['MEMORY',  'There was a before. It is there the way a word is there when you cannot say it. Present. Inaccessible. A woman. Water. Surviving together. That is all.'],
+    ['MEMORY',  'She mattered. She matters. You need to find her. But first: the water is cold. Something on you is alive. You are still standing in a shower.'],
+    ['FEAR',    'It is waiting for you to decide.'],
+  ];
+  const osNodes=[
+    {id:os0,type:'CUT_START',label:'Opening',x:100,y:60,background:'#080808',backgroundVideo:''},
+    ...osd.map(([vc,txt],i)=>line(os[i],'o'+i,txt,vc,100,200+i*150))
+  ];
+  const osConns=[conn(os0,'first',os[0],'in'),...os.slice(0,-1).map((id,i)=>conn(id,'out',os[i+1],'in'))];
+
+  /* ── SHOWER SEQUENCE ── */
+  const sh0=tid(),sh1=tid(),sh2=tid(),sh3=tid(),shQ=tid();
+  const shA=[tid(),tid(),tid()],shB=[tid(),tid(),tid()],shC=[tid(),tid(),tid()];
+  const shNodes=[
+    {id:sh0,type:'CUT_START',label:'Shower',x:100,y:60,background:'#0a1415',backgroundVideo:''},
+    line(sh1,'cold',    "It's cold. You're freezing. Get out. Turn it off.",             'FEAR',    100,200),
+    line(sh2,'risk',    'Hypothermia risk. Core temperature dropping.',                  'NARRATOR',100,350),
+    line(sh3,'alive',   "Something is ON your body. Something ALIVE. Something that can make you FEEL its needs directly.",'NARRATOR',100,500),
+    {id:shQ,type:'CUT_CHOICE',label:'What do you do?',x:100,y:660,options:[
+      {text:'Turn off the water.',muted:false},
+      {text:'Leave it running.',muted:false},
+      {text:'Turn it down — something in between.',muted:false},
+    ]},
+    line(shA[0],'A1',"Water stops. That alien panic FLOODS your nervous system. Not your fear — its fear. Immediate. Drowning.",'NARRATOR',-330,880),
+    line(shA[1],'A2',"Turn it back on. NOW. It's dying. Please. PLEASE.",                                               'FEAR',   -330,1030),
+    line(shA[2],'A3',"It wasn't your choice. You don't owe it anything.",                                              'NARRATOR',-330,1180),
+    line(shB[0],'B1',"You're getting colder. But the alien distress has stopped.",                                     'NARRATOR', 100,880),
+    line(shB[1],'B2',"It needed the water. You stayed in the cold for it. It knows that now.",                         'NARRATOR', 100,1030),
+    line(shB[2],'B3',"A woman. In water. She understood this. She chose the creature's survival too.",                 'MEMORY',   100,1180),
+    line(shC[0],'C1',"Water reduced. Temperature stabilizing. Its panic shifts from drowning to manageable.",          'NARRATOR', 540,880),
+    line(shC[1],'C2',"Neither of you gets everything. But neither of you dies. That's partnership.",                   'NARRATOR', 540,1030),
+    line(shC[2],'C3',"You have responsibility to something now. That changes everything going forward.",               'NARRATOR', 540,1180),
+  ];
+  const shConns=[
+    conn(sh0,'first',sh1,'in'),conn(sh1,'out',sh2,'in'),conn(sh2,'out',sh3,'in'),conn(sh3,'out',shQ,'in'),
+    conn(shQ,'a',shA[0],'in'),conn(shA[0],'out',shA[1],'in'),conn(shA[1],'out',shA[2],'in'),
+    conn(shQ,'b',shB[0],'in'),conn(shB[0],'out',shB[1],'in'),conn(shB[1],'out',shB[2],'in'),
+    conn(shQ,'c',shC[0],'in'),conn(shC[0],'out',shC[1],'in'),conn(shC[1],'out',shC[2],'in'),
+  ];
+
+  /* ── MIRROR SEQUENCE ── */
+  const mi0=tid(),miQ=tid(),miSee=tid(),miSub=tid();
+  const miA1=[tid(),tid()],miA2=[tid(),tid()],miA3=[tid(),tid()],miB=tid();
+  const mirNodes=[
+    {id:mi0,type:'CUT_START',label:'Mirror',x:100,y:60,background:'#0e0b08',backgroundVideo:''},
+    {id:miQ,type:'CUT_CHOICE',label:'Mirror — look?',x:100,y:200,options:[
+      {text:'Look at the mirror.',muted:false},
+      {text:"Don't look. One problem at a time.",muted:false},
+      {text:'',muted:true},
+    ]},
+    line(miSee,'see','Tentacles. Red. Living. On your head. On your shoulders. Real.','NARRATOR',-200,400),
+    {id:miSub,type:'CUT_CHOICE',label:'Touch it?',x:-200,y:560,options:[
+      {text:'Try to pull it off.',muted:false},
+      {text:'Touch it gently.',muted:false},
+      {text:'Back away.',muted:false},
+    ]},
+    line(miA1[0],'A1a','PAIN. The tentacle grips your wrist — hard. Holding you in place.',                 'FEAR',   -490,760),
+    line(miA1[1],'A1b',"It won't come off. And it will fight back. Don't try that again.",                  'NARRATOR',-490,910),
+    line(miA2[0],'A2a','Warm. Wet. Alive. It curls around your fingers. Joy — alien, but real.',            'NARRATOR',-200,760),
+    line(miA2[1],'A2b',"It's not a weapon. It's alive. And it wanted to be acknowledged.",                  'NARRATOR',-200,910),
+    line(miA3[0],'A3a',"You back away. The tentacles tense — withdraw. It felt your rejection.",            'NARRATOR',  90,760),
+    line(miA3[1],'A3b',"It's separate. You're keeping it separate. That's safer.",                          'NARRATOR',  90,910),
+    line(miB,    'B',  'One problem at a time.',                                                             'NARRATOR', 400,400),
+  ];
+  const mirConns=[
+    conn(mi0,'first',miQ,'in'),
+    conn(miQ,'a',miSee,'in'),conn(miSee,'out',miSub,'in'),
+    conn(miSub,'a',miA1[0],'in'),conn(miA1[0],'out',miA1[1],'in'),
+    conn(miSub,'b',miA2[0],'in'),conn(miA2[0],'out',miA2[1],'in'),
+    conn(miSub,'c',miA3[0],'in'),conn(miA3[0],'out',miA3[1],'in'),
+    conn(miQ,'b',miB,'in'),
+  ];
+
+  const mk=o=>({outfitCondition:'any',playCount:'once',playLimit:1,conditions:[],...o});
+  return[
+    mk({id:tid(),name:'opening_sequence',treeType:'cutscene',subCanvas:{nodes:osNodes,conns:osConns}}),
+    mk({id:tid(),name:'shower_sequence', treeType:'cutscene',subCanvas:{nodes:shNodes, conns:shConns}}),
+    mk({id:tid(),name:'mirror_sequence', treeType:'cutscene',subCanvas:{nodes:mirNodes,conns:mirConns}}),
+  ];
+}
+
 /* ── APP ─────────────────────────────────────────────────────────── */
 function App(){
   const [pal,setPal]=useState('void');
@@ -3264,9 +3888,13 @@ function App(){
   /* entity state */
   const init=useMemo(()=>{
     const s=loadState();
-    if(s)return{chars:s.chars,dtrees:s.dtrees,quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT,items:s.items||[],vars:s.vars||[]};
+    if(s)return{chars:s.chars,dtrees:s.dtrees,quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT,items:s.items||[],vars:s.vars||[],cutPresets:s.cutPresets||[]};
     return{chars:SEED_CHARS,dtrees:SEED_TREES,quests:SEED_QUESTS,
-      mt:[{id:'m1',name:'Main Graph',treeType:'general',nodes:[],conns:[]}],amid:'m1',outfits:OUTFITS_DEFAULT,audio:AUDIO_DEFAULT,items:[],vars:[]};
+      mt:[
+        {id:'z1',name:'THE VEIL',zoneColor:'#5090d0',treeType:'general',nodes:[],conns:[]},
+        {id:'z2',name:'MOVE',zoneColor:'#e05030',treeType:'general',nodes:[],conns:[]},
+        {id:'z3',name:'HARBOR',zoneColor:'#1a7870',treeType:'general',nodes:[],conns:[]},
+      ],amid:'z1',outfits:OUTFITS_DEFAULT,audio:AUDIO_DEFAULT,items:[],vars:[],cutPresets:[]};
   },[]);
   const [chars,setChars]=useState(init.chars);
   const [dtrees,setDtrees]=useState(init.dtrees);
@@ -3279,8 +3907,9 @@ function App(){
   const [itemEdit,setItemEdit]=useState(null); /* {item, isNew} */
   const [vars,setVars]=useState(init.vars||[]);
   const [varEdit,setVarEdit]=useState(null); /* {variable, isNew} */
+  const [cutPresets,setCutPresets]=useState(init.cutPresets||[]);
 
-  useEffect(()=>{ saveState({chars,dtrees,quests,mt,amid,outfits,audio,items,vars}); },[chars,dtrees,quests,mt,amid,outfits,audio,items,vars]);
+  useEffect(()=>{ saveState({chars,dtrees,quests,mt,amid,outfits,audio,items,vars,cutPresets}); },[chars,dtrees,quests,mt,amid,outfits,audio,items,vars,cutPresets]);
 
   /* view stack */
   const [vStack,setVStack]=useState([{type:'master',id:null}]);
@@ -3289,7 +3918,7 @@ function App(){
   const popView=()=>setVStack(p=>p.length>1?p.slice(0,-1):p);
 
   /* accordion */
-  const [openAcc,setOpenAcc]=useState('chars');
+  const [openAcc,setOpenAcc]=useState('locs');
   const [openOutfits,setOpenOutfits]=useState(false);
   const [openAudio,setOpenAudio]=useState(false);
   const [showGuide,setShowGuide]=useState(false);
@@ -3322,7 +3951,7 @@ function App(){
       const t=mt.find(t=>t.id===amid)||mt[0]||{nodes:[],conns:[]};
       return{nodes:t.nodes||[],conns:t.conns||[]};
     }
-    const map={character:chars,dialogue:dtrees,quest:quests};
+    const map={character:chars,dialogue:dtrees,quest:quests,cutscene:dtrees};
     const ent=(map[view.type]||[]).find(e=>e.id===view.id);
     return{nodes:ent?.subCanvas?.nodes||[],conns:ent?.subCanvas?.conns||[]};
   },[view,mt,amid,chars,dtrees,quests]);
@@ -3331,7 +3960,7 @@ function App(){
     if(view.type==='master'){
       setMt(prev=>prev.map(t=>t.id===amid?{...t,nodes:typeof fn==='function'?fn(t.nodes):fn}:t));
     }else{
-      const setter={character:setChars,dialogue:setDtrees,quest:setQuests}[view.type];
+      const setter={character:setChars,dialogue:setDtrees,quest:setQuests,cutscene:setDtrees}[view.type];
       if(setter)setter(prev=>prev.map(e=>e.id===view.id?{...e,subCanvas:{...e.subCanvas,nodes:typeof fn==='function'?fn(e.subCanvas.nodes||[]):fn}}:e));
     }
   },[view,amid]);
@@ -3340,7 +3969,7 @@ function App(){
     if(view.type==='master'){
       setMt(prev=>prev.map(t=>t.id===amid?{...t,conns:typeof fn==='function'?fn(t.conns):fn}:t));
     }else{
-      const setter={character:setChars,dialogue:setDtrees,quest:setQuests}[view.type];
+      const setter={character:setChars,dialogue:setDtrees,quest:setQuests,cutscene:setDtrees}[view.type];
       if(setter)setter(prev=>prev.map(e=>e.id===view.id?{...e,subCanvas:{...e.subCanvas,conns:typeof fn==='function'?fn(e.subCanvas.conns||[]):fn}}:e));
     }
   },[view,amid]);
@@ -3349,7 +3978,7 @@ function App(){
   const conns=activeCanvas.conns;
 
   /* master tree management */
-  const newMT=()=>{const id=uid();setMt(p=>[...p,{id,name:'New Graph',treeType:'general',nodes:[],conns:[]}]);setAmid(id);setRenamingTab(id);};
+  const newMT=()=>{const id=uid();setMt(p=>{const color=mkZoneColor(p);return[...p,{id,name:'New Zone',zoneColor:color,treeType:'general',nodes:[],conns:[]}];});setAmid(id);setRenamingTab(id);};
   const delMT=id=>{if(mt.length<=1)return;setMt(p=>p.filter(t=>t.id!==id));if(amid===id)setAmid(mt.find(t=>t.id!==id)?.id||null);};
   const renMT=(id,name)=>setMt(p=>p.map(t=>t.id===id?{...t,name:name||t.name}:t));
   const cycleMT=id=>setMt(p=>p.map(t=>{if(t.id!==id)return t;const types=TREE_TYPES;const next=types[(types.indexOf(t.treeType||'general')+1)%types.length];return{...t,treeType:next};}));
@@ -3359,6 +3988,9 @@ function App(){
   const [zoom,setZoom]=useState(1);
   const canvasRef=useRef();
   const isPanning=useRef(false);
+  /* always-current dtrees ref so stable callbacks can route correctly */
+  const dtreesRef=useRef(dtrees);
+  useEffect(()=>{dtreesRef.current=dtrees;},[dtrees]);
   const panStart=useRef({x:0,y:0,ox:0,oy:0});
 
   /* port positions */
@@ -3508,12 +4140,17 @@ function App(){
     else if(nodeType==='SPAWN_POINT') setPopover({type:'spawn',nodeId});
     else if(nodeType==='LEVEL_CONNECTOR') setPopover({type:'level',nodeId});
     else if(nodeType==='QUEST') setPopover({type:'quest',nodeId,entityId});
-    else if(nodeType==='DIALOGUE_TREE') setVStack(p=>[...p,{type:'dialogue',id:entityId}]);
+    else if(nodeType==='DIALOGUE_TREE'){
+      const tree=dtreesRef.current.find(t=>t.id===entityId);
+      setVStack(p=>[...p,{type:tree?.treeType==='cutscene'?'cutscene':'dialogue',id:entityId}]);
+    }
     else if(['THOUGHTS','STATEMENT','QUESTION','DEAD_END','END_CONVO','LOOP','ITEMS'].includes(nodeType))
       setPopover({type:'dialoguenode',nodeId});
     else if(['QUEST_INFO','QUEST_STEP','QUEST_COLLECTABLE','QUEST_CONDITION','QUEST_END'].includes(nodeType))
       setPopover({type:'questnode',nodeId});
     else if(nodeType==='ITEM') setPopover({type:'itemnode',nodeId});
+    else if(['CUT_START','CUT_LINE','CUT_CHOICE','CUT_VIDEO','CUT_TITLE','CUT_WAIT','CUT_ACTION'].includes(nodeType))
+      setPopover({type:'cutscenenode',nodeId});
   },[]);
 
   /* ── DIALOGUE SERIALIZER ── converts kit node graph → game flat format */
@@ -3711,7 +4348,13 @@ function App(){
     // assemble
     const itemsOut=items.map(i=>({id:i.id,name:i.name,key:i.key||i.name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''),category:i.category||'misc',unique:i.unique||false,description:i.description||'',source:i.source||'scene',icon:i.icon||'',restore:i.restore||0,equippable:i.equippable||false}));
     const varsOut=vars.map(v=>({id:v.id,key:v.key||slugifyKey(v.name),name:v.name,type:v.type||'flag',category:v.category||'story',initial:v.type==='int'?(parseInt(v.initial)||0):v.initial,enumValues:v.enumValues||[],description:v.description||''}));
-    const payload={people,quests:questsOut,dialogue:dialogueOut,scenes:scenesOut,spawns:spawnsOut,levels:levelsOut,items:itemsOut,vars:varsOut,outfits:outfits.filter(o=>o.id!=='any'),audio};
+    // cutscenes — dialogue trees with treeType:'cutscene'
+    const cutsceneOut={};
+    dtrees.filter(t=>t.treeType==='cutscene').forEach(t=>{
+      const key=t.name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+      cutsceneOut[key]={id:t.id,name:t.name,nodes:serializeCutscene(t)};
+    });
+    const payload={people,quests:questsOut,dialogue:dialogueOut,scenes:scenesOut,spawns:spawnsOut,levels:levelsOut,items:itemsOut,vars:varsOut,cutscenes:cutsceneOut,outfits:outfits.filter(o=>o.id!=='any'),audio};
     const json=JSON.stringify(payload,null,2);
     try{
       const name=await writePayload(json);
@@ -3733,7 +4376,7 @@ function App(){
   /* ── VIEW LABEL (for breadcrumb) ─────────────────────────────── */
   const viewName=v=>{
     if(v.type==='master')return'MASTER';
-    const map={character:chars,dialogue:dtrees,quest:quests};
+    const map={character:chars,dialogue:dtrees,quest:quests,cutscene:dtrees};
     const ent=(map[v.type]||[]).find(e=>e.id===v.id);
     return v.type.toUpperCase()+': '+(ent?.name||v.id);
   };
@@ -3799,30 +4442,100 @@ function App(){
       const npcs=chars.filter(c=>c.id!=='c1');
       const octavia=chars.find(c=>c.id==='c1');
       return(<>
-        {/* GRAPHS — browse all node trees */}
+        {/* ZONES */}
         <div className="acc-section">
-          <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='graphs'?null:'graphs')}>
-            <span className="acc-arrow" style={{transform:openAcc==='graphs'?'rotate(90deg)':''}}>&#9658;</span>
-            <span className="acc-label">NODE GRAPHS</span>
+          <div className="acc-header" style={{cursor:'default'}}>
+            <span className="acc-label">ZONES</span>
+            <span className="acc-count">{mt.length}</span>
             <button className="acc-add" onClick={e=>{e.stopPropagation();newMT();}}>+ NEW</button>
-            <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='graphs'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='graphs'?null:'graphs');}}>?</span>
           </div>
-          {openTip==='graphs'&&<div style={{padding:'8px 12px 10px',background:'var(--bg)',borderBottom:'2px solid var(--brutal)',fontSize:'var(--fxs)',color:'var(--text2)',lineHeight:1.75,letterSpacing:'0.5px'}}>{SIDEBAR_TIPS.graphs}</div>}
-          {openAcc==='graphs'&&<div className="acc-body">
+          <div className="acc-body" style={{display:'block',paddingBottom:2}}>
             {mt.map(t=>{
-              const tc=TTC[t.treeType||'general'];
+              const zc=t.zoneColor||ZONE_PALETTE[0];
+              const zs=(t.name||'?').slice(0,2).toUpperCase();
+              const isActive=t.id===amid;
+              const cycleColor=e=>{e.stopPropagation();const i=ZONE_PALETTE.indexOf(t.zoneColor||ZONE_PALETTE[0]);const next=ZONE_PALETTE[(i+1)%ZONE_PALETTE.length];setMt(p=>p.map(x=>x.id===t.id?{...x,zoneColor:next}:x));};
               return(
-                <div key={t.id} className={'sb-item'+(t.id===amid?' sb-active':'')}
-                  style={{borderLeft:`3px solid ${tc}`}}
+                <div key={t.id} className={'zone-tile'+(isActive?' zone-active':'')}
+                  style={{borderLeftColor:isActive?zc:'transparent'}}
                   onClick={()=>setAmid(t.id)}>
-                  <span className="sb-item-icon" style={{color:tc,fontSize:'8px',fontWeight:700}}>{TTL[t.treeType||'general']}</span>
-                  <span className="sb-item-name">{t.name}</span>
-                  <span className="sb-item-sub">{(t.nodes||[]).length} nodes</span>
+                  <div className="zone-badge" style={{background:zc}} title="Click to cycle colour" onClick={cycleColor}>{zs}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    {renamingTab===t.id
+                      ?<input autoFocus className="tree-tab-rename" style={{width:'100%',fontSize:'var(--fxb)'}}
+                          defaultValue={t.name}
+                          onBlur={e=>{renMT(t.id,e.target.value);setRenamingTab(null);}}
+                          onKeyDown={e=>{if(e.key==='Enter'){renMT(t.id,e.target.value);setRenamingTab(null);}e.stopPropagation();}}
+                          onClick={e=>e.stopPropagation()}/>
+                      :<div style={{fontSize:'var(--fxb)',fontWeight:700,letterSpacing:'1px',
+                          color:isActive?zc:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+                          onDoubleClick={e=>{e.stopPropagation();setRenamingTab(t.id);}}>
+                          {t.name}
+                        </div>
+                    }
+                    <div style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'1px',marginTop:1}}>
+                      {(t.nodes||[]).length} nodes
+                    </div>
+                  </div>
+                  {mt.length>1&&<span className="node-del" style={{flexShrink:0,marginRight:4}} onClick={e=>{e.stopPropagation();delMT(t.id);}}>&#x2715;</span>}
                 </div>
               );
             })}
-          </div>}
+          </div>
         </div>
+        {/* LOCATIONS — level map + scenes for this zone */}
+        {(()=>{
+          const lvl=nodes.find(n=>n.type==='LEVEL_CONNECTOR');
+          const scns=nodes.filter(n=>n.type==='SCENE').sort((a,b)=>(a.octaviaWorldX||0)-(b.octaviaWorldX||0));
+          const scnTypeColor={neutral:'#5090d0',store:'#d4a020',combat:'#e05030',elevator:'#7a7090'};
+          const addLevel=()=>{const id=uid();setNodes(p=>[...p,{id,type:'LEVEL_CONNECTOR',label:'New Level',x:80,y:80,mapW:3200,mapH:900,mapScale:1.0,playerSpawn:{x:400,y:620,facing:'right'},npcSpawns:[],exits:[]}]);setTimeout(()=>{setSelectedId(id);setPopover({type:'level',nodeId:id});},40);};
+          const addScene=()=>{const id=uid();const c=scns.length;setNodes(p=>[...p,{id,type:'SCENE',label:'New Scene',x:100+c*30,y:300+c*20,sceneType:'neutral',octaviaWorldX:400+c*200,sceneChars:[],storeItems:[]}]);setTimeout(()=>{setSelectedId(id);setPopover({type:'scene',nodeId:id});},40);};
+          return(
+            <div className="acc-section" style={{borderLeft:'3px solid #3ab0c0'}}>
+              <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='locs'?null:'locs')}>
+                <span className="acc-arrow" style={{transform:openAcc==='locs'?'rotate(90deg)':''}}>&#9658;</span>
+                <span className="acc-label" style={{color:'#3ab0c0'}}>LOCATIONS</span>
+                <span className="acc-count">{scns.length+(lvl?1:0)}</span>
+                <button className="acc-add" onClick={e=>{e.stopPropagation();addScene();}}>+ SCENE</button>
+              </div>
+              {openAcc==='locs'&&(
+                <div className="acc-body">
+                  {/* Level map tile */}
+                  <div className="loc-level" style={{cursor:'default'}}>
+                    <span className="loc-level-badge">LEVEL</span>
+                    {lvl?(
+                      <>
+                        <span style={{fontSize:'var(--fxb)',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{lvl.label||'unnamed'}</span>
+                        <span style={{fontSize:'var(--fxt)',color:'var(--muted)',letterSpacing:'0.5px',flexShrink:0}}>{lvl.mapW||3200}×{lvl.mapH||900}</span>
+                        <button className="node-edit-btn" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();setSelectedId(lvl.id);setPopover({type:'level',nodeId:lvl.id});}}>EDIT</button>
+                      </>
+                    ):(
+                      <button className="acc-add" style={{flex:1,textAlign:'center'}} onClick={addLevel}>+ SET UP LEVEL</button>
+                    )}
+                  </div>
+                  {/* Scene list */}
+                  {scns.length===0
+                    ?<div style={{padding:'6px 10px 8px',fontSize:'var(--fxs)',color:'var(--muted)',letterSpacing:'1px'}}>No scenes — click + SCENE to add one.</div>
+                    :scns.map(n=>{
+                        const tc=scnTypeColor[n.sceneType||'neutral']||'#5090d0';
+                        return(
+                          <div key={n.id} className="loc-scene-row" onClick={()=>setSelectedId(n.id)}>
+                            <span className="loc-type-badge" style={{background:tc}}>{(n.sceneType||'NTR').toUpperCase().slice(0,3)}</span>
+                            <span style={{fontSize:'var(--fxb)',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{n.label||'Scene'}</span>
+                            {n.octaviaWorldX!==undefined&&<span className="loc-worldx">x:{n.octaviaWorldX}</span>}
+                            <button className="node-edit-btn" style={{flexShrink:0,fontSize:'7px'}}
+                              onClick={e=>{e.stopPropagation();setSelectedId(n.id);setPopover({type:'scene',nodeId:n.id});}}>EDIT</button>
+                          </div>
+                        );
+                      })
+                  }
+                  <button className="iadd" style={{margin:'4px 8px',width:'calc(100% - 16px)'}} onClick={addScene}>+ ADD SCENE</button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* OCTAVIA — protagonist node */}
         <div className="acc-section" style={{borderLeft:'2px solid #40e090'}}>
           <div className="acc-header">
@@ -3861,6 +4574,13 @@ function App(){
           <div className="acc-header" onClick={()=>setOpenAcc(o=>o==='trees'?null:'trees')}>
             <span className="acc-arrow" style={{transform:openAcc==='trees'?'rotate(90deg)':''}}>&#9658;</span>
             <span className="acc-label">DIALOGUE TREES</span>
+            {!dtrees.some(t=>t.name==='opening_sequence')&&(
+              <button className="acc-add" style={{borderColor:'#e05030',color:'#e05030',marginRight:2}}
+                title="Load pre-built opening, shower, and mirror sequence cutscene trees"
+                onClick={e=>{e.stopPropagation();setDtrees(p=>[...p,...buildOpeningTemplates()]);showToast('OPENING TEMPLATES LOADED');}}>
+                ▶ LOAD OPENING
+              </button>
+            )}
             <button className="acc-add" onClick={e=>{e.stopPropagation();const id=uid();setDtrees(prev=>[...prev,{id,name:'New Tree',treeType:'quest',outfitCondition:'any',subCanvas:mkC()}]);placeNode('DIALOGUE_TREE','New Tree',{entityId:id});}}>+ ADD</button>
             <span style={{fontSize:'var(--fxt)',fontWeight:700,color:openTip==='trees'?'var(--accent)':'var(--dim)',cursor:'pointer',padding:'1px 5px',border:'1px solid var(--dim)',letterSpacing:'0.5px',flexShrink:0}} onClick={e=>{e.stopPropagation();setOpenTip(o=>o==='trees'?null:'trees');}}>?</span>
           </div>
@@ -3871,7 +4591,7 @@ function App(){
               const mc=t.musicCue||'';
               const mcTrack=(audio||[]).find(a=>a.id===mc);
               return(<div key={t.id} className="sb-item" draggable onDragStart={sbDragStart('DIALOGUE_TREE',t.name,{entityId:t.id})}
-                onClick={()=>pushView('dialogue',t.id)}>
+                onClick={()=>pushView(t.treeType==='cutscene'?'cutscene':'dialogue',t.id)}>
                 <span className="sb-item-icon">&#128172;</span>
                 {renamingTree===t.id
                   ?<input autoFocus className="tree-tab-rename" style={{flex:1,fontSize:'var(--fxb)'}}
@@ -3912,9 +4632,10 @@ function App(){
                 <div key={key} className="sb-item" onClick={()=>{
                   if(exists){pushView('dialogue',exists.id);}
                   else{
-                    const id=uid();
-                    setDtrees(prev=>[...prev,mkTree({id,name:key,treeType:'dialogue'})]);
-                    setTimeout(()=>pushView('dialogue',id),50);
+                    const built=NPC_PREBUILDS[key]?NPC_PREBUILDS[key]():mkTree({id:uid(),name:key,treeType:'dialogue'});
+                    setDtrees(prev=>[...prev,built]);
+                    if(NPC_PREBUILDS[key])showToast(key.toUpperCase()+' — DIALOGUE LOADED');
+                    setTimeout(()=>pushView('dialogue',built.id),50);
                   }
                 }}>
                   <span style={{fontSize:'var(--fxh)',color:exists?'#40c080':'var(--dimmer)',flexShrink:0}}>{exists?'✓':'○'}</span>
@@ -4175,6 +4896,45 @@ function App(){
       </>);
     }
 
+    /* cutscene sub-canvas — own early return like dialogue */
+    if(view.type==='cutscene'){
+      return(<>
+        <div className="acc-section" style={{borderLeft:'3px solid #e05030'}}>
+          <div className="acc-header"><span className="acc-label" style={{color:'#e05030'}}>&#9654; CUTSCENE NODES</span></div>
+          <div className="acc-body">
+            {['CUT_START','CUT_LINE','CUT_CHOICE','CUT_VIDEO','CUT_TITLE','CUT_WAIT','CUT_ACTION'].map(type=>{
+              const m=NM[type];
+              return(<div key={type} className="sb-item" draggable onDragStart={sbDragStart(type,m.lbl,{})} onClick={()=>placeNode(type,m.lbl,{})}>
+                <span className="sb-item-icon" style={{color:m.color}}>{m.icon}</span>
+                <span className="sb-item-name">{m.lbl}</span>
+              </div>);
+            })}
+          </div>
+        </div>
+        <div className="acc-section" style={{borderLeft:'3px solid #d4a020'}}>
+          <div className="acc-header">
+            <span className="acc-label" style={{color:'#d4a020'}}>&#9733; PRESETS</span>
+            <span className="acc-count">{cutPresets.length}</span>
+          </div>
+          <div className="acc-body">
+            {cutPresets.length===0&&<div style={{padding:'10px 12px',fontSize:'var(--fxs)',color:'var(--muted)',letterSpacing:'1px',lineHeight:1.7}}>No presets yet. Edit a node, then click &#9733; SAVE PRESET to save it here.</div>}
+            {cutPresets.map(p=>{
+              const m=NM[p.type]||{icon:'?',color:'#888',lbl:p.type};
+              return(
+                <div key={p.id} className="sb-item" draggable
+                  onDragStart={sbDragStart(p.type,p.name,p.data)}
+                  onClick={()=>placeNode(p.type,p.name,p.data)}>
+                  <span style={{fontSize:'var(--fxt)',fontWeight:700,padding:'1px 5px',background:m.color,color:'var(--bg)',letterSpacing:'0.5px',flexShrink:0}}>{(m.lbl||p.type).slice(0,3)}</span>
+                  <span className="sb-item-name">{p.name}</span>
+                  <span className="node-del" style={{marginLeft:'auto'}} onClick={e=>{e.stopPropagation();setCutPresets(prev=>prev.filter(x=>x.id!==p.id));}}>&#x2715;</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </>);
+    }
+
     const vtypes=VIEW_NODES[view.type]||[];
     return(<div className="acc-section">
       <div className="acc-header"><span className="acc-label">{view.type.toUpperCase()+' NODES'}</span></div>
@@ -4241,39 +5001,32 @@ function App(){
         </select>
         <button className="nav-btn" style={{borderColor:'var(--accent2)',color:'var(--accent2)',boxShadow:'3px 3px 0 var(--accent2)'}} onClick={()=>setShowGuide(p=>!p)}>◉ GUIDE</button>
         <button className="nav-btn" style={{borderColor:'var(--accent)',color:'var(--accent)',boxShadow:'3px 3px 0 var(--accent)'}} onClick={()=>setShowAI(p=>!p)}>✦ AI</button>
-        <button className="nav-btn save-btn" onClick={()=>{saveState({chars,dtrees,quests,mt,amid,outfits,audio,items,vars});showToast('SAVED');}}>SAVE</button>
+        <button className="nav-btn save-btn" onClick={()=>{saveState({chars,dtrees,quests,mt,amid,outfits,audio,items,vars,cutPresets});showToast('SAVED');}}>SAVE</button>
         <button className="nav-btn export-btn" onClick={exportGame}>EXPORT TO GAME</button>
         <button className="nav-btn back-btn" style={{fontSize:'var(--fxt)',padding:'4px 8px'}}
           title="Change the target file for next export"
           onClick={async()=>{_fhHandle.current=null;try{const db=await getDB();db.transaction('h','readwrite').objectStore('h').delete('exportHandle');}catch(e){}showToast('FILE RESET — next export will prompt');}}>&#128196;</button>
       </div>
 
-      {/* TREE TABS / BREADCRUMB */}
+      {/* ZONE BAR / BREADCRUMB */}
       {view.type==='master'?(
         <div className="tree-bar">
-          {mt.map(t=>{
-            const tc=TTC[t.treeType||'general'];
+          {(()=>{
+            const t=mt.find(x=>x.id===amid)||mt[0]||{name:'',nodes:[]};
+            const zc=t.zoneColor||ZONE_PALETTE[0];
+            const zs=(t.name||'?').slice(0,2).toUpperCase();
             return(
-              <div key={t.id} className={'tree-tab'+(t.id===amid?' active':'')}
-                style={t.id===amid?{borderBottomColor:tc}:{}}
-                onClick={()=>setAmid(t.id)} onDoubleClick={e=>{if(e.target.classList.contains('tree-type-badge'))return;setRenamingTab(t.id);}}>
-                <span className="tree-type-badge" style={{background:tc}}
-                  title={'Type: '+TTF[t.treeType||'general']+' — click to cycle'}
-                  onClick={e=>{e.stopPropagation();cycleMT(t.id);}}>
-                  {TTL[t.treeType||'general']}
+              <>
+                <div className="zone-indicator" style={{borderRightColor:'var(--brutal)'}}>
+                  <div style={{width:22,height:22,background:zc,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'7px',fontWeight:700,color:'var(--bg)',letterSpacing:'0.5px',flexShrink:0}}>{zs}</div>
+                  <span style={{fontSize:'var(--fxb)',fontWeight:700,letterSpacing:'2px',color:zc,whiteSpace:'nowrap'}}>{t.name||'—'}</span>
+                </div>
+                <span style={{padding:'0 12px',fontSize:'var(--fxs)',color:'var(--muted)',letterSpacing:'1px',alignSelf:'center',whiteSpace:'nowrap'}}>
+                  {(t.nodes||[]).length}&nbsp;NODES
                 </span>
-                {renamingTab===t.id
-                  ?<input className="tree-tab-rename" autoFocus defaultValue={t.name}
-                      onBlur={e=>{renMT(t.id,e.target.value);setRenamingTab(null);}}
-                      onKeyDown={e=>{if(e.key==='Enter'){renMT(t.id,e.target.value);setRenamingTab(null);}e.stopPropagation();}}
-                      onClick={e=>e.stopPropagation()}/>
-                  :<span className="tree-tab-name">{t.name}</span>
-                }
-                {mt.length>1&&<span className="tree-tab-del" onClick={e=>{e.stopPropagation();delMT(t.id);}}>&#x2715;</span>}
-              </div>
+              </>
             );
-          })}
-          <div className="tree-new" onClick={newMT}>+ NEW</div>
+          })()}
         </div>
       ):(
         <div className="tree-bar">
@@ -4322,7 +5075,14 @@ function App(){
             {nodes.length===0&&(
               <div className="canvas-empty">
                 <div className="canvas-empty-label">{viewName(view)}</div>
-                <div className="canvas-empty-sub">click items in sidebar &#8729; or drag them here</div>
+                {(view.type==='dialogue'||view.type==='cutscene')
+                  ?<>
+                    <div className="canvas-empty-sub" style={{color:'var(--accent)',letterSpacing:'2px'}}>THIS IS THE NODE CANVAS</div>
+                    <div className="canvas-empty-sub" style={{marginTop:4}}>click a node type in the left panel &#8729; it will appear here</div>
+                    <div className="canvas-empty-sub" style={{marginTop:2,opacity:0.6}}>then double-click the node to enter its text</div>
+                  </>
+                  :<div className="canvas-empty-sub">click items in sidebar &#8729; or drag them here</div>
+                }
               </div>
             )}
 
@@ -4416,6 +5176,12 @@ function App(){
         <QuestNodePopover node={nodes.find(x=>x.id===popover.nodeId)}
           dtrees={dtrees}
           onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onClose={()=>setPopover(null)}/>
+      )}
+      {popover?.type==='cutscenenode' && nodes.find(x=>x.id===popover.nodeId) && (
+        <CutsceneNodePopover node={nodes.find(x=>x.id===popover.nodeId)}
+          onSave={updated=>setNodes(p=>p.map(x=>x.id===updated.id?updated:x))}
+          onSavePreset={(name,data)=>setCutPresets(p=>[...p,{id:uid(),name,type:data.type,data}])}
           onClose={()=>setPopover(null)}/>
       )}
 

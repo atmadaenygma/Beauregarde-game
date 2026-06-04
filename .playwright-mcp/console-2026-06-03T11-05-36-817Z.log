@@ -1,0 +1,4 @@
+[     923ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://cdpn.io/gh-o-st/fullpage/raWyooG:1771
+[     924ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://cdpn.io/gh-o-st/fullpage/raWyooG:1771
+[     931ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0
+[    1393ms] [ERROR] Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin @ https://cpwebassets.codepen.io/assets/fullpage/fullpage-defe0b00ddddc98ad4bc2c428e9d6182cd7742e2624f558656dbfb986d4ba13c.css:0

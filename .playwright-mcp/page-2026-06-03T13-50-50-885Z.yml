@@ -1,0 +1,32 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - heading "⚠️ Do not enter passwords or personal information on this page. ⚠️" [level=1] [ref=e3]
+    - text: This is a code demo posted by a web developer on
+    - link "CodePen" [ref=e4] [cursor=pointer]:
+      - /url: https://codepen.io
+    - text: .
+    - text: A referer from CodePen is required to render this page view, and your browser is not sending one (
+    - link "more details" [ref=e5] [cursor=pointer]:
+      - /url: https://blog.codepen.io/2017/10/05/regarding-referer-headers/
+    - text: ).
+  - main [ref=e6]:
+    - iframe [ref=e7]:
+      - generic [active] [ref=f4e1]:
+        - generic [ref=f4e2]: C
+        - generic [ref=f4e3]: S
+        - generic [ref=f4e4]: S
+        - generic [ref=f4e6]: S
+        - generic [ref=f4e7]: m
+        - generic [ref=f4e8]: o
+        - generic [ref=f4e9]: k
+        - generic [ref=f4e10]: "y"
+        - generic [ref=f4e12]: T
+        - generic [ref=f4e13]: e
+        - generic [ref=f4e14]: x
+        - generic [ref=f4e15]: t
+        - generic [ref=f4e17]: E
+        - generic [ref=f4e18]: f
+        - generic [ref=f4e19]: f
+        - generic [ref=f4e20]: e
+        - generic [ref=f4e21]: c
+        - generic [ref=f4e22]: t

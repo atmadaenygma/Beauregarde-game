@@ -1,0 +1,3 @@
+[     503ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://codepen.io/Valgo/pen/PowZaNY:1566
+[     503ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://codepen.io/Valgo/pen/PowZaNY:1566
+[    1792ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://codepen.io/Valgo/pen/PowZaNY:0

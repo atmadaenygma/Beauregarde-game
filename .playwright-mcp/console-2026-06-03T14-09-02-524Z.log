@@ -1,0 +1,14 @@
+[       3ms] [LOG] All Blob URLs have been revoked @ pen.js:528
+[       3ms] [LOG] All resources have been cleaned up @ pen.js:575
+[     527ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://cdpn.io/fyildiz1974/fullpage/RNRgjpj:4147
+[     527ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://cdpn.io/fyildiz1974/fullpage/RNRgjpj:4147
+[     531ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0
+[     819ms] [LOG] ✓ Raindrops.js loaded: https://fyildiz1974.github.io/web/files/raindrops.js @ pen.js:97
+[     916ms] [LOG] Waiting for Raindrops... (1/10) @ pen.js:143
+[     934ms] [LOG] Audio successfully loaded: https://fyildiz1974.github.io/web/files/rain.mp3 @ pen.js:430
+[     934ms] [LOG] Audio is ready to play @ pen.js:436
+[    1219ms] [LOG] Waiting for Raindrops... (2/10) @ pen.js:143
+[    1375ms] [ERROR] A bad HTTP response code (404) was received when fetching the script. @ :0
+[    1375ms] [WARNING] ServiceWorker registration failed: TypeError: Failed to register a ServiceWorker for scope ('https://cdpn.io/fyildiz1974/fullpage/') with script ('https://cdpn.io/fyildiz1974/fullpage/sw.js'): A bad HTTP response code (404) was received when fetching the script. @ pen.js:628
+[    2442ms] [LOG] Raindrops: Maximum retry limit exceeded, effect may be running in manual mode @ pen.js:135
+[    2647ms] [LOG] Raindrops: Maximum retry limit exceeded, effect may be running in manual mode @ pen.js:135

@@ -1,0 +1,310 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "CodePen Home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: CodePen Home
+      - generic [ref=e10]:
+        - 'heading "Transmission: Glowing Text Animation" [level=1] [ref=e11]':
+          - generic [ref=e12]: "Transmission: Glowing Text Animation"
+        - generic [ref=e13]:
+          - link "Stephen Scaff" [ref=e14] [cursor=pointer]:
+            - /url: /StephenScaff
+          - button "Follow" [ref=e15] [cursor=pointer]:
+            - img
+            - text: Follow
+      - button "Love" [ref=e16] [cursor=pointer]:
+        - img
+        - generic [ref=e17]: Love
+      - generic [ref=e19]:
+        - button "Settings" [ref=e20] [cursor=pointer]:
+          - img
+          - text: Settings
+        - button "Change View" [ref=e22] [cursor=pointer]:
+          - img
+      - link "Sign Up" [ref=e23] [cursor=pointer]:
+        - /url: /accounts/signup/user/free
+      - link "Log In" [ref=e24] [cursor=pointer]:
+        - /url: /login
+  - option "None" [selected]
+  - option "Haml"
+  - option "Markdown"
+  - option "Slim"
+  - option "Pug"
+  - generic [ref=e26]:
+    - generic [ref=e27]:
+      - generic "Double-click to expand." [ref=e28]:
+        - heading "HTML" [level=2]:
+          - img
+          - generic: HTML
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - heading [level=2] [ref=e32]
+            - generic:
+              - text: 0 unsaved changes
+              - generic:
+                - img
+          - generic [ref=e33]:
+            - button "Open HTML Settings" [ref=e34] [cursor=pointer]:
+              - img
+            - button "HTML Options" [ref=e35] [cursor=pointer]:
+              - generic [ref=e36]: HTML Options
+              - img
+        - generic [ref=e38]:
+          - textbox "HTML Code Editor" [active] [ref=e39]
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]: "1"
+              - generic [ref=e48] [cursor=pointer]: ▾
+              - text: <main>
+            - generic [ref=e49]:
+              - generic [ref=e50]: "2"
+              - generic [ref=e52] [cursor=pointer]: ▾
+              - text: <section class="mast">
+            - generic [ref=e53]:
+              - generic [ref=e54]: "3"
+              - text: <figure class="mast__bg" style="background-image:url(https://unsplash.it/1800/800?image=893)"></figure>
+            - generic [ref=e55]:
+              - generic [ref=e56]: "4"
+              - generic [ref=e58] [cursor=pointer]: ▾
+              - text: <header class="mast__header">
+            - generic [ref=e59]:
+              - generic [ref=e60]: "5"
+              - generic [ref=e62] [cursor=pointer]: ▾
+              - text: <h1 class="mast__title js-spanize">Incoming Transmission</h1>
+            - generic [ref=e63]:
+              - generic [ref=e64]: "6"
+              - text: <hr class="sep"/>
+            - generic [ref=e65]:
+              - generic [ref=e66]: "7"
+              - generic [ref=e68] [cursor=pointer]: ▾
+              - text: <p class="mast__text js-spanize">
+            - generic [ref=e69]:
+              - generic [ref=e70]: "8"
+              - text: This is a story, all about how,
+            - generic [ref=e71]:
+              - generic [ref=e72]: "9"
+              - text: My life got twisted upside down.
+            - generic [ref=e73]:
+              - generic [ref=e74]: "10"
+              - text: So I'd like to tell a story, just sit right there.
+            - generic [ref=e75]:
+              - generic [ref=e76]: "11"
+              - text: And I'll tell you how I became the prince of Bel Air.</p>
+            - generic [ref=e78]: "12"
+            - generic [ref=e79]:
+              - generic [ref=e80]: "13"
+              - text: </header>
+            - generic [ref=e81]:
+              - generic [ref=e82]: "14"
+              - text: </section>
+            - generic [ref=e83]:
+              - generic [ref=e84]: "15"
+              - text: </main>
+      - generic "Double-click to expand." [ref=e89]:
+        - heading "CSS (SCSS)" [level=2]:
+          - img
+          - generic: CSS
+          - generic: (SCSS)
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - heading [level=2] [ref=e93]
+          - generic [ref=e94]:
+            - button "Open CSS Settings" [ref=e95] [cursor=pointer]:
+              - img
+            - button "CSS Options" [ref=e96] [cursor=pointer]:
+              - generic [ref=e97]: CSS Options
+              - img
+        - generic [ref=e99]:
+          - textbox "CSS Code Editor" [ref=e100]
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - generic [ref=e107]: "1"
+              - text: "// Config: fonts"
+            - generic [ref=e108]:
+              - generic [ref=e109]: "2"
+              - text: "$font-mono: \"Cutive Mono\", monospace;"
+            - generic [ref=e110]:
+              - generic [ref=e111]: "3"
+              - text: "// Config: Ease"
+            - generic [ref=e112]:
+              - generic [ref=e113]: "4"
+              - text: "$ease-cb: cubic-bezier(.19,1,.22,1);"
+            - generic [ref=e115]: "5"
+            - generic [ref=e116]:
+              - generic [ref=e117]: "6"
+              - text: //--------------------------
+            - generic [ref=e118]:
+              - generic [ref=e119]: "7"
+              - text: // nth-trans-delay()
+            - generic [ref=e120]:
+              - generic [ref=e121]: "8"
+              - text: "// @description: Transition Delay on nth-childs"
+            - generic [ref=e122]:
+              - generic [ref=e123]: "9"
+              - text: "// @param: $delay_items: [7] - number of nth-of-type items to create"
+            - generic [ref=e124]:
+              - generic [ref=e125]: "10"
+              - text: "// @param: $delay_time:[1.5s] - transition-dealy value"
+            - generic [ref=e126]:
+              - generic [ref=e127]: "11"
+              - text: //--------------------------
+            - generic [ref=e128]:
+              - generic [ref=e129]: "12"
+              - generic [ref=e131] [cursor=pointer]: ▾
+              - text: "@mixin nth-trans-delay($delay_items: 7, $delay_time: 0.2s){"
+            - generic [ref=e132]:
+              - generic [ref=e133]: "13"
+              - generic [ref=e135] [cursor=pointer]: ▾
+              - text: "@for $i from 1 through $delay_items {"
+            - generic [ref=e136]:
+              - generic [ref=e137]: "14"
+              - generic [ref=e139] [cursor=pointer]: ▾
+              - text: "&:nth-child(#{$i}) {"
+            - generic [ref=e140]:
+              - generic [ref=e141]: "15"
+              - text: "transition-delay: $delay_time * $i;"
+            - generic [ref=e142]:
+              - generic [ref=e143]: "16"
+              - text: "}"
+            - generic [ref=e144]:
+              - generic [ref=e145]: "17"
+              - text: "}"
+            - generic [ref=e146]:
+              - generic [ref=e147]: "18"
+              - text: "}"
+            - generic [ref=e149]: "19"
+            - generic [ref=e150]:
+              - generic [ref=e151]: "20"
+              - text: //--------------------------
+            - generic [ref=e152]:
+              - generic [ref=e153]: "21"
+              - text: // nth-ani-delay()
+            - generic [ref=e154]:
+              - generic [ref=e155]: "22"
+              - text: "// @description: Animation Delay on nth-childs"
+            - generic [ref=e156]:
+              - generic [ref=e157]: "23"
+              - text: "// @param: $delay_items: [7] - number of nth-of-type items to create"
+      - generic "Double-click to expand." [ref=e162]:
+        - heading "JS" [level=2]:
+          - img
+          - generic: JS
+      - generic [ref=e163]:
+        - generic [ref=e164]:
+          - heading [level=2] [ref=e166]
+          - generic [ref=e167]:
+            - button "Open JS Settings" [ref=e168] [cursor=pointer]:
+              - img
+            - button "JS Options" [ref=e169] [cursor=pointer]:
+              - generic [ref=e170]: JS Options
+              - img
+        - generic [ref=e172]:
+          - textbox "JavaScript Code Editor" [ref=e173]
+          - generic [ref=e178]:
+            - generic [ref=e179]:
+              - generic [ref=e180]: "1"
+              - generic [ref=e182] [cursor=pointer]: ▾
+              - text: /*-----
+            - generic [ref=e183]:
+              - generic [ref=e184]: "2"
+              - text: Spanizer
+            - generic [ref=e185]:
+              - generic [ref=e186]: "3"
+              - text: "- Wraps letters with spans, for css animations"
+            - generic [ref=e187]:
+              - generic [ref=e188]: "4"
+              - text: "-----*/"
+            - generic [ref=e189]:
+              - generic [ref=e190]: "5"
+              - generic [ref=e192] [cursor=pointer]: ▾
+              - text: "(function($) {"
+            - generic [ref=e193]:
+              - generic [ref=e194]: "6"
+              - text: var s,
+            - generic [ref=e195]:
+              - generic [ref=e196]: "7"
+              - generic [ref=e198] [cursor=pointer]: ▾
+              - text: "spanizeLetters = {"
+            - generic [ref=e199]:
+              - generic [ref=e200]: "8"
+              - generic [ref=e202] [cursor=pointer]: ▾
+              - text: "settings: {"
+            - generic [ref=e203]:
+              - generic [ref=e204]: "9"
+              - text: "letters: $('.js-spanize'),"
+            - generic [ref=e205]:
+              - generic [ref=e206]: "10"
+              - text: "},"
+            - generic [ref=e207]:
+              - generic [ref=e208]: "11"
+              - generic [ref=e210] [cursor=pointer]: ▾
+              - text: "init: function() {"
+            - generic [ref=e211]:
+              - generic [ref=e212]: "12"
+              - text: s = this.settings;
+            - generic [ref=e213]:
+              - generic [ref=e214]: "13"
+              - text: this.bindEvents();
+            - generic [ref=e215]:
+              - generic [ref=e216]: "14"
+              - text: "},"
+            - generic [ref=e217]:
+              - generic [ref=e218]: "15"
+              - generic [ref=e220] [cursor=pointer]: ▾
+              - text: "bindEvents: function(){"
+            - generic [ref=e221]:
+              - generic [ref=e222]: "16"
+              - generic [ref=e224] [cursor=pointer]: ▾
+              - text: "s.letters.html(function (i, el) {"
+            - generic [ref=e225]:
+              - generic [ref=e226]: "17"
+              - text: //spanizeLetters.joinChars();
+            - generic [ref=e227]:
+              - generic [ref=e228]: "18"
+              - text: var spanizer = $.trim(el).split("");
+            - generic [ref=e229]:
+              - generic [ref=e230]: "19"
+              - text: return '<span>' + spanizer.join('</span><span>') + '</span>';
+            - generic [ref=e231]:
+              - generic [ref=e232]: "20"
+              - text: "});"
+            - generic [ref=e233]:
+              - generic [ref=e234]: "21"
+              - text: "},"
+            - generic [ref=e235]:
+              - generic [ref=e236]: "22"
+              - text: "};"
+            - generic [ref=e237]:
+              - generic [ref=e238]: "23"
+              - text: spanizeLetters.init();
+            - generic [ref=e239]:
+              - generic [ref=e240]: "24"
+              - text: "})(jQuery);"
+    - generic [ref=e247]:
+      - iframe [ref=e249]:
+        - main [ref=f5e2]:
+          - generic [ref=f5e3]:
+            - figure [ref=f5e4]
+            - generic [ref=f5e5]:
+              - heading "Incoming Transmission" [level=1] [ref=f5e6]
+              - separator [ref=f5e7]
+              - paragraph [ref=f5e8]: This is a story, all about how, My life got twisted upside down. So I'd like to tell a story, just sit right there. And I'll tell you how I became the prince of Bel Air.
+      - text: ">"
+  - contentinfo [ref=e250]:
+    - generic [ref=e251]:
+      - img [ref=e253]
+      - button "Fork" [ref=e254] [cursor=pointer]:
+        - img
+        - text: Fork
+      - button "Embed" [ref=e255] [cursor=pointer]
+      - button "Export" [ref=e257] [cursor=pointer]
+      - button "Share" [ref=e259] [cursor=pointer]
+    - generic [ref=e260]:
+      - button "Console" [ref=e261] [cursor=pointer]
+      - button "Assets" [ref=e262] [cursor=pointer]
+      - button "Comments" [ref=e263] [cursor=pointer]
+      - button "Shortcuts" [ref=e264] [cursor=pointer]
+  - text: Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl

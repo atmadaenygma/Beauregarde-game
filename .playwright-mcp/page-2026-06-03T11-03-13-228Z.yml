@@ -1,0 +1,290 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "CodePen Home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: CodePen Home
+      - generic [ref=e10]:
+        - heading "M-M-M-Maaxx News" [level=1] [ref=e11]:
+          - generic [ref=e12]: M-M-M-Maaxx News
+        - generic [ref=e13]:
+          - link "Josh" [ref=e14] [cursor=pointer]:
+            - /url: /gh-o-st
+          - link "PRO" [ref=e15] [cursor=pointer]:
+            - /url: https://codepen.io/pro
+            - img [ref=e16]
+          - button "Follow" [ref=e19] [cursor=pointer]:
+            - img
+            - text: Follow
+      - button "Love" [ref=e20] [cursor=pointer]:
+        - img
+        - generic [ref=e21]: Love
+      - generic [ref=e23]:
+        - button "Settings" [ref=e24] [cursor=pointer]:
+          - img
+          - text: Settings
+        - button "Change View" [ref=e26] [cursor=pointer]:
+          - img
+      - link "Sign Up" [ref=e27] [cursor=pointer]:
+        - /url: /accounts/signup/user/free
+      - link "Log In" [ref=e28] [cursor=pointer]:
+        - /url: /login
+  - option "None" [selected]
+  - option "Haml"
+  - option "Markdown"
+  - option "Slim"
+  - option "Pug"
+  - generic [ref=e30]:
+    - generic [ref=e31]:
+      - generic "Double-click to expand." [ref=e32]:
+        - heading "HTML" [level=2]:
+          - img
+          - generic: HTML
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - heading [level=2] [ref=e36]
+            - generic:
+              - text: 0 unsaved changes
+              - generic:
+                - img
+          - generic [ref=e37]:
+            - button "Open HTML Settings" [ref=e38] [cursor=pointer]:
+              - img
+            - button "HTML Options" [ref=e39] [cursor=pointer]:
+              - generic [ref=e40]: HTML Options
+              - img
+        - generic [ref=e42]:
+          - textbox "HTML Code Editor" [active] [ref=e43]
+          - generic [ref=e48]:
+            - generic [ref=e49]:
+              - generic [ref=e50]: "1"
+              - generic [ref=e52] [cursor=pointer]: ▾
+              - text: <div class="backdrop" aria-hidden="true">
+            - generic [ref=e53]:
+              - generic [ref=e54]: "2"
+              - text: <div class="tunnel tunnel-back"></div>
+            - generic [ref=e55]:
+              - generic [ref=e56]: "3"
+              - text: <div class="tunnel tunnel-front"></div>
+            - generic [ref=e57]:
+              - generic [ref=e58]: "4"
+              - text: <div class="horizon-flash"></div>
+            - generic [ref=e59]:
+              - generic [ref=e60]: "5"
+              - text: </div>
+            - generic [ref=e62]: "6"
+            - generic [ref=e63]:
+              - generic [ref=e64]: "7"
+              - generic [ref=e66] [cursor=pointer]: ▾
+              - text: <div class="broadcast-bugs" aria-hidden="true">
+            - generic [ref=e67]:
+              - generic [ref=e68]: "8"
+              - generic [ref=e70] [cursor=pointer]: ▾
+              - text: <span class="bug bug-right">VTR SYNC // 23</span>
+            - generic [ref=e71]:
+              - generic [ref=e72]: "9"
+              - text: </div>
+            - generic [ref=e74]: "10"
+            - generic [ref=e75]:
+              - generic [ref=e76]: "11"
+              - text: <div class="static" aria-hidden="true"></div>
+            - generic [ref=e77]:
+              - generic [ref=e78]: "12"
+              - text: <div class="scanlines" aria-hidden="true"></div>
+            - generic [ref=e79]:
+              - generic [ref=e80]: "13"
+              - text: <div class="crt-vignette" aria-hidden="true"></div>
+            - generic [ref=e82]: "14"
+            - generic [ref=e83]:
+              - generic [ref=e84]: "15"
+              - generic [ref=e86] [cursor=pointer]: ▾
+              - text: <div class="potato" aria-hidden="true">
+            - generic [ref=e87]:
+              - generic [ref=e88]: "16"
+              - text: <img class="potato-bg" src="https://assets.codepen.io/3436190/potato.gif" alt="">
+            - generic [ref=e89]:
+              - generic [ref=e90]: "17"
+              - text: <img class="potato-fg" src="https://assets.codepen.io/3436190/potato.gif" alt="">
+            - generic [ref=e91]:
+              - generic [ref=e92]: "18"
+              - text: </div>
+            - generic [ref=e94]: "19"
+            - generic [ref=e95]:
+              - generic [ref=e96]: "20"
+              - generic [ref=e98] [cursor=pointer]: ▾
+              - text: <main class="signal">
+            - generic [ref=e99]:
+              - generic [ref=e100]: "21"
+              - generic [ref=e102] [cursor=pointer]: ▾
+              - text: <header class="head">
+            - generic [ref=e103]:
+              - generic [ref=e104]: "22"
+              - generic [ref=e106] [cursor=pointer]: ▾
+              - text: <span class="net">NET&nbsp;23</span>
+            - generic [ref=e108]: "23"
+            - generic [ref=e109]:
+              - generic [ref=e110]: "24"
+              - generic [ref=e112] [cursor=pointer]: ▾
+              - text: <h1 class="title">
+      - generic "Double-click to expand." [ref=e117]:
+        - heading "CSS" [level=2]:
+          - img
+          - generic: CSS
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - heading [level=2] [ref=e121]
+          - generic [ref=e122]:
+            - button "Open CSS Settings" [ref=e123] [cursor=pointer]:
+              - img
+            - button "CSS Options" [ref=e124] [cursor=pointer]:
+              - generic [ref=e125]: CSS Options
+              - img
+        - generic [ref=e127]:
+          - textbox "CSS Code Editor" [ref=e128]
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]: "1"
+              - generic [ref=e137] [cursor=pointer]: ▾
+              - text: ":root {"
+            - generic [ref=e138]:
+              - generic [ref=e139]: "2"
+              - text: "--yellow: #ffd500;"
+            - generic [ref=e140]:
+              - generic [ref=e141]: "3"
+              - text: "--yellow-hot: #fff000;"
+            - generic [ref=e142]:
+              - generic [ref=e143]: "4"
+              - text: "--cyan: #00e5ff;"
+            - generic [ref=e144]:
+              - generic [ref=e145]: "5"
+              - text: "--cyan-soft: #00a8ff;"
+            - generic [ref=e146]:
+              - generic [ref=e147]: "6"
+              - text: "--green: #00ff66;"
+            - generic [ref=e148]:
+              - generic [ref=e149]: "7"
+              - text: "--magenta: #ff1aa1;"
+            - generic [ref=e150]:
+              - generic [ref=e151]: "8"
+              - text: "--pink: #ff65c8;"
+            - generic [ref=e152]:
+              - generic [ref=e153]: "9"
+              - text: "--purple: #19002c;"
+            - generic [ref=e154]:
+              - generic [ref=e155]: "10"
+              - text: "--deep-purple: #090012;"
+            - generic [ref=e156]:
+              - generic [ref=e157]: "11"
+              - text: "--black: #030106;"
+            - generic [ref=e158]:
+              - generic [ref=e159]: "12"
+              - text: "--white: #f4ecff;"
+            - generic [ref=e160]:
+              - generic [ref=e161]: "13"
+              - text: "--tube: #11170f;"
+            - generic [ref=e163]: "14"
+            - generic [ref=e164]:
+              - generic [ref=e165]: "15"
+              - text: "--font-display: \"Bungee\", \"Impact\", sans-serif;"
+            - generic [ref=e166]:
+              - generic [ref=e167]: "16"
+              - text: "--font-inline: \"Bungee Inline\", \"Impact\", sans-serif;"
+            - generic [ref=e168]:
+              - generic [ref=e169]: "17"
+              - text: "--font-crt: \"VT323\", \"Courier New\", monospace;"
+            - generic [ref=e170]:
+              - generic [ref=e171]: "18"
+              - text: "--font-future: \"Orbitron\", sans-serif;"
+            - generic [ref=e172]:
+              - generic [ref=e173]: "19"
+              - text: "}"
+            - generic [ref=e175]: "20"
+            - generic [ref=e176]:
+              - generic [ref=e177]: "21"
+              - generic [ref=e179] [cursor=pointer]: ▾
+              - text: "* {"
+            - generic [ref=e180]:
+              - generic [ref=e181]: "22"
+              - text: "box-sizing: border-box;"
+            - generic [ref=e182]:
+              - generic [ref=e183]: "23"
+              - text: "}"
+            - generic [ref=e185]: "24"
+      - generic "Double-click to expand." [ref=e190]:
+        - heading "JS" [level=2]:
+          - img
+          - generic: JS
+      - generic [ref=e191]:
+        - generic [ref=e192]:
+          - heading [level=2] [ref=e194]
+          - generic [ref=e195]:
+            - button "Open JS Settings" [ref=e196] [cursor=pointer]:
+              - img
+            - button "JS Options" [ref=e197] [cursor=pointer]:
+              - generic [ref=e198]: JS Options
+              - img
+        - generic [ref=e200]:
+          - textbox "JavaScript Code Editor" [ref=e201]
+          - generic [ref=e206]: "1"
+    - generic [ref=e213]:
+      - iframe [ref=e215]:
+        - generic [active] [ref=f1e1]:
+          - generic:
+            - generic: VTR SYNC // 23
+          - main [ref=f1e6]:
+            - generic [ref=f1e7]:
+              - generic [ref=f1e8]: NET 23
+              - heading "M-M-MAX NEWSROOM M-M-MAX NEWSROOM M-M-MAX NEWSROOM" [level=1] [ref=f1e9]:
+                - generic [ref=f1e10]: M-M-MAX NEWSROOM M-M-MAX NEWSROOM M-M-MAX NEWSROOM
+              - generic [ref=f1e11]: "|||| ||| ||"
+            - complementary [ref=f1e12]
+            - generic [ref=f1e21]:
+              - text: NETWORK 23
+              - generic [ref=f1e22]:
+                - article [ref=f1e23]:
+                  - generic [ref=f1e24]:
+                    - text: MAXFEED
+                    - generic [ref=f1e25]: CH 23 · NOW ON AIR
+                    - heading "Computing and Displaying Discounted Prices in CSS" [level=2] [ref=f1e26]:
+                      - link "Computing and Displaying Discounted Prices in CSS" [ref=f1e27] [cursor=pointer]:
+                        - /url: https://css-tricks.com/computing-and-displaying-discounted-prices-in-css/
+                    - generic [ref=f1e28]:
+                      - link "CSS Tricks" [ref=f1e29] [cursor=pointer]:
+                        - /url: https://css-tricks.com/
+                      - text: ·
+                      - time [ref=f1e30]: May 14, 2026
+                    - navigation [ref=f1e31]:
+                      - link "◀ PREV" [ref=f1e32] [cursor=pointer]:
+                        - /url: "#slide-12"
+                      - generic [ref=f1e33]: 01 / 12
+                      - link "NEXT ▶" [ref=f1e34] [cursor=pointer]:
+                        - /url: "#slide-2"
+                - text: MAXFEED MAXFEED MAXFEED MAXFEED MAXFEED MAXFEED MAXFEED MAXFEED MAXFEED MAXFEED MAXFEED
+                - text: TRANSMISSION LOCK // HEADROOM FEED
+              - generic [ref=f1e36]: CH 23 · LIVE · ILLEGAL CARRIER
+            - region "now reading" [ref=f1e37]:
+              - generic [ref=f1e38]: B-B-BREAKING
+              - generic [ref=f1e40]: Network 23 transmits the week’s f-f-frontend dispatches Network 23 transmits the week’s f-f-frontend dispatches Network 23 transmits the week’s f-f-frontend dispatches
+            - generic [ref=f1e41]:
+              - generic [ref=f1e42]: CH 23
+              - generic [ref=f1e43]: 22:47:13
+              - generic [ref=f1e44]: "SIGNAL: UNSTABLE"
+              - generic [ref=f1e45]: 20 MIN. INTO THE FUTURE
+      - text: ">"
+  - contentinfo [ref=e216]:
+    - generic [ref=e217]:
+      - img [ref=e219]
+      - button "Fork" [ref=e220] [cursor=pointer]:
+        - img
+        - text: Fork
+      - button "Embed" [ref=e221] [cursor=pointer]
+      - button "Export" [ref=e223] [cursor=pointer]
+      - button "Share" [ref=e225] [cursor=pointer]
+    - generic [ref=e226]:
+      - button "Console" [ref=e227] [cursor=pointer]
+      - button "Assets" [ref=e228] [cursor=pointer]
+      - button "Comments" [ref=e229] [cursor=pointer]
+      - button "Shortcuts" [ref=e230] [cursor=pointer]
+  - text: Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl Ctrl

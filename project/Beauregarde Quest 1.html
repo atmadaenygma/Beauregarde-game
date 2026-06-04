@@ -428,9 +428,15 @@ const CHAR_ANIMATIONS={
     jump_start_right:'../graphics/characters/cyberOctavia/cyber_octavia_jump_right.webm',
     jump_air_right:'../graphics/characters/cyberOctavia/cyber_octavia_jump_in_air_right.webm',
     jump_end_right:'../graphics/characters/cyberOctavia/cyber_octavia_jump_end_right.webm',
-    kick_right:'../graphics/characters/cyberOctavia/cyber_octavia_right_mid_kick.webm',
+    kick_right:'../graphics/characters/cyberOctavia/combat/powerful_kick_right.webm',
+    sweep_kick_right:'../graphics/characters/cyberOctavia/combat/sweep_kick_right.webm',
+    roundhouse_kick_right:'../graphics/characters/cyberOctavia/combat/low_high_kick.webm',
+    double_kick_right:'../graphics/characters/cyberOctavia/combat/running_kick.webm',
+    block_right:'../graphics/characters/cyberOctavia/combat/esquiva_right.webm',
+    roll_right:'../graphics/characters/cyberOctavia/combat/au_to_role.webm',
     walk:'../graphics/characters/cyberOctavia/cyber_octavia_walk_right.webm',
     run:'../graphics/characters/cyberOctavia/cyber_octavia_run_right.webm',
+    combatScale:1.4, // scale combat animations up to match idle/walk visual size
   },
   hoodie:{
     rightBased:true,
@@ -449,7 +455,12 @@ const getCharAnimation=(outfit,facing,action)=>{
     if(action==='jump_start') return {src:def.jump_start_right||def.walk||null, flip:facing==='left'};
     if(action==='jump_air')   return {src:def.jump_air_right||def.jump_start_right||def.walk||null, flip:facing==='left'};
     if(action==='jump_end')   return {src:def.jump_end_right||def.jump_start_right||def.walk||null, flip:facing==='left'};
-    if(action==='kick')       return {src:def.kick_right||def.walk||null, flip:facing==='left'};
+    if(action==='kick')            return {src:def.kick_right||def.walk||null,            flip:facing==='left'};
+    if(action==='sweep_kick')      return {src:def.sweep_kick_right||def.kick_right||null,  flip:facing==='left'};
+    if(action==='roundhouse_kick') return {src:def.roundhouse_kick_right||def.kick_right||null, flip:facing==='left'};
+    if(action==='double_kick')     return {src:def.double_kick_right||def.kick_right||null, flip:facing==='left'};
+    if(action==='block')           return {src:def.block_right||def.idle_left||null,        flip:facing==='left'};
+    if(action==='roll')            return {src:def.roll_right||def.kick_right||null,        flip:facing==='left'};
     const src=(action==='run'&&def.run)?def.run:def.walk;
     return {src:src||null, flip:facing==='left'};
   }
@@ -535,6 +546,7 @@ const PHONE_APPS=[
 // Add tracks to audio/music/instrumentals/ and audio/music/vocals/.
 // Each entry: {id, title, artist, src, duration}
 // src is relative to the project folder: '../audio/music/instrumentals/filename.mp3'
+const RECORD_COLORS=['#88e030','#fff0c0','#d84878','#6cc4ff','#f0d060','#ff8855','#c060e0','#4ab8d0'];
 const MUSIC_LIB={
   instrumentals:[
     {id:'i1',title:'THE TORN APART',artist:'instrumental',src:'../audio/music/instrumentals/The Torn Apart.mp3',duration:''},
@@ -816,22 +828,31 @@ function ChromaKeyVideo({src,flip,height,playing,playbackRate,filterStr}){
   );
 }
 
-function Char({facing,walking,running=false,crouching=false,kicking=false,jumpPhase=null,vertOffset=0,charBottom=116,charX,charHeight=371,currentOutfit='cyber_octavia'}){
+function Char({facing,walking,running=false,crouching=false,kicking=false,sweepKicking=false,roundhouseKicking=false,doubleKicking=false,blocking=false,rolling=false,jumpPhase=null,vertOffset=0,charBottom=116,charX,charHeight=371,currentOutfit='cyber_octavia'}){
   const vidRef=useRef(null);
-  const action=jumpPhase?('jump_'+jumpPhase):kicking?'kick':crouching?(walking||running?'crouch_walk':'crouch'):running?'run':walking?'walk':'idle';
+  const anyOneShot=kicking||sweepKicking||roundhouseKicking||doubleKicking||blocking||rolling;
+  const action=jumpPhase?('jump_'+jumpPhase)
+    :rolling?'roll'
+    :blocking?'block'
+    :doubleKicking?'double_kick'
+    :roundhouseKicking?'roundhouse_kick'
+    :sweepKicking?'sweep_kick'
+    :kicking?'kick'
+    :crouching?(walking||running?'crouch_walk':'crouch')
+    :running?'run':walking?'walk':'idle';
   const effectiveHeight=jumpPhase?Math.round(charHeight*0.9):crouching?Math.round(charHeight*0.75):charHeight;
   const {src:animSrc,flip:shouldFlip}=getCharAnimation(currentOutfit,facing,action);
-  // True only for outfits with dedicated idle files (rags). Others share the walk file.
   const hasIdleAnim=!!CHAR_ANIMATIONS[currentOutfit]?.idle_left;
+
   useEffect(()=>{
     const v=vidRef.current;if(!v||!animSrc)return;
-    // Hide until alpha is decoded to prevent green flash on src change
     v.style.opacity='0';
     v.load();v.muted=true;
-    v.playbackRate=action==='kick'?2.5:walking?0.65:1;
+    v.loop=!anyOneShot;
+    v.playbackRate=anyOneShot?2.5:walking?0.65:1;
     const onReady=()=>{v.style.opacity='1';};
     v.addEventListener('loadeddata',onReady,{once:true});
-    if(action==='kick'){
+    if(anyOneShot){
       const onEnded=()=>document.dispatchEvent(new CustomEvent('kickEnd'));
       v.addEventListener('ended',onEnded,{once:true});
       v.play().catch(()=>{});
@@ -839,31 +860,36 @@ function Char({facing,walking,running=false,crouching=false,kicking=false,jumpPh
     }
     v.play().catch(()=>{});
     return()=>v.removeEventListener('loadeddata',onReady);
-  },[animSrc,running,walking,crouching,kicking,jumpPhase]);
+  },[animSrc]); // only animSrc — other deps would reload mid-animation on any key change
+
   useEffect(()=>{
     const v=vidRef.current;if(!v)return;
     v.muted=true;
-    if(kicking){v.playbackRate=2.5;v.play().catch(()=>{});}
+    if(anyOneShot){v.playbackRate=2.5;v.play().catch(()=>{});}
     else if(jumpPhase==='start'||jumpPhase==='end'){v.playbackRate=1.5;v.play().catch(()=>{});}
     else if(jumpPhase==='air'){v.playbackRate=1;v.play().catch(()=>{});}
     else if(crouching&&(walking||running)){v.playbackRate=0.65;v.play().catch(()=>{});}
     else if(crouching){v.playbackRate=1;v.play().catch(()=>{});}
     else if(walking){v.playbackRate=0.65;v.play().catch(()=>{});}
     else if(running){v.playbackRate=1;v.play().catch(()=>{});}
-    else if(hasIdleAnim){/* rags: idle_left/idle_right loop plays via animSrc change */}
-    else{v.currentTime=0;v.addEventListener('seeked',()=>v.pause(),{once:true});} // single-file outfit idle: freeze at frame 0
-  },[running,walking,crouching,kicking,jumpPhase]);
+    else if(hasIdleAnim){/* idle_left/idle_right loop plays via animSrc change */}
+    else{v.currentTime=0;v.addEventListener('seeked',()=>v.pause(),{once:true});}
+  },[running,walking,crouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase]);
+
   if(animSrc){
     const ckNeeded=CHAR_ANIMATIONS[currentOutfit]?.needsChromaKey;
     const DROP='drop-shadow(0 6px 16px rgba(196,48,40,.55))';
+    const combatScale=anyOneShot?(CHAR_ANIMATIONS[currentOutfit]?.combatScale||1):1;
     return(
-      <div style={{position:'absolute',bottom:charBottom+(vertOffset||0),left:charX!==undefined?charX:'50%',zIndex:100,pointerEvents:'none',transform:'translateX(-50%)'}}>
+      <div style={{position:'absolute',bottom:charBottom+(vertOffset||0),left:charX!==undefined?charX:'50%',zIndex:100,pointerEvents:'none',transform:'translateX(-50%)',filter:ckNeeded?undefined:DROP}}>
         {ckNeeded
           ?<ChromaKeyVideo src={animSrc} flip={shouldFlip} height={effectiveHeight}
               playing={walking||running||crouching||!!jumpPhase} playbackRate={(jumpPhase==='start'||jumpPhase==='end')?1.5:jumpPhase==='air'?1:(walking&&!running)?0.65:1} filterStr={DROP}/>
-          :<video key={animSrc} ref={vidRef} src={animSrc} loop={action!=='kick'} muted playsInline preload="auto"
-              style={{height:effectiveHeight,display:'block',transformOrigin:'center center',
-                transform:shouldFlip?'scaleX(-1)':'none',filter:DROP,transition:'opacity 0.1s ease'}}/>
+          :<video key={animSrc} ref={vidRef} src={animSrc} muted playsInline preload="auto"
+              style={{height:effectiveHeight,width:'auto',display:'block',
+                transformOrigin:'50% 100%',
+                transform:`scaleX(${shouldFlip?-combatScale:combatScale}) scaleY(${combatScale})`,
+                transition:'opacity 0.08s ease'}}/>
         }
       </div>
     );
@@ -944,13 +970,17 @@ function VoiceBox({seq,onChoose,onFinish}){
           <div style={{color:C.dim,fontSize:8,fontFamily:"'TheMurk',monospace",lineHeight:1.9,marginBottom:28,letterSpacing:.3,borderLeft:`2px solid ${C.border}`,paddingLeft:16}}>
             {node.prompt}
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:5}}>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
             {node.opts.map((opt,i)=>(
               <div key={i} onClick={()=>setSel(i)}
-                style={{display:'flex',gap:12,alignItems:'flex-start',cursor:'pointer',padding:'5px 10px',
+                style={{display:'flex',gap:14,alignItems:'flex-start',cursor:'pointer',padding:'6px 12px',
                   borderLeft:`2px solid ${sel===i?C.red:'transparent'}`,background:'transparent'}}>
-                <span style={{color:'#3a2c14',fontSize:8,fontFamily:"'TheMurk',monospace",minWidth:14}}>{i+1}</span>
-                <span style={{color:opt.muted?C.dim:C.text,fontSize:7,lineHeight:1.65,fontFamily:"'TheMurk',monospace",fontStyle:opt.muted?'italic':'normal'}}>{opt.t}</span>
+                <span style={{color:sel===i?C.red:'#3a2c1488',fontSize:10,fontFamily:"'TheMurk',monospace",minWidth:16,flexShrink:0}}>{i+1}</span>
+                <span style={{color:opt.muted?C.dim:C.text,fontSize:12,lineHeight:1.7,fontFamily:"'TheMurk',monospace",fontStyle:opt.muted?'italic':'normal'}}>
+                  {opt.t.split('').map((ch,j)=>(
+                    <span key={j} style={{animation:'letterGlow 0.7s ease both',animationDelay:`${j*0.04}s`,display:'inline',whiteSpace:'pre'}}>{ch}</span>
+                  ))}
+                </span>
               </div>
             ))}
             <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",marginTop:12}}>[ 1/2/3/4 · ↑↓ ] SELECT  [ E ] CONFIRM</div>
@@ -1455,7 +1485,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
   const [bedOptionIdx,setBedOptionIdx]=useState(0); // 0=REST, 1=SLEEP
   const raf=useRef(null);
   const aptSPD=SPD*0.42;
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const near=APT_OBJ.find(o=>{
     if(!o.prompt)return false;
     if(o.id==='money'&&money>0)return false;
@@ -1572,7 +1602,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
           <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
         )}
       </div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charHeight={297} charBottom={53} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charHeight={297} charBottom={53} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="OAKWOOD ARMS — 4C"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="apartment" onSceneChange={debugGo}/>}
@@ -1759,7 +1789,7 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
   },[]);
   const raf=useRef(null);
   const hallwaySPD=SPD*0.2;
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(hallwaySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(hallwaySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const near=HALL_OBJ.find(o=>Math.abs(o.wx-px)<70&&o.prompt);
 
   useEffect(()=>{
@@ -1847,7 +1877,7 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
         <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
         <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
       </div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="hallway" onSceneChange={debugGo}/>}
@@ -1953,7 +1983,7 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
   const [popup,setPopup]=useState(null);
   const raf=useRef(null);
   const lobbySPD=2.8;
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(lobbySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(lobbySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
 
   const elevRange={xMin:560,xMax:840};
   const nearElev=px>=elevRange.xMin&&px<=elevRange.xMax?{id:'elevator'}:null;
@@ -1997,7 +2027,7 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
       <img src="../graphics/maps/the_veil/move_block/residential_zone/apartment_building/lobby/lobby.png"
         style={{position:'absolute',top:0,width:'170%',height:'100%',objectFit:'contain',zIndex:0,left:`${200-px*1.0}px`,objectPosition:'left'}}
         alt="lobby"/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={92} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={92} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
       {(nearObj||nearElev)&&(nearObj?.prompt||nearElev?.id==='elevator')&&(
         <div style={{position:'absolute',bottom:130,left:'50%',transform:'translateX(-50%)',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,fontFamily:"'TheMurk',monospace",zIndex:300}}>
           {nearObj?.prompt||'[ E ] ELEVATOR'}
@@ -2076,7 +2106,7 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
   const [convType,setConvType]=useState('dialogue');
   const [nearTrigger,setNearTrigger]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.5,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.5,stamina,onStaminaChange,currentOutfit,hudOpen);
   const kickHitbox=useKickHitbox(kicking,px,facing,102);
   const atElevatorHall=px>=80&&px<=124;
   const atApt=px>=991&&px<=1057;
@@ -2156,7 +2186,7 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
       {nearBusyDoor&&!doorMsg&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
       {nearNoAnswerDoor&&!doorMsg&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
       {doorMsg&&<div style={{position:'absolute',bottom:200,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:8,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace",whiteSpace:'nowrap'}}>{doorMsg}</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={102} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={102} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="fourth_floor_hallway" onSceneChange={debugGo}/>}
@@ -2191,7 +2221,7 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
   const [facing,setFacing]=useState(spawnX>600?'left':'right');
   const [walking,setWalking]=useState(false);
   const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.55,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.55,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearStairwell=px>=612&&px<=732;
   const nearElevator=px>=138&&px<=302;
   const atReturn=px>=951&&px<=1121;
@@ -2226,7 +2256,7 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
       {nearStairwell&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] STAIRWELL"/></div>}
       {nearElevator&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR"/></div>}
       {atReturn&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] 4TH FLOOR HALL"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={354} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={354} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="ELEVATOR HALL — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="elevator_hallway" onSceneChange={debugGo}/>}
@@ -2240,7 +2270,7 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
   const [facing,setFacing]=useState('right');
   const [walking,setWalking]=useState(false);
   const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.25,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.25,stamina,onStaminaChange,currentOutfit,hudOpen);
   const atReturn=px>=VIEWPORT.maxX-20;
   const atDown=px<=VIEWPORT.minX+20;
   useEffect(()=>{
@@ -2272,7 +2302,7 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
       <video src={APT_STAIRWELL_VID} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}} autoPlay muted loop playsInline/>
       {atReturn&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR HALL"/></div>}
       {atDown&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] GROUND FLOOR"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="STAIRWELL — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="apt_stairwell" onSceneChange={debugGo}/>}
@@ -2309,7 +2339,7 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
   const [streetTexts,setStreetTexts]=useState([]);
   const raf=useRef(null);
   const strSPD=SPD*0.1024;
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen,0.35);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen,0.35);
   // Camera: follows worldX but stops at image edges — never shows black
   const cam=clamp(worldX-VW/2,0,STR_CAM_MAX);
   const nearNpc=STR_NPCS.find(n=>Math.abs(n.wx-worldX)<85);
@@ -2401,7 +2431,7 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
       <div style={{position:'absolute',inset:0,zIndex:0,backgroundImage:`url('${EXTERIOR_IMG}')`,backgroundSize:'auto 120%',backgroundPosition:`${-cam}px 105%`,backgroundRepeat:'no-repeat',backgroundColor:'#0a0907'}}/>
       {nearLoc&&!conv&&<div style={{position:'absolute',bottom:25,left:worldX-cam,zIndex:9999}}><Prompt text={`[ E ] ${nearLoc.label}`}/></div>}
       {nearNpc&&!conv&&<div style={{position:'absolute',bottom:25,left:worldX-cam,zIndex:9999}}><Prompt text="[ E ] TALK"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={worldX-cam} charHeight={74} charBottom={25} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={worldX-cam} charHeight={74} charBottom={25} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label={mode==='return'?'THE VEIL — RETURNING':'THE VEIL — MOVE BLOCK'}/>
       <Controls hints={[['← →','MOVE'],['E','TALK/ENTER'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={worldX} scene="street" onSceneChange={debugGo}/>}
@@ -2439,7 +2469,7 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
   const [stolen,setStolen]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearItem=STORE_ITEMS.find(i=>Math.abs(i.wx-px)<52&&!basket.includes(i.id));
   const nearLookItem=STORE_ITEMS.find(i=>Math.abs(i.wx-px)<90&&!basket.includes(i.id));
   const nearCounter=Math.abs(px-1144)<100&&!conv;
@@ -2528,7 +2558,7 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
       {stolen&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.red,fontSize:8,letterSpacing:4,fontFamily:"'TheMurk',monospace",textShadow:`0 0 12px ${C.red}`}}>// THEFT</div>}
       {paid&&!credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// PAID — ${money-total} REMAINING</div>}
       {credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.gold,fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// CREDIT — COME BACK WHEN YOU CAN</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={65} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={65} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="CORNER STORE"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="store" onSceneChange={debugGo}/>}
@@ -2547,7 +2577,7 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
   const [paid,setPaid]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const guardBlocking=currentOutfit!=='hoodie';
   const nearGuard=Math.abs(px-GUARD_X)<80&&!conv;
   const nearPharmacist=Math.abs(px-1057)<100&&!conv;
@@ -2615,7 +2645,7 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
       {paid&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// THANK YOU — STAY SAFE</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={23} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={23} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="PHARMACY — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="pharmacy" onSceneChange={debugGo}/>}
@@ -2634,7 +2664,7 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
   const [paid,setPaid]=useState(false);
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearOwner=Math.abs(px-821)<100&&!conv;
   const nearChef=Math.abs(px-384)<80&&!conv;
   const atExit=px>=1054;
@@ -2692,7 +2722,7 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
       </div>
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={95} charHeight={317} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={95} charHeight={317} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="RESTAURANT — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="restaurant" onSceneChange={debugGo}/>}
@@ -2709,7 +2739,7 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
   const [facing,setFacing]=useState('right');
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
   const nearCounter=px>900&&px<1200&&!conv;
   const atExit=px<200;
 
@@ -2750,7 +2780,7 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,o
       </div>
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={29} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={29} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="ALLEY WAY — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="alley_video_store" onSceneChange={debugGo}/>}
@@ -2821,17 +2851,19 @@ function StaticNoise(){
 }
 
 function Opening({onDone}){
-  const NOISE_CH='▓▒░█▌▐─│▄▪╫■▀╬';
   const[nodeId,setNodeId]=useState('o0');
   const[sel,setSel]=useState(0);
-  const[chars,setChars]=useState(0);
-  const[tail,setTail]=useState('');
+  const[morphFull,setMorphFull]=useState(false);
   const[glitch,setGlitch]=useState(null);
+  const[choiceKey,setChoiceKey]=useState(0);
   const showerRef=useRef(null);
+  const text1Ref=useRef(null);
+  const text2Ref=useRef(null);
+  const morphAnimRef=useRef(null);
+  const prevTxtRef=useRef('');
   const node=OPEN.find(n=>n.id===nodeId)||OPEN[0];
   const txt=node.text;
-  const shown=txt.slice(0,chars);
-  const full=chars>=txt.length;
+  const hasOpts=!!(node.opts&&node.opts.length>0);
   const SCOL={
     PAIN:C.red,MEMORY:C.gold,MACHINE:'#4090b0',
     FEAR:VOICE_C.FEAR,BODY:VOICE_C.BODY,SURVIVAL:VOICE_C.SURVIVAL,
@@ -2843,32 +2875,49 @@ function Opening({onDone}){
 
   useEffect(()=>{
     const a=showerRef.current;if(!a)return;
-    a.volume=0.08;
-    a.muted=false;
-    a.play().catch(()=>{});
+    a.volume=0.08;a.muted=false;a.play().catch(()=>{});
     return()=>{a.pause();a.currentTime=0;};
   },[]);
 
-  useEffect(()=>{setChars(0);setSel(0);setTail('');},[nodeId]);
+  const skipMorph=useCallback(()=>{
+    cancelAnimationFrame(morphAnimRef.current);
+    if(text1Ref.current){text1Ref.current.style.filter='none';text1Ref.current.style.opacity='0';}
+    if(text2Ref.current){text2Ref.current.style.filter='none';text2Ref.current.style.opacity='1';}
+    setMorphFull(true);
+  },[]);
 
-  // typewriter
+  // Text-morph animation: previous text dissolves out, new text crystallises in
   useEffect(()=>{
-    if(full)return;
-    const t=setTimeout(()=>setChars(c=>c+1),34);
-    return()=>clearTimeout(t);
-  },[chars,full]);
+    const prevText=prevTxtRef.current;
+    prevTxtRef.current=txt;
+    setMorphFull(false);
+    setSel(0);
+    setChoiceKey(k=>k+1);
+    cancelAnimationFrame(morphAnimRef.current);
+    if(text1Ref.current){text1Ref.current.textContent=prevText;text1Ref.current.style.opacity='1';text1Ref.current.style.filter='blur(0px)';}
+    if(text2Ref.current){text2Ref.current.textContent=txt;text2Ref.current.style.opacity='0';text2Ref.current.style.filter='blur(100px)';}
+    let startTime=null;
+    const MORPH_DUR=1200;
+    const step=ts=>{
+      if(!startTime)startTime=ts;
+      const frac=Math.min((ts-startTime)/MORPH_DUR,1);
+      if(text2Ref.current){
+        text2Ref.current.style.filter=`blur(${Math.min(8/Math.max(frac,0.001)-8,100)}px)`;
+        text2Ref.current.style.opacity=Math.pow(frac,0.4);
+      }
+      if(text1Ref.current){
+        const f2=1-frac;
+        text1Ref.current.style.filter=f2>0?`blur(${Math.min(8/Math.max(f2,0.001)-8,100)}px)`:'none';
+        text1Ref.current.style.opacity=f2>0?Math.pow(f2,0.4):0;
+      }
+      if(frac<1){morphAnimRef.current=requestAnimationFrame(step);}
+      else{setMorphFull(true);}
+    };
+    morphAnimRef.current=requestAnimationFrame(step);
+    return()=>cancelAnimationFrame(morphAnimRef.current);
+  },[nodeId]);
 
-  // scramble tail — noise chars ahead of settled text
-  useEffect(()=>{
-    if(full)return;
-    const t=setInterval(()=>{
-      const len=1+Math.floor(Math.random()*3);
-      setTail(Array.from({length:len},()=>NOISE_CH[Math.floor(Math.random()*NOISE_CH.length)]).join(''));
-    },48);
-    return()=>clearInterval(t);
-  },[full]);
-
-  // periodic glitch displacement
+  // Periodic glitch displacement
   useEffect(()=>{
     const t=setInterval(()=>{
       if(Math.random()<0.22){
@@ -2891,7 +2940,7 @@ function Opening({onDone}){
 
   useEffect(()=>{
     const kd=e=>{
-      if(!full){setChars(9999);setTail('');return;}
+      if(!morphFull){skipMorph();return;}
       if(e.code==='Enter'){confirm(0);return;}
       if(e.key==='1')setSel(0);
       else if(e.key==='2')setSel(1);
@@ -2902,46 +2951,65 @@ function Opening({onDone}){
     };
     window.addEventListener('keydown',kd);
     return()=>window.removeEventListener('keydown',kd);
-  },[full,sel,confirm,node]);
+  },[morphFull,sel,confirm,node,skipMorph]);
 
   const gxf=glitch?{transform:`translate(${glitch.dx}px,${glitch.dy}px) skewX(${glitch.sk}deg)`}:{};
 
   return(
     <div style={{width:VW,height:VH,background:'#000',position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <audio ref={showerRef} src={SHOWER_SFX} loop preload="auto" muted/>
+      {/* SVG threshold filter — the "magic" behind text-morph crystallisation */}
+      <svg style={{position:'absolute',width:0,height:0,overflow:'hidden'}}>
+        <defs>
+          <filter id="openThreshold">
+            <feColorMatrix in="SourceGraphic" type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 255 -140"/>
+          </filter>
+        </defs>
+      </svg>
       <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse 70% 65% at 50% 55%,#090201 0%,#000 100%)'}}/>
       <div style={{position:'relative',zIndex:10,width:660,...gxf}}>
-        {/* chromatic aberration ghosts during glitch */}
-        {glitch&&shown&&<>
-          <div style={{position:'absolute',top:0,left:0,width:'100%',color:`${col}88`,fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,transform:'translateX(-5px)',pointerEvents:'none',whiteSpace:'pre-wrap'}}>{node.speaker&&'\n\n'}{shown}</div>
-          <div style={{position:'absolute',top:0,left:0,width:'100%',color:'#4090b088',fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,transform:'translateX(5px)',pointerEvents:'none',whiteSpace:'pre-wrap'}}>{node.speaker&&'\n\n'}{shown}</div>
+        {/* Chromatic aberration ghosts during glitch */}
+        {glitch&&<>
+          <div style={{position:'absolute',top:0,left:0,width:'100%',color:`${col}66`,fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,transform:'translateX(-5px)',pointerEvents:'none',whiteSpace:'pre-wrap'}}>{txt}</div>
+          <div style={{position:'absolute',top:0,left:0,width:'100%',color:'#4090b066',fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,transform:'translateX(5px)',pointerEvents:'none',whiteSpace:'pre-wrap'}}>{txt}</div>
         </>}
         {node.speaker&&(
           <div style={{color:col,fontSize:8,letterSpacing:4,fontFamily:"'TheMurk',monospace",marginBottom:16,opacity:.8}}>
             // {node.speaker}
           </div>
         )}
-        <div style={{color:col,fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',minHeight:72,marginBottom:40,letterSpacing:.3}}>
-          {shown}
-          {!full&&<span style={{color:`${col}80`,letterSpacing:.5}}>{tail}</span>}
-          {!full&&<span style={{animation:'blink .65s steps(1) infinite',color:col}}>▌</span>}
+        {/* Morphing text container — SVG threshold applied here */}
+        <div style={{position:'relative',filter:'url(#openThreshold) blur(0.6px)',marginBottom:40}}>
+          {/* Text A: previous text dissolving out */}
+          <div ref={text1Ref} style={{position:'absolute',top:0,left:0,width:'100%',color:col,fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,whiteSpace:'pre-wrap',opacity:0}}/>
+          {/* Text B: new text crystallising in */}
+          <div ref={text2Ref} style={{position:'absolute',top:0,left:0,width:'100%',color:col,fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,whiteSpace:'pre-wrap',opacity:0}}/>
+          {/* Invisible spacer keeps the container the right height */}
+          <div style={{visibility:'hidden',fontSize:15,lineHeight:2,fontFamily:"'TheMurk',monospace",fontStyle:'italic',letterSpacing:.3,whiteSpace:'pre-wrap',minHeight:72}}>{txt||' '}</div>
         </div>
-        {full&&(
-          <div style={{display:'flex',flexDirection:'column',gap:5}}>
-            {node.opts?.map((opt,i)=>(
-              <div key={i} onClick={()=>setSel(i)}
-                style={{display:'flex',gap:12,alignItems:'flex-start',cursor:'pointer',padding:'5px 10px',
-                  borderLeft:`2px solid ${sel===i?col:'transparent'}`,
-                  background:'transparent'}}>
-                <span style={{color:'#3a2c14',fontSize:8,fontFamily:"'TheMurk',monospace",minWidth:14,paddingTop:2}}>{i+1}</span>
-                <span style={{color:opt.muted?'#4a3820':C.text,fontSize:7,lineHeight:1.65,
-                  fontFamily:"'TheMurk',monospace",fontStyle:opt.muted?'italic':'normal'}}>{opt.t}</span>
+        {/* Choices — transmission-glow, larger text */}
+        {morphFull&&hasOpts&&(
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {node.opts.map((opt,i)=>(
+              <div key={`${choiceKey}_${i}`} onClick={()=>setSel(i)}
+                style={{display:'flex',gap:14,alignItems:'flex-start',cursor:'pointer',padding:'6px 12px',
+                  borderLeft:`2px solid ${sel===i?col:'transparent'}`,background:'transparent'}}>
+                <span style={{color:sel===i?col:'#3a2c1488',fontSize:10,fontFamily:"'TheMurk',monospace",minWidth:16,paddingTop:2,flexShrink:0}}>{i+1}</span>
+                <span style={{color:opt.muted?C.dim:C.text,fontSize:12,lineHeight:1.7,fontFamily:"'TheMurk',monospace",fontStyle:opt.muted?'italic':'normal'}}>
+                  {opt.t.split('').map((ch,j)=>(
+                    <span key={j} style={{animation:'letterGlow 0.7s ease both',animationDelay:`${j*0.04}s`,display:'inline',whiteSpace:'pre'}}>{ch}</span>
+                  ))}
+                </span>
               </div>
             ))}
-            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",marginTop:12}}>
+            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",marginTop:8}}>
               [ 1/2/3 ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM &nbsp;·&nbsp; [ ENTER ] SKIP
             </div>
           </div>
+        )}
+        {morphFull&&!hasOpts&&(
+          <div style={{color:`${C.dim}66`,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[E] CONTINUE</div>
         )}
       </div>
     </div>
@@ -3106,8 +3174,10 @@ function useGamepad() {
       0:KEYS.RUN,      // A / Cross  — run (ShiftRight)
       1:KEYS.CONFIRM,  // B / Circle — interact, confirm dialogue
       2:KEYS.JUMP,     // X / Square — jump
-      4:KEYS.TAB_PREV, // LB / L1     — HUD: previous tab
-      5:KEYS.TAB_NEXT, // RB / R1     — HUD: next tab
+      4:KEYS.TAB_PREV, // LB / L1     — HUD tab prev / standing kick / crouch sweep kick
+      5:KEYS.TAB_NEXT, // RB / R1     — HUD tab next / double kick
+      6:'KeyF',        // LT / L2     — roundhouse kick
+      7:'KeyG',        // RT / R2     — block / parry (hold)
       8:'KeyI',        // Back/Select — toggle device HUD (KeyI, not Shift)
       9:'Pause',       // Start/Menu  — pause menu
       12:KEYS.UP,      // D-pad up
@@ -3116,10 +3186,10 @@ function useGamepad() {
       15:KEYS.RIGHT,   // D-pad right
     };
     const ALL=Object.values(KEYS);
-    ALL.push('KeyI','Escape','Pause'); // Add non-KEYS buttons
+    ALL.push('KeyI','Escape','Pause','KeyF','KeyG'); // Add non-KEYS buttons
     const held={};
     let raf;
-    const keyMap={ShiftLeft:'ShiftLeft',ShiftRight:'ShiftRight',Escape:'Escape',KeyI:'KeyI',Enter:'Enter',Space:'Space',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',KeyE:'KeyE',KeyQ:'KeyQ',KeyW:'KeyW'};
+    const keyMap={ShiftLeft:'ShiftLeft',ShiftRight:'ShiftRight',Escape:'Escape',KeyI:'KeyI',Enter:'Enter',Space:'Space',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',KeyE:'KeyE',KeyQ:'KeyQ',KeyW:'KeyW',KeyF:'KeyF',KeyG:'KeyG'};
     const kd=code=>document.documentElement.dispatchEvent(new KeyboardEvent('keydown',{key:code,code:keyMap[code]||code,bubbles:true,cancelable:true}));
     const ku=code=>document.documentElement.dispatchEvent(new KeyboardEvent('keyup',  {key:code,code:keyMap[code]||code,bubbles:true,cancelable:true}));
     const poll=()=>{
@@ -3173,7 +3243,7 @@ function useInputSource(){
 // All new scenes MUST implement running mechanics and stamina this way:
 //
 // 1. Function signature: Add `stamina` and `onStaminaChange` props
-// 2. Call hook: `const {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit);`
+// 2. Call hook: `const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit);`
 // 3. Movement loop: Before movement checks, call `const {currentSpeed,isKicking}=updateMovement(isMoving);`
 // 4. Use speed: Replace hardcoded SPD with `currentSpeed` (applies 2.1x multiplier when running)
 // 5. Character: Pass `running={running}` to <Char> component
@@ -3187,6 +3257,11 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   const [running,setRunning]=useState(false);
   const [isCrouching,setIsCrouching]=useState(false);
   const [kicking,setKicking]=useState(false);
+  const [sweepKicking,setSweepKicking]=useState(false);
+  const [roundhouseKicking,setRoundHouseKicking]=useState(false);
+  const [doubleKicking,setDoubleKicking]=useState(false);
+  const [blocking,setBlocking]=useState(false);
+  const [rolling,setRolling]=useState(false);
   const [jumpPhase,setJumpPhase]=useState(null); // null | 'start' | 'air' | 'end'
   const [vertOffset,setVertOffset]=useState(0);
   const [bark,setBark]=useState(null);
@@ -3211,12 +3286,22 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   const baseSpeedRef=useRef(baseSpeed);
   const pausedRef=useRef(paused);
   const kickingRef=useRef(false);
+  const sweepKickingRef=useRef(false);
+  const roundhouseKickingRef=useRef(false);
+  const doubleKickingRef=useRef(false);
+  const blockingRef=useRef(false);
+  const rollingRef=useRef(false);
   staminaRef.current=stamina;
   outfitRef.current=currentOutfit;
   onStaminaChangeRef.current=onStaminaChange;
   baseSpeedRef.current=baseSpeed;
   pausedRef.current=paused;
   kickingRef.current=kicking;
+  sweepKickingRef.current=sweepKicking;
+  roundhouseKickingRef.current=roundhouseKicking;
+  doubleKickingRef.current=doubleKicking;
+  blockingRef.current=blocking;
+  rollingRef.current=rolling;
 
   // When HUD opens or closes, clear held keys so stale holds don't carry over
   useEffect(()=>{
@@ -3265,7 +3350,12 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   // Stable callback — no deps needed because everything is read from refs
   const updateMovement=useCallback((isMoving)=>{
     isMovingRef.current=isMoving;
-    if(kickingRef.current){
+    // Running kick keeps forward momentum at full run speed
+    if(doubleKickingRef.current){
+      return {canRun:true,currentSpeed:baseSpeedRef.current*2.1,isKicking:true};
+    }
+    // All other attacks stop movement
+    if(kickingRef.current||sweepKickingRef.current||roundhouseKickingRef.current||blockingRef.current||rollingRef.current){
       setRunning(false);
       setIsCrouching(false);
       isRunningRef.current=false;
@@ -3348,10 +3438,23 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
         jumpingRef.current=true;
         jumpStartRef.current=Date.now();
       }
-      // Right shoulder button kick — KeyW in gameplay (RB/R1 controller, W keyboard)
-      // Only cyber_octavia can kick; hoodie cannot. Blocked while jumping or HUD open.
-      if(e.code==='KeyW'&&!pausedRef.current&&outfitRef.current==='cyber_octavia'&&!jumpingRef.current&&!(keys.current['ShiftLeft']||keys.current['ArrowDown'])){
-        setKicking(true);
+      // Combat — only cyber_octavia, only in gameplay (not paused)
+      if(!pausedRef.current&&outfitRef.current==='cyber_octavia'&&!jumpingRef.current){
+        const isCrouch=keys.current['ShiftLeft']||keys.current['ArrowDown'];
+        const isMoving=keys.current['ArrowLeft']||keys.current['ArrowRight'];
+        const isRunning=keys.current['ShiftRight'];
+        // LB (Q): crouching = sweep kick · moving = roll · standing = powerful kick
+        if(e.code==='KeyQ'){
+          if(isCrouch){setSweepKicking(true);}
+          else if(isMoving){setRolling(true);}
+          else{setKicking(true);}
+        }
+        // RB (W) + running = running kick
+        if(e.code==='KeyW'&&isRunning){setDoubleKicking(true);}
+        // LT (F) = low/high kick
+        if(e.code==='KeyF'){setRoundHouseKicking(true);}
+        // RT (G) = esquiva dodge (one-shot)
+        if(e.code==='KeyG'){setBlocking(true);}
       }
     };
     const ku=e=>{delete keys.current[e.code];};
@@ -3364,12 +3467,19 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   },[]);
 
   useEffect(()=>{
-    const onKickEnd=()=>setKicking(false);
+    const onKickEnd=()=>{
+      setKicking(false);
+      setSweepKicking(false);
+      setRoundHouseKicking(false);
+      setDoubleKicking(false);
+      setBlocking(false);
+      setRolling(false);
+    };
     document.addEventListener('kickEnd',onKickEnd);
     return()=>document.removeEventListener('kickEnd',onKickEnd);
   },[]);
 
-  return {keys,running,isCrouching,kicking,jumpPhase,vertOffset,bark,setBark,updateMovement};
+  return {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,setBark,updateMovement};
 }
 
 // ── KICK HIT DETECTION ────────────────────────────────────────
@@ -3444,6 +3554,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
   // eqBars and eqIntervalRef are visual-only, fine to reset on HUD open
   const [eqBars,setEqBars]=useState(Array.from({length:18},()=>0.12));
   const eqIntervalRef=useRef(null);
+  const [recordAnimKey,setRecordAnimKey]=useState(0);
 
   // Auto-scroll selected item into view (skip in controller mode — cursor handles positioning)
   useEffect(()=>{
@@ -3558,6 +3669,8 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
     return()=>{a.removeEventListener('timeupdate',onTime);a.removeEventListener('loadedmetadata',onMeta);a.removeEventListener('ended',onEnd);};
   },[phoneSubApp,musicFolder,musicTrackIdx,musicPlaying]);
 
+  // Trigger record swap animation on track change
+  useEffect(()=>{setRecordAnimKey(k=>k+1);},[musicTrackIdx]);
   // Cleanup EQ animation on unmount — audio lives at QuestApp level, do not touch it here
   useEffect(()=>()=>{clearInterval(eqIntervalRef.current);},[]);
 
@@ -3774,7 +3887,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         </div>
       );
     }
-    // Phone → music player top screen
+    // Phone → music player top screen (vinyl record player)
     if(tab.id==='phone'&&phoneSubApp==='music'){
       const F=HUD_FONT_SCALE;
       const tracks=MUSIC_LIB[musicFolder];
@@ -3793,66 +3906,116 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
       };
       const prevTrack=()=>{setMusicTrackIdx(i=>Math.max(0,i-1));setMusicTime(0);};
       const nextTrack=()=>{setMusicTrackIdx(i=>Math.min((tracks?.length||1)-1,i+1));setMusicTime(0);};
+      const labelColor=RECORD_COLORS[musicTrackIdx%RECORD_COLORS.length];
+      const RECORD_D=Math.round(148*F/HUD_FONT_SCALE); // 148px at base, scale with F proxy
+      const ARM_H=Math.round(68*F/HUD_FONT_SCALE);
       return(
         <div style={{display:'flex',flexDirection:'column',height:'100%',fontFamily:"'TheMurk',monospace",background:C.bg}}>
           {/* Header */}
           <div style={{display:'flex',alignItems:'center',padding:`${Math.round(2*F)}px ${Math.round(4*F)}px`,borderBottom:`1px solid ${C.border}44`,background:C.panel,flexShrink:0,gap:Math.round(5*F)}}>
             <span onClick={()=>{setPhoneSubApp(null);setSelectedIdx(0);}} style={{color:C.dim,fontSize:Math.round(6*F),cursor:'pointer',userSelect:'none',letterSpacing:1,border:`1px solid ${C.border}66`,padding:`${Math.round(1*F)}px ${Math.round(3*F)}px`,borderRadius:1}}>← BACK</span>
             <span style={{flex:1,color:C.gold,fontSize:Math.round(7*F),letterSpacing:2,textAlign:'center'}}>// MUSIC</span>
-            <span style={{color:musicPlaying?C.red:C.dim+'66',fontSize:Math.round(5*F),letterSpacing:1}}>{musicPlaying?'▶ ON':'■ OFF'}</span>
+            <span style={{color:musicPlaying?labelColor:C.dim+'66',fontSize:Math.round(5*F),letterSpacing:1}}>{musicPlaying?'▶ ON':'■ OFF'}</span>
           </div>
-          {/* Track info */}
-          <div style={{padding:`${Math.round(4*F)}px ${Math.round(5*F)}px ${Math.round(2*F)}px`,flexShrink:0}}>
-            {track?(
-              <>
-                <div style={{color:C.text,fontSize:Math.round(8*F),letterSpacing:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{track.title}</div>
-                <div style={{color:C.dim,fontSize:Math.round(5*F),letterSpacing:2,marginTop:Math.round(1*F)}}>{track.artist||musicFolder.toUpperCase()}</div>
-              </>
-            ):(
-              <div style={{color:C.dim+'55',fontSize:Math.round(7*F),letterSpacing:2}}>// NO TRACKS LOADED</div>
-            )}
-          </div>
-          {/* EQ bars */}
-          <div style={{padding:`${Math.round(1*F)}px ${Math.round(5*F)}px`,flexShrink:0,display:'flex',alignItems:'flex-end',gap:1,height:Math.round(32*F)}}>
-            {eqBars.map((h,i)=>(
-              <div key={i} style={{flex:1,background:musicPlaying?`linear-gradient(to top,${C.red},${C.gold}88)`:C.border+'33',height:`${Math.max(6,Math.round(h*100))}%`,transition:'height 0.09s ease-out'}}/>
-            ))}
-          </div>
-          {/* Progress bar */}
-          <div style={{padding:`${Math.round(1*F)}px ${Math.round(5*F)}px`,flexShrink:0}}>
-            <div style={{height:3,background:C.border+'33',borderRadius:1,position:'relative',cursor:'pointer'}}
-              onClick={e=>{
-                if(!musicAudioRef.current||!musicDuration)return;
-                const r=e.currentTarget.getBoundingClientRect();
-                musicAudioRef.current.currentTime=((e.clientX-r.left)/r.width)*musicDuration;
+          {/* Two-column content */}
+          <div style={{flex:1,display:'flex',minHeight:0,overflow:'hidden'}}>
+            {/* Left column — vinyl record + tonearm */}
+            <div style={{width:Math.round(165*F/HUD_FONT_SCALE),flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+              {/* Record */}
+              <div key={recordAnimKey} style={{
+                width:RECORD_D,height:RECORD_D,borderRadius:'50%',flexShrink:0,position:'relative',
+                background:`repeating-radial-gradient(circle at center,#0a0a0a 0,#1a1a1a 1px,#1a1a1a 9px,#0d0d0d 10px,#0d0d0d 16px)`,
+                boxShadow:`0 0 ${Math.round(12*F/HUD_FONT_SCALE)}px rgba(0,0,0,0.8)`,
+                animation:`vinylSpin 2s linear infinite, vinylSwap 0.45s ease`,
+                animationPlayState:`${musicPlaying?'running':'paused'}, running`,
               }}>
-              <div style={{position:'absolute',top:0,left:0,height:'100%',width:`${pct}%`,background:C.red,borderRadius:1,transition:'width 0.3s linear'}}/>
-            </div>
-            <div style={{display:'flex',justifyContent:'space-between',marginTop:Math.round(1*F)}}>
-              <span style={{color:C.dim,fontSize:Math.round(5*F)}}>{fmt(musicTime)}</span>
-              <span style={{color:C.dim,fontSize:Math.round(5*F)}}>{track?track.duration||fmt(musicDuration):'--:--'}</span>
-            </div>
-          </div>
-          {/* Playback controls */}
-          <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:Math.round(5*F),padding:`0 ${Math.round(4*F)}px`}}>
-            {[
-              {lbl:'|◄',fn:()=>{setMusicTrackIdx(0);setMusicTime(0);},big:false},
-              {lbl:'◄◄',fn:prevTrack,big:false},
-              {lbl:musicPlaying?'■ PAUSE':'▶ PLAY',fn:togglePlay,big:true},
-              {lbl:'▶▶',fn:nextTrack,big:false},
-              {lbl:'►|',fn:()=>{setMusicTrackIdx(Math.max(0,(tracks?.length||1)-1));setMusicTime(0);},big:false},
-            ].map((btn,i)=>(
-              <div key={i} onClick={btn.fn} style={{
-                padding:`${Math.round(2*F)}px ${Math.round(btn.big?8:4)*F}px`,
-                border:`1px solid ${btn.big?C.gold:C.border}66`,
-                background:btn.big?C.selBg:'transparent',
-                color:btn.big?C.gold:C.dim,
-                fontSize:Math.round((btn.big?7:6)*F),
-                cursor:'pointer',letterSpacing:1,userSelect:'none',textAlign:'center',
-                minWidth:btn.big?Math.round(36*F):Math.round(18*F)}}>
-                {btn.lbl}
+                {/* Outer edge highlight */}
+                <div style={{position:'absolute',inset:0,borderRadius:'50%',boxShadow:`inset 0 0 0 2px rgba(255,255,255,0.06)`}}/>
+                {/* Center label */}
+                <div style={{
+                  position:'absolute',
+                  top:'50%',left:'50%',
+                  transform:'translate(-50%,-50%)',
+                  width:Math.round(46*F/HUD_FONT_SCALE),height:Math.round(46*F/HUD_FONT_SCALE),
+                  borderRadius:'50%',
+                  background:`radial-gradient(circle at 38% 35%, ${labelColor}dd, ${labelColor}88)`,
+                  boxShadow:`0 0 ${Math.round(8*F/HUD_FONT_SCALE)}px ${labelColor}66`,
+                  display:'flex',alignItems:'center',justifyContent:'center'
+                }}>
+                  {/* Spindle hole */}
+                  <div style={{width:Math.round(10*F/HUD_FONT_SCALE),height:Math.round(10*F/HUD_FONT_SCALE),borderRadius:'50%',background:'#050505',boxShadow:'inset 0 1px 2px rgba(0,0,0,0.9)'}}/>
+                </div>
               </div>
-            ))}
+              {/* Tonearm */}
+              <div style={{
+                position:'absolute',
+                top:Math.round(8*F/HUD_FONT_SCALE),
+                right:Math.round(6*F/HUD_FONT_SCALE),
+                width:Math.round(6*F/HUD_FONT_SCALE),
+                height:ARM_H,
+                transformOrigin:'50% 0',
+                transform:`rotate(${musicPlaying?12:-38}deg)`,
+                transition:'transform 0.5s ease',
+                display:'flex',flexDirection:'column',alignItems:'center',
+              }}>
+                {/* Headshell (top) */}
+                <div style={{width:Math.round(10*F/HUD_FONT_SCALE),height:Math.round(7*F/HUD_FONT_SCALE),background:`linear-gradient(135deg,#c0a878,#8a7040)`,borderRadius:1,flexShrink:0}}/>
+                {/* Arm shaft */}
+                <div style={{flex:1,width:Math.round(4*F/HUD_FONT_SCALE),background:`linear-gradient(to bottom,#b8a070,#6a5030)`,borderRadius:1}}/>
+                {/* Stylus tip */}
+                <div style={{width:Math.round(6*F/HUD_FONT_SCALE),height:Math.round(6*F/HUD_FONT_SCALE),borderRadius:'50%',background:`radial-gradient(circle at 40% 35%, #d0b888, #5a4020)`,flexShrink:0}}/>
+              </div>
+            </div>
+            {/* Right column — info + controls */}
+            <div style={{flex:1,display:'flex',flexDirection:'column',padding:`${Math.round(5*F)}px ${Math.round(5*F)}px ${Math.round(4*F)}px ${Math.round(3*F)}px`,minWidth:0,justifyContent:'center',gap:Math.round(3*F)}}>
+              {/* Track info */}
+              {track?(
+                <>
+                  <div style={{color:C.text,fontSize:Math.round(8*F),letterSpacing:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.2}}>{track.title}</div>
+                  <div style={{color:C.dim,fontSize:Math.round(5*F),letterSpacing:2,marginBottom:Math.round(2*F)}}>{track.artist||musicFolder.toUpperCase()}</div>
+                </>
+              ):(
+                <div style={{color:C.dim+'55',fontSize:Math.round(6*F),letterSpacing:2}}>// NO TRACKS</div>
+              )}
+              {/* Progress bar */}
+              <div>
+                <div style={{height:3,background:C.border+'33',borderRadius:1,position:'relative',cursor:'pointer',marginBottom:Math.round(2*F)}}
+                  onClick={e=>{
+                    if(!musicAudioRef.current||!musicDuration)return;
+                    const r=e.currentTarget.getBoundingClientRect();
+                    musicAudioRef.current.currentTime=((e.clientX-r.left)/r.width)*musicDuration;
+                  }}>
+                  <div style={{position:'absolute',top:0,left:0,height:'100%',width:`${pct}%`,background:labelColor,borderRadius:1,transition:'width 0.3s linear',boxShadow:`0 0 4px ${labelColor}88`}}/>
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between'}}>
+                  <span style={{color:C.dim,fontSize:Math.round(5*F)}}>{fmt(musicTime)}</span>
+                  <span style={{color:C.dim,fontSize:Math.round(5*F)}}>{track?track.duration||fmt(musicDuration):'--:--'}</span>
+                </div>
+              </div>
+              {/* Playback controls */}
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:Math.round(2*F)}}>
+                {[
+                  {lbl:'|◄',fn:()=>{setMusicTrackIdx(0);setMusicTime(0);},big:false},
+                  {lbl:'◄◄',fn:prevTrack,big:false},
+                  {lbl:musicPlaying?'■':'▶',fn:togglePlay,big:true},
+                  {lbl:'▶▶',fn:nextTrack,big:false},
+                  {lbl:'►|',fn:()=>{setMusicTrackIdx(Math.max(0,(tracks?.length||1)-1));setMusicTime(0);},big:false},
+                ].map((btn,i)=>(
+                  <div key={i} onClick={btn.fn} style={{
+                    flex:btn.big?2:1,
+                    padding:`${Math.round(2*F)}px ${Math.round(2*F)}px`,
+                    border:`1px solid ${btn.big?labelColor:C.border}66`,
+                    background:btn.big?C.selBg:'transparent',
+                    color:btn.big?labelColor:C.dim,
+                    fontSize:Math.round((btn.big?9:6)*F),
+                    cursor:'pointer',letterSpacing:1,userSelect:'none',textAlign:'center',
+                    boxShadow:btn.big?`0 0 6px ${labelColor}33`:'none',
+                    borderRadius:1}}>
+                    {btn.lbl}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -4364,13 +4527,14 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
               </div>
             ):tracks.map((t,i)=>{
               const isCur=i===musicTrackIdx;
+              const trackColor=RECORD_COLORS[i%RECORD_COLORS.length];
               return(
                 <div key={t.id} onClick={()=>launchTrack(i)}
                   style={{display:'flex',alignItems:'center',gap:Math.round(3*F),
                     padding:`${Math.round(3*F)}px ${Math.round(4*F)}px`,
                     background:isCur?C.selBg:'transparent',
-                    borderLeft:`2px solid ${isCur?C.red:'transparent'}`,cursor:'pointer'}}>
-                  <span style={{color:isCur?C.red:C.dim,fontSize:Math.round(6*F),width:Math.round(12*F),flexShrink:0,textAlign:'right'}}>{isCur?'▶':`${i+1}.`}</span>
+                    borderLeft:`2px solid ${isCur?trackColor:'transparent'}`,cursor:'pointer'}}>
+                  <span style={{color:isCur?trackColor:C.dim,fontSize:Math.round(6*F),width:Math.round(12*F),flexShrink:0,textAlign:'right'}}>{isCur?'▶':`${i+1}.`}</span>
                   <span style={{flex:1,color:isCur?C.text:C.dim,fontSize:Math.round(7*F),overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.title}</span>
                   <span style={{color:C.dim+'88',fontSize:Math.round(6*F),flexShrink:0}}>{t.duration||'--:--'}</span>
                 </div>
@@ -4857,6 +5021,8 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         @keyframes hudFadeOut{from{opacity:1}to{opacity:0}}
         @keyframes hudSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes hudSlideDown{from{transform:translateY(0);opacity:1}to{transform:translateY(100%);opacity:0}}
+        @keyframes vinylSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes vinylSwap{0%,100%{opacity:1;transform:scale(1)}35%,65%{opacity:.05;transform:scale(.88)}}
         @keyframes hudGrain{
           0%,100%{transform:translate(0,0)}
           12%{transform:translate(-2%,-1%)}
@@ -5115,6 +5281,7 @@ function QuestApp(){
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:C.bg}}>
       <style>{`
         @keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.2)}30%{transform:scale(1.07)}45%{transform:scale(1.15)}}
+        @keyframes letterGlow{0%{opacity:0;text-shadow:0 0 1px rgba(255,255,255,.1)}66%{opacity:1;text-shadow:0 0 20px rgba(255,255,255,.9)}77%{opacity:1}100%{opacity:.7;text-shadow:0 0 20px rgba(255,255,255,0)}}
         @keyframes flicker{0%,90%,100%{opacity:1}91%{opacity:.55}94%{opacity:.85}97%{opacity:.45}}
         @keyframes ng{0%,85%,100%{transform:none}86%{transform:translateX(-3px)}88%{transform:translateX(3px)}90%{transform:none}}
         @keyframes flash{0%{opacity:.25}100%{opacity:0}}

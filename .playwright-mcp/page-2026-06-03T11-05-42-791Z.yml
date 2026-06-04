@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - heading "⚠️ Do not enter passwords or personal information on this page. ⚠️" [level=1] [ref=e3]
+    - text: This is a code demo posted by a web developer on
+    - link "CodePen" [ref=e4] [cursor=pointer]:
+      - /url: https://codepen.io
+    - text: .
+    - text: A referer from CodePen is required to render this page view, and your browser is not sending one (
+    - link "more details" [ref=e5] [cursor=pointer]:
+      - /url: https://blog.codepen.io/2017/10/05/regarding-referer-headers/
+    - text: ).
+  - main [ref=e6]:
+    - iframe [ref=e7]:
+      - generic [active] [ref=f4e1]: M-M-MAX NEWSROOM M-M-MAX NEWSROOM NETWORK 23 TRANSMISSION LOCK // HEADROOM FEED Network 23 transmits the week’s f-f-frontend dispatches Network 23 transmits the week’s f-f-frontend dispatches

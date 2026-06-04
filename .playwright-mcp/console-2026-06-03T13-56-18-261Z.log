@@ -1,0 +1,4 @@
+[     620ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://codepen.io/StephenScaff/pen/oLBqmw:1596
+[     620ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://codepen.io/StephenScaff/pen/oLBqmw:1596
+[     934ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://codepen.io/editor/constants/addons/scss:0
+[    3172ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://codepen.io/StephenScaff/pen/oLBqmw:0

@@ -1,0 +1,2866 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Realistic Living Rainy Window Generator 🌧️</title>
+  <link rel="manifest" href="https://fyildiz1974.github.io/web/files/manifest.json">
+
+  <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  touch-action: manipulation;
+}
+
+/* Skip Link for Accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #6cf;
+  color: #000;
+  padding: 8px 16px;
+  z-index: 10000;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Background Layers */
+#custom-bg,
+#custom-video {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%) scale(1.05);
+  z-index: 0;
+  object-fit: cover;
+  transition: filter 0.3s ease;
+  will-change: filter;
+}
+
+#custom-video {
+  display: none;
+}
+
+#custom-bg.hidden,
+#custom-video.hidden {
+  display: none;
+}
+
+#custom-video.active {
+  display: block;
+}
+
+/* Color Overlay */
+#color-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.3s ease;
+}
+
+/* Raindrops Canvas */
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
+/* Loading Overlay */
+#loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#loading-overlay.active {
+  display: flex;
+}
+
+.loader-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #6cf;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loader-text {
+  color: #fff;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* UI Buttons */
+.ui-btn {
+  position: fixed;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  font-size: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+  right: 20px;
+}
+
+.ui-btn:hover,
+.ui-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.ui-btn:focus {
+  outline: 2px solid #6cf;
+  outline-offset: 2px;
+}
+
+.ui-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.ui-btn:focus-visible {
+  outline: 2px solid #6cf;
+  outline-offset: 2px;
+}
+
+.ui-btn.active {
+  background: rgba(102, 204, 255, 0.3);
+  border-color: #6cf;
+}
+
+/* Button specific positions */
+#btn-settings {
+  top: 20px;
+}
+
+#btn-sound {
+  top: 80px;
+}
+
+#btn-fullscreen {
+  bottom: 20px;
+}
+
+#btn-share {
+  bottom: 80px;
+}
+
+/* Slide ALL buttons with the panel */
+body.panel-active #btn-settings,
+body.panel-active #btn-sound,
+body.panel-active #btn-share,
+body.panel-active #btn-fullscreen {
+  right: 360px;
+}
+
+/* Settings Panel */
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 340px;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  padding-top: 70px;
+  z-index: 999;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.panel.open {
+  transform: translateX(0);
+}
+
+.panel-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.panel-close:focus {
+  outline: 2px solid #6cf;
+  outline-offset: 2px;
+}
+
+.panel-close:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.panel h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 15px;
+  margin-top: 25px;
+  color: #6cf;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
+
+.panel h3:first-of-type {
+  margin-top: 0;
+}
+
+/* Preset Grid */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.preset-item {
+  aspect-ratio: 16/10;
+  background-size: cover;
+  background-position: center;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.preset-item:hover,
+.preset-item:active {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+
+.preset-item:focus {
+  outline: 2px solid #6cf;
+  outline-offset: 2px;
+  opacity: 0.85;
+}
+
+.preset-item:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.preset-item.active {
+  border-color: #6cf;
+  opacity: 1;
+}
+
+.preset-item::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+  color: white;
+  font-size: 8px;
+  text-align: center;
+  border-radius: 0 0 6px 6px;
+}
+
+.preset-item.video::before {
+  content: "▶";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: white;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  z-index: 1;
+}
+
+/* Controls */
+.control-group {
+  margin-bottom: 16px;
+}
+
+.control-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.control-value {
+  color: #6cf;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]:focus {
+  outline: 2px solid #6cf;
+  outline-offset: 4px;
+}
+
+input[type="range"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #6cf;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #6cf;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Color Picker */
+.color-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.color-btn:hover,
+.color-btn.active {
+  transform: scale(1.15);
+  border-color: white;
+}
+
+.color-btn:focus {
+  outline: 2px solid #6cf;
+  outline-offset: 2px;
+}
+
+.color-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.color-btn.none {
+  background: linear-gradient(135deg, #333 45%, #fff 45%, #fff 55%, #333 55%);
+}
+
+/* Inputs */
+.input-group {
+  margin-top: 12px;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.text-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+
+.text-input:focus {
+  border-color: #6cf;
+  outline: none;
+}
+
+.text-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.btn {
+  background: #6cf;
+  border: none;
+  color: #000;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn:hover,
+.btn:active {
+  filter: brightness(1.1);
+}
+
+.btn:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.btn-file {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.btn-file:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Audio Control */
+.sound-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+.sound-icon {
+  font-size: 20px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.sound-icon:focus {
+  outline: 2px solid #6cf;
+  outline-offset: 2px;
+}
+
+.sound-icon:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.sound-control input[type="range"] {
+  flex: 1;
+}
+
+/* Reset Button */
+.btn-reset {
+  width: 100%;
+  background: rgba(255, 100, 100, 0.2);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  margin-top: 10px;
+}
+
+.btn-reset:hover {
+  background: rgba(255, 100, 100, 0.3);
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 14px 24px;
+  border-radius: 30px;
+  font-size: 13px;
+  z-index: 2000;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.error {
+  border-color: rgba(255, 100, 100, 0.5);
+  background: rgba(50, 0, 0, 0.9);
+}
+
+.toast.success {
+  border-color: rgba(100, 255, 150, 0.5);
+}
+
+/* Swipe Indicator */
+.swipe-indicator {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  width: 20px;
+  height: 60px;
+  background: linear-gradient(to left, rgba(102, 204, 255, 0.3), transparent);
+  border-radius: 10px 0 0 10px;
+  z-index: 998;
+  transform: translateY(-50%);
+  opacity: 0.5;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.panel.open ~ .swipe-indicator {
+  opacity: 0;
+}
+
+/* Scrollbar */
+.panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* PWA Install Button */
+#btn-install {
+  display: none;
+  bottom: 140px;
+}
+
+#btn-install.show {
+  display: flex;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .panel {
+    width: 100%;
+    padding: 15px;
+    padding-top: 60px;
+  }
+
+  body.panel-active #btn-settings,
+  body.panel-active #btn-sound,
+  body.panel-active #btn-share,
+  body.panel-active #btn-fullscreen,
+  body.panel-active #btn-install {
+    right: auto;
+    left: 15px;
+  }
+
+  .preset-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .ui-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  #btn-settings {
+    top: 15px;
+    right: 15px;
+  }
+
+  #btn-sound {
+    top: 70px;
+    right: 15px;
+  }
+
+  #btn-fullscreen {
+    bottom: 15px;
+    right: 15px;
+  }
+
+  #btn-share {
+    bottom: 70px;
+    right: 15px;
+  }
+
+  #btn-install {
+    bottom: 125px;
+    right: 15px;
+  }
+
+  .control-label {
+    font-size: 11px;
+  }
+
+  .text-input {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .btn {
+    padding: 8px 12px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .preset-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Hidden audio element */
+#rain-audio {
+  display: none;
+}
+
+/* =========================================================
+   WIDGETS - Premium Glassmorphism Edition
+   ========================================================= */
+
+@keyframes widgetSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes secondsPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes rainSway {
+  0%, 100% { transform: rotate(-2deg) translateX(0); }
+  25% { transform: rotate(1deg) translateX(1px); }
+  75% { transform: rotate(-1deg) translateX(-1px); }
+}
+
+@keyframes celestialGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(255, 200, 100, 0.3));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(255, 200, 100, 0.5));
+    transform: scale(1.05);
+  }
+}
+
+@keyframes cloudDrift {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}
+
+@keyframes nowPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(102, 204, 255, 0.4),
+      inset 0 0 15px rgba(102, 204, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(102, 204, 255, 0),
+      inset 0 0 20px rgba(102, 204, 255, 0.2);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes glowBreathe {
+  0%, 100% {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+}
+
+.widgets-container {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
+  pointer-events: none;
+  perspective: 1000px;
+}
+
+.widgets-container > * {
+  pointer-events: auto;
+}
+
+.widgets-container.widgets-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.widgets-container.widgets-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.widgets-container.widgets-visible .datetime-widget {
+  animation: widgetSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.widgets-container.widgets-visible .weather-widget {
+  animation: widgetSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+  opacity: 0;
+}
+
+.datetime-widget,
+.weather-widget {
+  position: relative;
+  width: min(92vw, 380px);
+  border-radius: 24px;
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-style: preserve-3d;
+}
+
+.datetime-widget::before,
+.weather-widget::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.datetime-widget::after,
+.weather-widget::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.datetime-widget:hover,
+.weather-widget:hover {
+  transform: translateY(-4px) scale(1.01);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 0 40px rgba(102, 180, 255, 0.1);
+}
+
+.datetime-widget {
+  padding: 24px 28px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.datetime-widget .time {
+  font-size: 56px;
+  font-weight: 200;
+  letter-spacing: 2px;
+  line-height: 1;
+  margin-bottom: 8px;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.15), 0 2px 10px rgba(0, 0, 0, 0.3);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.datetime-widget .time-seconds {
+  font-size: 20px;
+  font-weight: 300;
+  opacity: 0.6;
+  vertical-align: top;
+  margin-left: 4px;
+  display: inline-block;
+  min-width: 28px;
+  animation: secondsPulse 1s ease-in-out infinite;
+}
+
+.datetime-widget .date {
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.85;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.datetime-widget .day-name {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.datetime-widget .day-phase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.datetime-widget .day-phase span:first-child {
+  font-size: 14px;
+}
+
+.weather-widget {
+  padding: 20px 24px;
+  overflow: hidden;
+}
+
+.weather-widget.loading {
+  min-height: 160px;
+}
+
+.weather-widget.loading #weather-content {
+  display: none;
+}
+
+.weather-widget.loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 24px;
+}
+
+.weather-widget.error .weather-error {
+  display: flex;
+}
+
+.weather-widget.error #weather-content {
+  display: none;
+}
+
+.weather-error {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.weather-error-icon {
+  font-size: 32px;
+  opacity: 0.7;
+  animation: subtleFloat 3s ease-in-out infinite;
+}
+
+.weather-error-text {
+  font-size: 13px;
+  opacity: 0.8;
+  max-width: 200px;
+}
+
+.weather-retry-btn {
+  padding: 10px 24px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    rgba(102, 204, 255, 0.3) 0%,
+    rgba(102, 204, 255, 0.15) 100%
+  );
+  border: 1px solid rgba(102, 204, 255, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 204, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.weather-retry-btn:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(102, 204, 255, 0.5) 0%,
+    rgba(102, 204, 255, 0.25) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 204, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.weather-retry-btn:active {
+  transform: translateY(0);
+}
+
+.weather-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.weather-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: -8px -12px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.weather-location:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.weather-location:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.5);
+}
+
+.weather-location-icon {
+  font-size: 14px;
+}
+
+.weather-location-text {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-location-edit {
+  font-size: 11px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.weather-location:hover .weather-location-edit {
+  opacity: 1;
+}
+
+.weather-update-time {
+  font-size: 10px;
+  opacity: 0.5;
+  white-space: nowrap;
+  padding-top: 4px;
+}
+
+.weather-current {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.weather-icon {
+  font-size: 52px;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+
+.weather-icon.rain {
+  animation: rainSway 2s ease-in-out infinite;
+}
+
+.weather-icon.sun,
+.weather-icon.moon {
+  animation: celestialGlow 4s ease-in-out infinite;
+}
+
+.weather-icon.cloud {
+  animation: cloudDrift 4s ease-in-out infinite;
+}
+
+.weather-icon.snow {
+  animation: subtleFloat 3s ease-in-out infinite;
+}
+
+.weather-info {
+  flex: 1;
+}
+
+.weather-temp {
+  font-size: 42px;
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.1), 0 2px 10px rgba(0, 0, 0, 0.2);
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-temp-unit {
+  font-size: 18px;
+  font-weight: 300;
+  opacity: 0.6;
+  vertical-align: top;
+  margin-left: 2px;
+}
+
+.weather-desc {
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}
+
+.weather-details {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid transparent;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 100%
+  );
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: bottom;
+}
+
+.weather-detail-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.weather-detail-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.weather-detail-icon {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.weather-detail-item span:last-child {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.weather-hourly {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.weather-hour {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.3s ease;
+}
+
+.weather-hour:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.weather-hour.is-now {
+  background: linear-gradient(
+    180deg,
+    rgba(102, 204, 255, 0.2) 0%,
+    rgba(102, 204, 255, 0.08) 100%
+  );
+  border-color: rgba(102, 204, 255, 0.3);
+  animation: nowPulse 3s ease-in-out infinite;
+}
+
+.weather-hour.is-now::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  background: #6cf;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(102, 204, 255, 0.8);
+  animation: secondsPulse 1.5s ease-in-out infinite;
+}
+
+.weather-hour-time {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.7;
+  letter-spacing: 0.3px;
+}
+
+.weather-hour.is-now .weather-hour-time {
+  opacity: 1;
+  color: #6cf;
+  font-weight: 600;
+}
+
+.weather-hour-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.weather-hour-temp {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Location Modal */
+.location-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.location-modal.open {
+  display: flex;
+  opacity: 1;
+}
+
+.location-modal-content {
+  position: relative;
+  width: min(92vw, 420px);
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 28px;
+  background: linear-gradient(
+    135deg,
+    rgba(30, 35, 45, 0.95) 0%,
+    rgba(20, 25, 35, 0.98) 100%
+  );
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #fff;
+  animation: widgetSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.location-modal-content::-webkit-scrollbar { width: 6px; }
+.location-modal-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+.location-modal-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+.location-modal-content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+.location-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.location-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.location-modal-close {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.location-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+.location-modal-close:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.5);
+}
+
+.location-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.location-option:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateX(4px);
+}
+
+.location-option:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.5);
+}
+
+.location-option.active {
+  background: linear-gradient(
+    135deg,
+    rgba(102, 204, 255, 0.2) 0%,
+    rgba(102, 204, 255, 0.08) 100%
+  );
+  border-color: rgba(102, 204, 255, 0.4);
+}
+
+.location-option.active::before {
+  content: "✓";
+  position: absolute;
+  right: 18px;
+  font-size: 14px;
+  color: #6cf;
+}
+
+.location-option-icon {
+  font-size: 24px;
+  width: 40px;
+  text-align: center;
+}
+
+.location-option-info { flex: 1; }
+
+.location-option-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 3px;
+  letter-spacing: 0.2px;
+}
+
+.location-option-desc {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.location-search { margin-top: 20px; }
+
+.location-search-input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.location-search-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+.location-search-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(102, 204, 255, 0.5);
+  box-shadow: 0 0 0 4px rgba(102, 204, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.location-search-results {
+  margin-top: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.location-search-result {
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.location-search-result:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+.location-search-result:focus {
+  outline: none;
+  border-color: rgba(102, 204, 255, 0.5);
+}
+
+.location-search-result-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.location-search-result-country {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.location-search-loading,
+.location-search-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.location-popular { margin-top: 24px; }
+
+.location-popular-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  opacity: 0.5;
+  margin-bottom: 14px;
+}
+
+.location-popular-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.location-popular-item {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.location-popular-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.location-popular-item:focus {
+  outline: none;
+  border-color: rgba(102, 204, 255, 0.5);
+}
+
+@media (max-width: 480px) {
+  .widgets-container { gap: 16px; padding: 16px; }
+  .datetime-widget, .weather-widget { width: min(94vw, 360px); border-radius: 20px; }
+  .datetime-widget::before, .weather-widget::before,
+  .datetime-widget::after, .weather-widget::after { border-radius: 20px; }
+  .datetime-widget { padding: 20px 22px; }
+  .datetime-widget .time { font-size: 44px; }
+  .datetime-widget .time-seconds { font-size: 16px; }
+  .weather-widget { padding: 18px 20px; }
+  .weather-icon { font-size: 44px; }
+  .weather-temp { font-size: 36px; }
+  .weather-hour { padding: 12px 8px; }
+  .weather-hour-icon { font-size: 20px; }
+  .location-modal-content { padding: 24px; border-radius: 24px; }
+}
+
+@media (max-width: 360px) {
+  .datetime-widget .time { font-size: 38px; letter-spacing: 1px; }
+  .weather-temp { font-size: 32px; }
+  .weather-details { gap: 6px; }
+  .weather-detail-item { padding: 8px 6px; }
+  .weather-hourly { gap: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .widgets-container.widgets-visible .datetime-widget,
+  .widgets-container.widgets-visible .weather-widget {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .datetime-widget, .weather-widget {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.04) 50%,
+      rgba(255, 255, 255, 0.07) 100%
+    );
+  }
+}
+  </style>
+</head>
+
+<body translate="no">
+<!-- Skip Link for Accessibility -->
+<a href="#panel" class="skip-link">Skip to settings</a>
+
+<!-- Background Image -->
+<img id="custom-bg" src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1920&q=80" onerror="this.onerror=null; this.src='assets/images/bg/city.jpg';" alt="Rainy cityscape background">
+
+<!-- Background Video -->
+<video id="custom-video" class="hidden" muted loop playsinline webkit-playsinline preload="metadata" aria-hidden="true">
+</video>
+
+<!-- Color Overlay -->
+<div id="color-overlay" aria-hidden="true"></div>
+
+<!-- Raindrops Canvas -->
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" role="alert" aria-live="polite">
+  <div class="loader-spinner"></div>
+  <span class="loader-text">Loading...</span>
+</div>
+
+<!-- Widgets Container -->
+<div class="widgets-container widgets-hidden" id="widgets-container" aria-hidden="true">
+  <!-- DateTime Widget -->
+  <div class="datetime-widget" id="datetime-widget" role="timer" aria-live="polite" aria-label="Current date and time">
+    <div class="time">
+      <span id="time-display">--:--</span>
+      <span class="time-seconds" id="time-seconds">--</span>
+    </div>
+    <div class="date" id="date-display">--</div>
+    <div class="day-name" id="day-display">--</div>
+    <div class="day-phase" id="day-phase">
+      <span id="day-phase-icon">🌙</span>
+      <span id="day-phase-text">--</span>
+    </div>
+  </div>
+
+  <!-- Weather Widget -->
+  <div class="weather-widget loading" id="weather-widget" role="region" aria-label="Weather information">
+    <div class="weather-error">
+      <span class="weather-error-icon">⚠️</span>
+      <span class="weather-error-text" id="weather-error-text">Unable to load weather</span>
+      <button class="weather-retry-btn" id="weather-retry-btn" type="button">Retry</button>
+    </div>
+
+    <div id="weather-content" style="display:none;">
+      <div class="weather-header">
+        <div class="weather-location" id="weather-location" tabindex="0" role="button" aria-label="Change location">
+          <span class="weather-location-icon">📍</span>
+          <span class="weather-location-text" id="location-text">Loading...</span>
+          <span class="weather-location-edit">✎</span>
+        </div>
+        <div class="weather-update-time" id="weather-update-time"></div>
+      </div>
+
+      <div class="weather-current">
+        <span class="weather-icon" id="weather-icon">--</span>
+        <div class="weather-info">
+          <div class="weather-temp">
+            <span id="weather-temp">--</span>
+            <span class="weather-temp-unit">°C</span>
+          </div>
+          <div class="weather-desc" id="weather-desc">--</div>
+        </div>
+      </div>
+
+      <div class="weather-details">
+        <div class="weather-detail-item">
+          <span class="weather-detail-icon">💧</span>
+          <span id="weather-humidity">--%</span>
+        </div>
+        <div class="weather-detail-item">
+          <span class="weather-detail-icon">💨</span>
+          <span id="weather-wind">-- km/h</span>
+        </div>
+        <div class="weather-detail-item">
+          <span class="weather-detail-icon">🌡️</span>
+          <span id="weather-feels">--°</span>
+        </div>
+      </div>
+
+      <div class="weather-hourly" id="weather-hourly" role="list" aria-label="Hourly forecast">
+        <!-- items generated by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Location Selection Modal -->
+<div class="location-modal" id="location-modal" role="dialog" aria-modal="true" aria-labelledby="location-modal-title" aria-hidden="true">
+  <div class="location-modal-content">
+    <div class="location-modal-header">
+      <h2 class="location-modal-title" id="location-modal-title">📍 Select Location</h2>
+      <button class="location-modal-close" id="location-modal-close" aria-label="Close" type="button">✕</button>
+    </div>
+
+    <div class="location-option" id="location-auto" tabindex="0" role="button">
+      <span class="location-option-icon">🌐</span>
+      <div class="location-option-info">
+        <div class="location-option-title" id="location-auto-title">Automatic (IP Based)</div>
+        <div class="location-option-desc" id="location-auto-desc">Detect location automatically</div>
+      </div>
+    </div>
+
+    <div class="location-option" id="location-gps" tabindex="0" role="button">
+      <span class="location-option-icon">📍</span>
+      <div class="location-option-info">
+        <div class="location-option-title" id="location-gps-title">Use GPS</div>
+        <div class="location-option-desc" id="location-gps-desc">Precise location (requires permission)</div>
+      </div>
+    </div>
+
+    <div class="location-search">
+      <input type="text" class="location-search-input" id="location-search-input" placeholder="Search city..." aria-label="Search city">
+      <div class="location-search-results" id="location-search-results"></div>
+    </div>
+
+    <div class="location-popular" id="location-popular">
+      <div class="location-popular-title" id="location-popular-title">Popular Cities</div>
+      <div class="location-popular-grid" id="location-popular-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Rain Sound -->
+<audio id="rain-audio" loop preload="auto">
+  <source src="https://fyildiz1974.github.io/web/files/rain.mp3" type="audio/mpeg">
+  <source src="assets/audio/rain.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
+
+<!-- UI Buttons -->
+<button id="btn-settings" class="ui-btn" title="Settings" aria-label="Open the settings panel." aria-expanded="false" aria-controls="panel">
+  ⚙️
+</button>
+<button id="btn-sound" class="ui-btn" title="Sound" aria-label="Mute / Unmute" aria-pressed="false">
+  🔇
+</button>
+<button id="btn-share" class="ui-btn" title="Share" aria-label="Copy link">
+  🔗
+</button>
+<button id="btn-install" class="ui-btn" title="Install the app" aria-label="Add the app to the home screen">
+  📲
+</button>
+<button id="btn-fullscreen" class="ui-btn" title="Fullscreen" aria-label="Enter full-screen mode">
+  ⛶
+</button>
+
+<!-- Swipe Indicator (Mobile) -->
+<div class="swipe-indicator" aria-hidden="true"></div>
+
+<!-- Settings Panel -->
+<div class="panel" id="panel" role="dialog" aria-label="Settings panel" aria-hidden="true">
+  <button class="panel-close" id="panel-close" aria-label="Close the panel">✕</button>
+
+  <h3 id="bg-heading">🖼️ Background</h3>
+
+  <div class="preset-grid" id="preset-grid" role="listbox" aria-labelledby="bg-heading"></div>
+
+  <div class="input-group">
+    <div class="input-row">
+      <label for="url-input" class="sr-only">Image or Video URL</label>
+      <input type="text" id="url-input" class="text-input" placeholder="Image or Video URL...">
+      <button id="url-btn" class="btn" aria-label="Load from URL">Load</button>
+    </div>
+    <input type="file" id="file-input" accept="image/*,video/*" style="display:none" aria-label="Choose file">
+    <button id="file-btn" class="btn btn-file" aria-label="Choose file from computer">📁 Choose file from computer (Image/Video)</button>
+  </div>
+
+  <h3 id="effects-heading">🎛️ Visual Effects</h3>
+
+  <div class="control-group">
+    <div class="control-label">
+      <label for="blur-range">Blur</label>
+      <span class="control-value" id="blur-val">5px</span>
+    </div>
+    <input type="range" id="blur-range" min="0" max="25" value="5" aria-describedby="blur-val">
+  </div>
+
+  <div class="control-group">
+    <div class="control-label">
+      <label for="brightness-range">Brightness</label>
+      <span class="control-value" id="brightness-val">30%</span>
+    </div>
+    <input type="range" id="brightness-range" min="20" max="120" value="30" aria-describedby="brightness-val">
+  </div>
+
+  <div class="control-group">
+    <div class="control-label">
+      <label for="rain-range">Rain Intensity</label>
+      <span class="control-value" id="rain-val">70%</span>
+    </div>
+    <input type="range" id="rain-range" min="20" max="100" value="70" aria-describedby="rain-val">
+  </div>
+
+  <h3 id="color-heading">🎨 Hue</h3>
+
+  <div class="color-options" id="color-options" role="radiogroup" aria-labelledby="color-heading">
+    <button class="color-btn none active" data-color="none" title="None" role="radio" aria-checked="true" aria-label="No color"></button>
+    <button class="color-btn" data-color="#3498db" style="background:#3498db" title="Blue" role="radio" aria-checked="false" aria-label="Blue"></button>
+    <button class="color-btn" data-color="#9b59b6" style="background:#9b59b6" title="Purple" role="radio" aria-checked="false" aria-label="Purple"></button>
+    <button class="color-btn" data-color="#e74c3c" style="background:#e74c3c" title="Red" role="radio" aria-checked="false" aria-label="Red"></button>
+    <button class="color-btn" data-color="#f39c12" style="background:#f39c12" title="Orange" role="radio" aria-checked="false" aria-label="Orange"></button>
+    <button class="color-btn" data-color="#2ecc71" style="background:#2ecc71" title="Green" role="radio" aria-checked="false" aria-label="Green"></button>
+    <button class="color-btn" data-color="#1abc9c" style="background:#1abc9c" title="Turquoise" role="radio" aria-checked="false" aria-label="Turquoise"></button>
+    <button class="color-btn" data-color="#e91e63" style="background:#e91e63" title="Pink" role="radio" aria-checked="false" aria-label="Pink"></button>
+  </div>
+
+  <div class="control-group">
+    <div class="control-label">
+      <label for="overlay-range">Color Intensity</label>
+      <span class="control-value" id="overlay-val">0%</span>
+    </div>
+    <input type="range" id="overlay-range" min="0" max="80" value="0" aria-describedby="overlay-val">
+  </div>
+
+  <h3 id="sound-heading">🔊 Ambient Sound</h3>
+
+  <div class="sound-control">
+    <button class="sound-icon" id="sound-toggle" aria-label="Mute / Unmute" aria-pressed="false">🔇</button>
+    <label for="volume-range" class="sr-only">Volume</label>
+    <input type="range" id="volume-range" min="0" max="100" value="50" aria-describedby="volume-val">
+    <span class="control-value" id="volume-val">50%</span>
+  </div>
+
+  <h3>⚙️ Other</h3>
+
+  <button id="btn-save" class="btn" style="width:100%; margin-bottom:8px;" aria-label="Save Settings">
+    💾 Save Settings
+  </button>
+  <button id="btn-reset" class="btn btn-reset" aria-label="Reset to Default">
+    🔄 Reset to Default
+  </button>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+  <script>
+// =====================================================================
+// GLOBAL ERROR HANDLING
+// =====================================================================
+(function () {
+  let errorCount = 0;
+  const MAX_ERRORS = 5;
+  const ERROR_RESET_TIME = 60000;
+
+  setInterval(() => { errorCount = 0; }, ERROR_RESET_TIME);
+
+  window.addEventListener("error", event => {
+    errorCount++;
+    if (errorCount <= MAX_ERRORS) {
+      console.error("Application Error:", { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno, error: event.error });
+      if (event.error && event.error.stack) {
+        const toastEl = document.getElementById("toast");
+        if (toastEl) { showErrorToast("An error occurred. The page can be refreshed."); }
+      }
+    }
+  });
+
+  window.addEventListener("unhandledrejection", event => {
+    errorCount++;
+    if (errorCount <= MAX_ERRORS) {
+      console.error("Unhandled Promise Error:", event.reason);
+      const toastEl = document.getElementById("toast");
+      if (toastEl) { showErrorToast("An operation failed."); }
+    }
+  });
+
+  window.showErrorToast = function (message) {
+    const toast = document.getElementById("toast");
+    if (toast && typeof showToast === "function") {
+      showToast("⚠️ " + message, "error");
+    } else if (toast) {
+      toast.textContent = "⚠️ " + message;
+      toast.className = "toast show error";
+      setTimeout(() => { toast.classList.remove("show", "error"); }, 3000);
+    }
+  };
+
+  window.addEventListener("load", () => {
+    const criticalElements = ["bg-canvas", "custom-bg", "panel", "rain-audio"];
+    const missing = criticalElements.filter(id => !document.getElementById(id));
+    if (missing.length > 0) {
+      console.error("Critical elements are missing:", missing);
+      showErrorToast("The page could not be loaded properly. Please refresh.");
+    }
+  });
+})();
+
+// =====================================================================
+// RAINDROPS.JS LOADER & INITIALIZER
+// =====================================================================
+let raindropInstance = null;
+let raindropsInitialized = false;
+let raindropsRetryCount = 0;
+const MAX_RAINDROPS_RETRY = 10;
+
+function loadRaindrops() {
+  return new Promise((resolve, reject) => {
+    const sources = [
+      "https://fyildiz1974.github.io/web/files/raindrops.js",
+      "assets/js/raindrops.js",
+      "https://fthyldz.com/bio/js/raindrops.js"
+    ];
+
+    let currentIndex = 0;
+
+    function tryLoadScript() {
+      if (currentIndex >= sources.length) {
+        console.error("All Raindrops sources failed");
+        reject(new Error("Raindrops.js could not be loaded"));
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = sources[currentIndex];
+
+      script.onload = () => {
+        console.log("✓ Raindrops.js loaded:", sources[currentIndex]);
+        setTimeout(resolve, 100);
+      };
+
+      script.onerror = () => {
+        console.warn("Raindrops source failed:", sources[currentIndex]);
+        currentIndex++;
+        tryLoadScript();
+      };
+
+      document.head.appendChild(script);
+    }
+
+    tryLoadScript();
+  });
+}
+
+function initRaindrops() {
+  if (raindropsInitialized && raindropInstance) { return raindropInstance; }
+
+  const canvas = document.getElementById("bg-canvas");
+  const bg = document.getElementById("custom-bg");
+
+  if (!canvas || !bg) { console.error("Canvas or background element not found"); return null; }
+
+  if (typeof Raindrops === "undefined") {
+    raindropsRetryCount++;
+    if (raindropsRetryCount >= MAX_RAINDROPS_RETRY) {
+      console.log("Raindrops: Maximum retry limit exceeded, effect may be running in manual mode");
+      return null;
+    }
+    if (raindropsRetryCount <= 2) {
+      console.log("Waiting for Raindrops... (" + raindropsRetryCount + "/" + MAX_RAINDROPS_RETRY + ")");
+    }
+    setTimeout(initRaindrops, 300);
+    return null;
+  }
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  if (!bg.complete || bg.naturalWidth === 0) {
+    bg.addEventListener("load", () => { if (!raindropsInitialized) { initRaindrops(); } }, { once: true });
+    return null;
+  }
+
+  try {
+    if (raindropInstance && typeof raindropInstance.destroy === "function") {
+      raindropInstance.destroy();
+    }
+
+    raindropInstance = new Raindrops(canvas, canvas.width, canvas.height, {
+      renderDropsOnTop: true,
+      brightness: 1.04,
+      alphaMultiply: 6,
+      alphaSubtract: 3,
+      minR: 10,
+      maxR: 40,
+      rainChance: 0.35,
+      rainLimit: 6,
+      dropletsRate: 50,
+      dropletsSize: [3, 5.5],
+      trailRate: 1,
+      trailScaleRange: [0.2, 0.45],
+      fg: bg,
+      bg: bg
+    });
+
+    raindropsInitialized = true;
+    raindropsRetryCount = 0;
+    console.log("✓ Raindrops successfully initialized");
+    return raindropInstance;
+  } catch (e) {
+    console.error("Raindrops initialization error:", e.message);
+    raindropsInitialized = true;
+    return null;
+  }
+}
+
+// =====================================================================
+// UTILITY FUNCTIONS
+// =====================================================================
+function throttle(func, limit) {
+  let inThrottle;
+  return function (...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+function isValidUrl(string) {
+  if (!string || typeof string !== "string") { return false; }
+  try {
+    const url = new URL(string);
+    return ["http:", "https:"].includes(url.protocol);
+  } catch { return false; }
+}
+
+function sanitizeUrl(url) {
+  if (!isValidUrl(url)) { return null; }
+  try {
+    const parsed = new URL(url);
+    return parsed.href;
+  } catch { return null; }
+}
+
+// =====================================================================
+// DEVICE DETECTION
+// =====================================================================
+const DeviceInfo = {
+  isMobile: function () {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  },
+  isIOS: function () { return /iPad|iPhone|iPod/.test(navigator.userAgent); },
+  getMaxBlur: function () { return this.isMobile() ? 15 : 25; }
+};
+
+// =====================================================================
+// FULLSCREEN API
+// =====================================================================
+const FullscreenAPI = {
+  isFullscreen: function () {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  },
+  enter: function (element) {
+    element = element || document.documentElement;
+    const requestMethod = element.requestFullscreen || element.webkitRequestFullscreen || element.mozRequestFullScreen || element.msRequestFullscreen;
+    if (!requestMethod) { showToast("❌ Fullscreen is not supported", "error"); return Promise.reject(new Error("Not supported")); }
+    try {
+      const result = requestMethod.call(element);
+      if (result && typeof result.then === "function") {
+        return result.catch(function (err) { console.warn("Fullscreen error:", err.message); showToast("❌ Fullscreen cannot be used", "error"); });
+      }
+      return Promise.resolve();
+    } catch (err) { console.error("Fullscreen exception:", err); return Promise.reject(err); }
+  },
+  exit: function () {
+    const exitMethod = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (exitMethod && this.isFullscreen()) {
+      try {
+        const result = exitMethod.call(document);
+        if (result && typeof result.then === "function") { return result.catch(function (err) { console.warn("Fullscreen exit error:", err.message); }); }
+        return Promise.resolve();
+      } catch (err) { return Promise.reject(err); }
+    }
+    return Promise.resolve();
+  },
+  toggle: function () { return this.isFullscreen() ? this.exit() : this.enter(); },
+  updateButtonIcon: function (isFullscreen) {
+    const btn = document.getElementById("btn-fullscreen");
+    if (!btn) return;
+    while (btn.firstChild) { btn.removeChild(btn.firstChild); }
+    btn.appendChild(document.createTextNode(isFullscreen ? "✕" : "⛶"));
+    btn.setAttribute("aria-label", isFullscreen ? "Exit fullscreen" : "Enter fullscreen mode");
+    btn.title = isFullscreen ? "Exit Fullscreen" : "Fullscreen";
+    btn.classList.toggle("active", isFullscreen);
+  },
+  init: function () {
+    const self = this;
+    ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"].forEach(function (eventName) {
+      document.addEventListener(eventName, function () { self.updateButtonIcon(self.isFullscreen()); }, false);
+    });
+    ["fullscreenerror", "webkitfullscreenerror", "mozfullscreenerror", "MSFullscreenError"].forEach(function (eventName) {
+      document.addEventListener(eventName, function () { showToast("❌ Fullscreen error", "error"); }, false);
+    });
+  }
+};
+
+// =====================================================================
+// AUDIO MANAGER
+// =====================================================================
+const AudioManager = {
+  audio: null,
+  sources: [],
+  currentSourceIndex: 0,
+  allSourcesFailed: false,
+  loadAttempts: 0,
+  maxLoadAttempts: 3,
+
+  init: function (audioElement) {
+    this.audio = audioElement;
+    this.sources = Array.from(audioElement.querySelectorAll("source")).map(s => s.src);
+    this.setupEventListeners();
+  },
+
+  setupEventListeners: function () {
+    const self = this;
+    this.audio.addEventListener("error", function (e) { console.warn("Audio source error:", self.audio.currentSrc); self.tryNextSource(); }, true);
+    this.audio.addEventListener("loadeddata", function () { console.log("Audio successfully loaded:", self.audio.currentSrc); self.loadAttempts = 0; self.allSourcesFailed = false; });
+    this.audio.addEventListener("canplaythrough", function () { console.log("Audio is ready to play"); });
+  },
+
+  tryNextSource: function () {
+    this.loadAttempts++;
+    if (this.loadAttempts > this.maxLoadAttempts) { this.currentSourceIndex++; this.loadAttempts = 0; }
+    if (this.currentSourceIndex >= this.sources.length) {
+      if (!this.allSourcesFailed) {
+        this.allSourcesFailed = true;
+        console.error("All audio sources failed");
+        showToast("⚠️ Audio could not be loaded – please check your internet connection", "error");
+        if (typeof state !== "undefined") { state.soundOn = false; if (typeof syncSoundUI === "function") { syncSoundUI(); } }
+      }
+      return;
+    }
+    console.log("Trying fallback audio source:", this.sources[this.currentSourceIndex]);
+    this.audio.src = this.sources[this.currentSourceIndex];
+    this.audio.load();
+  },
+
+  play: function () {
+    if (this.allSourcesFailed) { showToast("⚠️ Audio sources could not be loaded", "error"); return Promise.reject(new Error("All audio sources failed")); }
+    return this.audio.play();
+  },
+  pause: function () { this.audio.pause(); },
+  setVolume: function (volume) { this.audio.volume = Math.max(0, Math.min(1, volume)); },
+  isReady: function () { return !this.allSourcesFailed && this.audio.readyState >= 2; }
+};
+
+// =====================================================================
+// RESOURCE MANAGER
+// =====================================================================
+const ResourceManager = {
+  blobUrls: new Set(),
+  eventListeners: new Map(),
+  abortControllers: new Map(),
+
+  createBlobUrl: function (blob) { const url = URL.createObjectURL(blob); this.blobUrls.add(url); return url; },
+  revokeBlobUrl: function (url) { if (url && this.blobUrls.has(url)) { URL.revokeObjectURL(url); this.blobUrls.delete(url); } },
+  revokeAllBlobUrls: function () { this.blobUrls.forEach(url => { URL.revokeObjectURL(url); }); this.blobUrls.clear(); },
+
+  addManagedEventListener: function (element, event, handler, options = {}) {
+    const key = `${element.id || "anonymous"}-${event}`;
+    const controller = new AbortController();
+    this.removeManagedEventListener(element, event);
+    element.addEventListener(event, handler, { ...options, signal: controller.signal });
+    this.abortControllers.set(key, controller);
+    this.eventListeners.set(key, { element, event, handler });
+  },
+
+  removeManagedEventListener: function (element, event) {
+    const key = `${element.id || "anonymous"}-${event}`;
+    const controller = this.abortControllers.get(key);
+    if (controller) { controller.abort(); this.abortControllers.delete(key); this.eventListeners.delete(key); }
+  },
+
+  cleanup: function () {
+    this.revokeAllBlobUrls();
+    this.abortControllers.forEach(controller => controller.abort());
+    this.abortControllers.clear();
+    this.eventListeners.clear();
+    if (raindropInstance && typeof raindropInstance.destroy === "function") { raindropInstance.destroy(); raindropInstance = null; }
+    console.log("All resources have been cleaned up");
+  }
+};
+
+// =====================================================================
+// LOADING CONTROLLER
+// =====================================================================
+const LoadingController = {
+  currentLoadId: null,
+  startLoading: function () { const loadId = Date.now() + "-" + Math.random().toString(36).substr(2, 9); this.currentLoadId = loadId; return loadId; },
+  isCurrentLoading: function (loadId) { return this.currentLoadId === loadId; },
+  cancelLoading: function (loadId) { if (this.currentLoadId === loadId) { this.currentLoadId = null; } },
+  cancelAll: function () { this.currentLoadId = null; }
+};
+
+// =====================================================================
+// PWA MANAGER
+// =====================================================================
+const PWAManager = {
+  deferredPrompt: null,
+  installButton: null,
+
+  init: function () {
+    this.installButton = document.getElementById("btn-install");
+    this.registerServiceWorker();
+    this.setupInstallPrompt();
+  },
+
+  registerServiceWorker: function () {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").then(registration => { console.log("ServiceWorker registered:", registration.scope); }).catch(error => { console.warn("ServiceWorker registration failed:", error); });
+      });
+    }
+  },
+
+  setupInstallPrompt: function () {
+    const self = this;
+    window.addEventListener("beforeinstallprompt", e => {
+      e.preventDefault();
+      self.deferredPrompt = e;
+      if (self.installButton) { self.installButton.classList.add("show"); }
+    });
+    if (this.installButton) { this.installButton.addEventListener("click", () => { self.promptInstall(); }); }
+    window.addEventListener("appinstalled", () => {
+      self.deferredPrompt = null;
+      if (self.installButton) { self.installButton.classList.remove("show"); }
+      showToast("✓ App added to home screen!", "success");
+    });
+  },
+
+  promptInstall: async function () {
+    if (!this.deferredPrompt) { showToast("ℹ️ App is already installed or not supported", "info"); return; }
+    this.deferredPrompt.prompt();
+    const { outcome } = await this.deferredPrompt.userChoice;
+    if (outcome === "accepted") { showToast("✓ Installing app...", "success"); }
+    this.deferredPrompt = null;
+  }
+};
+
+// =====================================================================
+// CONFIGURATION
+// =====================================================================
+const CONFIG = {
+  codepenUrl: "https://codepen.io/fyildiz1974/pen/RNRgjpj",
+  productionUrl: "https://fthyldz.com/rainy"
+};
+
+// =====================================================================
+// PRESET BACKGROUNDS
+// =====================================================================
+const PRESETS = [
+  { type: "image", label: "City",     url: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1920&q=80",    urlFallback: "assets/images/bg/city.jpg",     thumb: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=300&q=60",   thumbFallback: "assets/images/thumbs/city.jpg" },
+  { type: "image", label: "Forest",   url: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1920&q=80",    urlFallback: "assets/images/bg/forest.jpg",   thumb: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=300&q=60",   thumbFallback: "assets/images/thumbs/forest.jpg" },
+  { type: "image", label: "Mountain", url: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80",    urlFallback: "assets/images/bg/mountain.jpg", thumb: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=300&q=60",   thumbFallback: "assets/images/thumbs/mountain.jpg" },
+  { type: "image", label: "Towers",   url: "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1920&q=80",       urlFallback: "assets/images/bg/lights.jpg",   thumb: "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=300&q=60",    thumbFallback: "assets/images/thumbs/lights.jpg" },
+  { type: "image", label: "Future",   url: "https://images.unsplash.com/photo-1494522855154-9297ac14b55f?w=1920&q=80",    urlFallback: "assets/images/bg/road.jpg",     thumb: "https://images.unsplash.com/photo-1494522855154-9297ac14b55f?w=300&q=60",   thumbFallback: "assets/images/thumbs/road.jpg" },
+  { type: "image", label: "Sky",      url: "https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=1920&q=80",    urlFallback: "assets/images/bg/sky.jpg",      thumb: "https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=300&q=60",   thumbFallback: "assets/images/thumbs/sky.jpg" },
+  { type: "video", label: "Hurricane",url: "https://cdn.pixabay.com/video/2019/03/18/22070-325253460_large.mp4",          urlFallback: "assets/videos/traffic.mp4",     thumb: "https://cdn.pixabay.com/video/2019/03/18/22070-325253460_tiny.jpg",        thumbFallback: "assets/images/thumbs/traffic.jpg" },
+  { type: "video", label: "River",    url: "https://cdn.pixabay.com/video/2020/12/01/58020-486900427_large.mp4",          urlFallback: "assets/videos/cityrain.mp4",    thumb: "https://cdn.pixabay.com/video/2020/12/01/58020-486900427_tiny.jpg",        thumbFallback: "assets/images/thumbs/cityrain.jpg" },
+  { type: "video", label: "Beach",    url: "https://videos.pexels.com/video-files/2439510/2439510-hd_1920_1080_30fps.mp4", urlFallback: "assets/videos/nature.mp4",     thumb: "https://images.pexels.com/videos/2439510/free-video-2439510.jpg?auto=compress&cs=tinysrgb&w=300&h=200&dpr=1", thumbFallback: "assets/images/thumbs/nature.jpg" }
+];
+
+// =====================================================================
+// DEFAULT STATE
+// =====================================================================
+const DEFAULT_STATE = {
+  blur: 5,
+  brightness: 30,
+  rain: 70,
+  overlayColor: "none",
+  overlayOpacity: 0,
+  volume: 50,
+  soundOn: true,
+  currentType: "image",
+  currentUrl: PRESETS[0].url,
+  currentPresetIndex: 0
+};
+
+let state = new Proxy(
+  { ...DEFAULT_STATE },
+  {
+    set(target, property, value) {
+      const oldValue = target[property];
+      if (property === "blur") { const maxBlur = DeviceInfo.getMaxBlur(); value = Math.min(value, maxBlur); }
+      target[property] = value;
+      if (oldValue !== value) {
+        const visualProperties = ["blur", "brightness", "rain", "overlayColor", "overlayOpacity"];
+        if (visualProperties.includes(property)) { if (typeof updateFilters === "function") { updateFilters(); } }
+      }
+      return true;
+    },
+    get(target, property) { return target[property]; }
+  }
+);
+
+// =====================================================================
+// DOM ELEMENTS
+// =====================================================================
+const customBg = document.getElementById("custom-bg");
+const customVideo = document.getElementById("custom-video");
+const colorOverlay = document.getElementById("color-overlay");
+const canvas = document.getElementById("bg-canvas");
+const panel = document.getElementById("panel");
+const presetGrid = document.getElementById("preset-grid");
+const rainAudio = document.getElementById("rain-audio");
+const toast = document.getElementById("toast");
+const soundToggleIcon = document.getElementById("sound-toggle");
+const soundBtn = document.getElementById("btn-sound");
+const loadingOverlay = document.getElementById("loading-overlay");
+const settingsBtn = document.getElementById("btn-settings");
+
+// =====================================================================
+// HELPER FUNCTIONS
+// =====================================================================
+function showToast(message, type = "info") {
+  toast.textContent = message;
+  toast.className = "toast show";
+  if (type === "error") toast.classList.add("error");
+  if (type === "success") toast.classList.add("success");
+  setTimeout(() => toast.classList.remove("show", "error", "success"), 2500);
+}
+
+function showLoader(text = "Loading...") {
+  loadingOverlay.querySelector(".loader-text").textContent = text;
+  loadingOverlay.classList.add("active");
+}
+
+function hideLoader() { loadingOverlay.classList.remove("active"); }
+
+function isVideoUrl(url) { return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url); }
+
+function cleanupBlobUrl() { ResourceManager.revokeAllBlobUrls(); }
+
+const updateFilters = throttle(function () {
+  const filter = `blur(${state.blur}px) brightness(${state.brightness / 100})`;
+  customBg.style.filter = filter;
+  customVideo.style.filter = filter;
+  canvas.style.opacity = state.rain / 100;
+  if (state.overlayColor !== "none" && state.overlayOpacity > 0) {
+    colorOverlay.style.backgroundColor = state.overlayColor;
+    colorOverlay.style.opacity = state.overlayOpacity / 100;
+  } else {
+    colorOverlay.style.opacity = 0;
+  }
+}, 16);
+
+function setBackground(url, type = "image", presetIndex = -1) {
+  LoadingController.cancelAll();
+  const loadId = LoadingController.startLoading();
+
+  state.currentType = type;
+  state.currentUrl = url;
+  state.currentPresetIndex = presetIndex;
+
+  if (presetIndex === -1) { document.querySelectorAll(".preset-item").forEach(el => el.classList.remove("active")); }
+
+  if (type === "video") {
+    showLoader("Loading video...");
+    customBg.classList.add("hidden");
+    customVideo.classList.remove("hidden");
+    customVideo.classList.add("active");
+    customVideo.muted = true;
+    customVideo.loop = true;
+    customVideo.playsInline = true;
+    customVideo.setAttribute("playsinline", "");
+    customVideo.setAttribute("webkit-playsinline", "");
+    customVideo.pause();
+    customVideo.removeAttribute("src");
+    customVideo.load();
+    customVideo.src = url;
+
+    const playVideo = () => {
+      if (!LoadingController.isCurrentLoading(loadId)) { return; }
+      const playPromise = customVideo.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          if (!LoadingController.isCurrentLoading(loadId)) { customVideo.pause(); return; }
+          hideLoader();
+        }).catch(error => {
+          if (!LoadingController.isCurrentLoading(loadId)) return;
+          console.warn("Video could not autoplay:", error);
+          hideLoader();
+          if (error.name === "NotAllowedError") {
+            showToast("🎬 Tap the screen to start the video", "info");
+            const startVideo = () => { customVideo.play().catch(() => {}); document.removeEventListener("click", startVideo); document.removeEventListener("touchstart", startVideo); };
+            document.addEventListener("click", startVideo, { once: true });
+            document.addEventListener("touchstart", startVideo, { once: true, passive: true });
+          } else { showToast("❌ Video could not be played", "error"); }
+        });
+      }
+    };
+
+    const canPlayHandler = () => { if (LoadingController.isCurrentLoading(loadId)) { playVideo(); } };
+    if (customVideo.readyState >= 3) { playVideo(); } else { customVideo.addEventListener("canplay", canPlayHandler, { once: true }); }
+  } else {
+    showLoader("Loading image...");
+    customVideo.pause();
+    customVideo.classList.add("hidden");
+    customVideo.classList.remove("active");
+    customBg.classList.remove("hidden");
+
+    const imgLoadHandler = () => {
+      if (LoadingController.isCurrentLoading(loadId)) {
+        hideLoader();
+        if (!raindropsInitialized && typeof initRaindrops === "function") { setTimeout(() => initRaindrops(), 100); }
+      }
+    };
+
+    const imgErrorHandler = () => {
+      if (LoadingController.isCurrentLoading(loadId)) {
+        hideLoader();
+        showToast("❌ Image could not be loaded", "error");
+        if (state.currentPresetIndex !== 0) { setBackground(PRESETS[0].url, PRESETS[0].type, 0); document.querySelectorAll(".preset-item")[0]?.classList.add("active"); }
+      }
+    };
+
+    customBg.onload = imgLoadHandler;
+    customBg.onerror = imgErrorHandler;
+    customBg.src = url;
+    if (customBg.complete) { imgLoadHandler(); }
+  }
+
+  updateFilters();
+}
+
+function setupMediaErrorHandlers() {
+  customVideo.onerror = function (e) {
+    hideLoader();
+    console.error("Video loading error", e);
+    showToast("❌ Video could not be loaded", "error");
+    if (state.currentPresetIndex !== 0) { setBackground(PRESETS[0].url, PRESETS[0].type, 0); document.querySelectorAll(".preset-item")[0]?.classList.add("active"); }
+  };
+  customVideo.addEventListener("loadeddata", () => { console.log("Video data loaded"); });
+  customVideo.addEventListener("waiting", () => { showLoader("Video buffering..."); });
+  customVideo.addEventListener("playing", () => { hideLoader(); });
+  customVideo.addEventListener("canplay", () => { hideLoader(); });
+  customVideo.addEventListener("stalled", () => { console.warn("Video stream stalled"); showLoader("Waiting for video connection..."); });
+}
+
+function syncSoundUI() {
+  const isOn = state.soundOn;
+  soundBtn.classList.toggle("active", isOn);
+  soundBtn.textContent = isOn ? "🔊" : "🔇";
+  soundBtn.setAttribute("aria-pressed", isOn);
+  soundToggleIcon.textContent = isOn ? "🔊" : "🔇";
+  soundToggleIcon.setAttribute("aria-pressed", isOn);
+}
+
+function setSound(on) {
+  state.soundOn = !!on;
+  syncSoundUI();
+  if (state.soundOn) {
+    AudioManager.setVolume(state.volume / 100);
+    AudioManager.play().catch(() => { state.soundOn = false; syncSoundUI(); showToast("🔇 Autoplay audio blocked — click to enable", "info"); });
+  } else {
+    AudioManager.pause();
+  }
+}
+
+function saveToLocalStorage() {
+  try {
+    const saveData = { blur: state.blur, brightness: state.brightness, rain: state.rain, overlayColor: state.overlayColor, overlayOpacity: state.overlayOpacity, volume: state.volume, soundOn: state.soundOn, currentPresetIndex: state.currentPresetIndex, savedAt: Date.now() };
+    localStorage.setItem("rainSettings", JSON.stringify(saveData));
+    showToast("✓ Settings saved", "success");
+    return true;
+  } catch (e) {
+    if (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED" || e.code === 22 || e.code === 1014) {
+      showToast("❌ Storage is full!", "error");
+      if (confirm("Storage is full. Delete old settings and try again?")) {
+        try { localStorage.removeItem("rainSettings"); return saveToLocalStorage(); } catch (retryError) { showToast("❌ Cleanup failed", "error"); }
+      }
+    } else { showToast("❌ Settings could not be saved", "error"); console.error("localStorage save error:", e); }
+    return false;
+  }
+}
+
+function loadFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem("rainSettings");
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (typeof data !== "object" || data === null) { localStorage.removeItem("rainSettings"); return false; }
+      const maxBlur = DeviceInfo.getMaxBlur();
+      state.blur = Math.min(maxBlur, Math.max(0, parseInt(data.blur) || DEFAULT_STATE.blur));
+      state.brightness = Math.min(120, Math.max(20, parseInt(data.brightness) || DEFAULT_STATE.brightness));
+      state.rain = Math.min(100, Math.max(20, parseInt(data.rain) || DEFAULT_STATE.rain));
+      state.volume = Math.min(100, Math.max(0, parseInt(data.volume) || DEFAULT_STATE.volume));
+      state.overlayOpacity = Math.min(80, Math.max(0, parseInt(data.overlayOpacity) || DEFAULT_STATE.overlayOpacity));
+      state.overlayColor = data.overlayColor || DEFAULT_STATE.overlayColor;
+      state.soundOn = typeof data.soundOn === "boolean" ? data.soundOn : DEFAULT_STATE.soundOn;
+      state.currentPresetIndex = data.currentPresetIndex ?? DEFAULT_STATE.currentPresetIndex;
+      if (state.currentPresetIndex >= 0 && state.currentPresetIndex < PRESETS.length) {
+        state.currentUrl = PRESETS[state.currentPresetIndex].url;
+        state.currentType = PRESETS[state.currentPresetIndex].type;
+      } else { state.currentPresetIndex = 0; state.currentUrl = PRESETS[0].url; state.currentType = PRESETS[0].type; }
+      return true;
+    }
+  } catch (e) { console.warn("localStorage read error:", e); try { localStorage.removeItem("rainSettings"); } catch (removeError) {} }
+  return false;
+}
+
+function resetToDefaults() {
+  Object.keys(DEFAULT_STATE).forEach(key => { state[key] = DEFAULT_STATE[key]; });
+  const filter = `blur(${state.blur}px) brightness(${state.brightness / 100})`;
+  customBg.style.filter = filter;
+  customVideo.style.filter = filter;
+  canvas.style.opacity = state.rain / 100;
+  colorOverlay.style.opacity = 0;
+  applyStateToUI();
+  document.querySelectorAll(".preset-item").forEach((el, i) => { el.classList.toggle("active", i === 0); });
+  try { localStorage.removeItem("rainSettings"); } catch (e) {}
+  setBackground(PRESETS[0].url, PRESETS[0].type, 0);
+  AudioManager.setVolume(state.volume / 100);
+  setSound(state.soundOn);
+  showToast("✓ Reset to defaults", "success");
+}
+
+function applyStateToUI() {
+  const maxBlur = DeviceInfo.getMaxBlur();
+  const blurRange = document.getElementById("blur-range");
+  blurRange.max = maxBlur;
+  blurRange.value = state.blur;
+  document.getElementById("blur-val").textContent = state.blur + "px";
+  document.getElementById("brightness-range").value = state.brightness;
+  document.getElementById("brightness-val").textContent = state.brightness + "%";
+  document.getElementById("rain-range").value = state.rain;
+  document.getElementById("rain-val").textContent = state.rain + "%";
+  document.getElementById("overlay-range").value = state.overlayOpacity;
+  document.getElementById("overlay-val").textContent = state.overlayOpacity + "%";
+  document.getElementById("volume-range").value = state.volume;
+  document.getElementById("volume-val").textContent = state.volume + "%";
+  document.querySelectorAll(".color-btn").forEach(btn => { const isActive = btn.dataset.color === state.overlayColor; btn.classList.toggle("active", isActive); btn.setAttribute("aria-checked", isActive); });
+  updateFilters();
+  syncSoundUI();
+  if (typeof AudioManager !== "undefined" && AudioManager.setVolume) { AudioManager.setVolume(state.volume / 100); }
+}
+
+function generateShareUrl() {
+  const params = new URLSearchParams();
+  params.set("blur", state.blur);
+  params.set("brightness", state.brightness);
+  params.set("rain", state.rain);
+  params.set("volume", state.volume);
+  params.set("sound", state.soundOn ? "1" : "0");
+  if (state.overlayColor !== "none") { params.set("color", state.overlayColor.replace("#", "")); params.set("colorOpacity", state.overlayOpacity); }
+  if (state.currentPresetIndex >= 0) { params.set("preset", state.currentPresetIndex); }
+  let baseUrl;
+  const hostname = window.location.hostname;
+  if (hostname.includes("cdpn.io") || hostname.includes("codepen.io")) { baseUrl = CONFIG.codepenUrl || "https://codepen.io/fyildiz1974/pen/RNRgjpj"; } else if (hostname === "127.0.0.1" || hostname === "localhost") { baseUrl = window.location.origin + window.location.pathname; } else { baseUrl = CONFIG.productionUrl || window.location.origin + window.location.pathname; }
+  return baseUrl + "?" + params.toString();
+}
+
+function loadFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  let hasUrlParams = false;
+  if (params.has("blur")) { const maxBlur = DeviceInfo.getMaxBlur(); const blurVal = parseInt(params.get("blur")); state.blur = !isNaN(blurVal) ? Math.min(maxBlur, Math.max(0, blurVal)) : DEFAULT_STATE.blur; hasUrlParams = true; }
+  if (params.has("brightness")) { const v = parseInt(params.get("brightness")); state.brightness = !isNaN(v) ? Math.min(120, Math.max(20, v)) : DEFAULT_STATE.brightness; hasUrlParams = true; }
+  if (params.has("rain")) { const v = parseInt(params.get("rain")); state.rain = !isNaN(v) ? Math.min(100, Math.max(20, v)) : DEFAULT_STATE.rain; hasUrlParams = true; }
+  if (params.has("volume")) { const v = parseInt(params.get("volume")); state.volume = !isNaN(v) ? Math.min(100, Math.max(0, v)) : DEFAULT_STATE.volume; hasUrlParams = true; }
+  if (params.has("color")) { state.overlayColor = "#" + params.get("color"); hasUrlParams = true; }
+  if (params.has("colorOpacity")) { const v = parseInt(params.get("colorOpacity")); state.overlayOpacity = !isNaN(v) ? Math.min(80, Math.max(0, v)) : 30; hasUrlParams = true; }
+  if (params.has("preset")) { const presetIdx = parseInt(params.get("preset")); if (!isNaN(presetIdx) && presetIdx >= 0 && presetIdx < PRESETS.length) { state.currentPresetIndex = presetIdx; state.currentUrl = PRESETS[presetIdx].url; state.currentType = PRESETS[presetIdx].type; } hasUrlParams = true; }
+  return hasUrlParams;
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => { showToast("✓ Link copied!", "success"); }).catch(() => { fallbackCopy(text); }); } else { fallbackCopy(text); }
+}
+
+function fallbackCopy(text) {
+  const input = document.createElement("input");
+  input.value = text;
+  document.body.appendChild(input);
+  input.select();
+  try { document.execCommand("copy"); showToast("✓ Link copied!", "success"); } catch (e) { showToast("❌ Copy failed", "error"); }
+  document.body.removeChild(input);
+}
+
+function togglePanel(forceState) {
+  const shouldOpen = typeof forceState === "boolean" ? forceState : !panel.classList.contains("open");
+  if (shouldOpen) {
+    panel.classList.add("open");
+    document.body.classList.add("panel-active");
+    panel.setAttribute("aria-hidden", "false");
+    settingsBtn.setAttribute("aria-expanded", "true");
+    setTimeout(() => { document.getElementById("panel-close").focus(); }, 100);
+  } else {
+    panel.classList.remove("open");
+    document.body.classList.remove("panel-active");
+    panel.setAttribute("aria-hidden", "true");
+    settingsBtn.setAttribute("aria-expanded", "false");
+    settingsBtn.focus();
+  }
+}
+
+function setupFocusTrap() {
+  panel.addEventListener("keydown", e => {
+    if (e.key !== "Tab") return;
+    if (!panel.classList.contains("open")) return;
+    const focusableElements = panel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    if (e.shiftKey && document.activeElement === firstElement) { e.preventDefault(); lastElement.focus(); } else if (!e.shiftKey && document.activeElement === lastElement) { e.preventDefault(); firstElement.focus(); }
+  });
+}
+
+// =====================================================================
+// INITIALIZATION & EVENT LISTENERS
+// =====================================================================
+function createPresets() {
+  PRESETS.forEach((preset, index) => {
+    const item = document.createElement("div");
+    item.className = "preset-item" + (index === state.currentPresetIndex ? " active" : "") + (preset.type === "video" ? " video" : "");
+    item.dataset.label = preset.label;
+    item.dataset.index = index;
+    item.style.backgroundImage = `url(${preset.thumb})`;
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", index === state.currentPresetIndex);
+    item.setAttribute("tabindex", "0");
+    item.setAttribute("aria-label", `${preset.label} ${preset.type === "video" ? "video" : "image"}`);
+
+    const selectPreset = () => {
+      document.querySelectorAll(".preset-item").forEach((el, i) => { el.classList.remove("active"); el.setAttribute("aria-selected", "false"); });
+      item.classList.add("active");
+      item.setAttribute("aria-selected", "true");
+      cleanupBlobUrl();
+      setBackground(preset.url, preset.type, index);
+    };
+
+    item.addEventListener("click", selectPreset);
+    item.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPreset(); }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); const nextIndex = (index + 1) % PRESETS.length; const nextItem = presetGrid.children[nextIndex]; if (nextItem) nextItem.focus(); }
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); const prevIndex = (index - 1 + PRESETS.length) % PRESETS.length; const prevItem = presetGrid.children[prevIndex]; if (prevItem) prevItem.focus(); }
+    });
+
+    presetGrid.appendChild(item);
+  });
+}
+
+function setupSlider(id, stateKey, suffix) {
+  const slider = document.getElementById(id + "-range");
+  const display = document.getElementById(id + "-val");
+  const throttledUpdate = throttle(() => { updateFilters(); }, 16);
+  slider.addEventListener("input", e => { state[stateKey] = parseInt(e.target.value); display.textContent = state[stateKey] + suffix; throttledUpdate(); });
+}
+
+function setupTouchSupport() {
+  let touchStartX = 0;
+  let touchEndX = 0;
+  const threshold = 50;
+  document.addEventListener("touchstart", e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+  document.addEventListener("touchend", e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); }, { passive: true });
+  function handleSwipe() {
+    const diff = touchStartX - touchEndX;
+    if (diff > threshold && touchStartX > window.innerWidth - 50) { togglePanel(true); }
+    if (diff < -threshold && panel.classList.contains("open")) { togglePanel(false); }
+  }
+}
+
+// Main initialization
+document.addEventListener("DOMContentLoaded", () => {
+  AudioManager.init(rainAudio);
+  PWAManager.init();
+  setupMediaErrorHandlers();
+  setupFocusTrap();
+
+  const hasUrlParams = loadFromUrl();
+  if (!hasUrlParams) { loadFromLocalStorage(); }
+
+  const blurSlider = document.getElementById("blur-range");
+  blurSlider.max = DeviceInfo.getMaxBlur();
+
+  createPresets();
+  applyStateToUI();
+
+  if (state.currentPresetIndex >= 0 && state.currentPresetIndex < PRESETS.length) {
+    setBackground(PRESETS[state.currentPresetIndex].url, PRESETS[state.currentPresetIndex].type, state.currentPresetIndex);
+  }
+
+  if (hasUrlParams) {
+    setTimeout(() => {
+      const filter = `blur(${state.blur}px) brightness(${state.brightness / 100})`;
+      customBg.style.filter = filter;
+      customVideo.style.filter = filter;
+      canvas.style.opacity = state.rain / 100;
+      if (state.overlayColor !== "none" && state.overlayOpacity > 0) { colorOverlay.style.backgroundColor = state.overlayColor; colorOverlay.style.opacity = state.overlayOpacity / 100; } else { colorOverlay.style.opacity = 0; }
+      AudioManager.setVolume(state.volume / 100);
+    }, 100);
+  }
+
+  loadRaindrops().then(() => {
+    setTimeout(() => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; initRaindrops(); }, 500);
+  }).catch(err => { console.warn("Raindrops.js could not be loaded:", err); });
+
+  setupTouchSupport();
+  setupSlider("blur", "blur", "px");
+  setupSlider("brightness", "brightness", "%");
+  setupSlider("rain", "rain", "%");
+  setupSlider("overlay", "overlayOpacity", "%");
+
+  const volumeSlider = document.getElementById("volume-range");
+  const volumeDisplay = document.getElementById("volume-val");
+  volumeSlider.addEventListener("input", e => { state.volume = parseInt(e.target.value); volumeDisplay.textContent = state.volume + "%"; AudioManager.setVolume(state.volume / 100); });
+
+  setSound(true);
+
+  const retryAudioOnce = () => { if (!state.soundOn) setSound(true); window.removeEventListener("pointerdown", retryAudioOnce); window.removeEventListener("keydown", retryAudioOnce); window.removeEventListener("touchstart", retryAudioOnce); };
+  window.addEventListener("pointerdown", retryAudioOnce, { once: true });
+  window.addEventListener("keydown", retryAudioOnce, { once: true });
+  window.addEventListener("touchstart", retryAudioOnce, { once: true, passive: true });
+
+  settingsBtn.addEventListener("click", e => { e.stopPropagation(); togglePanel(); });
+  document.getElementById("panel-close").addEventListener("click", () => { togglePanel(false); });
+
+  document.addEventListener("click", e => {
+    if (window.innerWidth > 480 && !panel.contains(e.target) && !e.target.closest(".ui-btn") && panel.classList.contains("open")) { togglePanel(false); }
+  });
+
+  document.querySelectorAll(".color-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".color-btn").forEach(b => { b.classList.remove("active"); b.setAttribute("aria-checked", "false"); });
+      btn.classList.add("active");
+      btn.setAttribute("aria-checked", "true");
+      state.overlayColor = btn.dataset.color;
+      if (state.overlayColor === "none") { state.overlayOpacity = 0; document.getElementById("overlay-range").value = 0; document.getElementById("overlay-val").textContent = "0%"; } else if (state.overlayOpacity === 0) { state.overlayOpacity = 30; document.getElementById("overlay-range").value = 30; document.getElementById("overlay-val").textContent = "30%"; }
+      updateFilters();
+    });
+  });
+
+  document.getElementById("url-btn").addEventListener("click", () => {
+    const rawUrl = document.getElementById("url-input").value.trim();
+    if (!rawUrl) { showToast("❌ Please enter a URL", "error"); return; }
+    const safeUrl = sanitizeUrl(rawUrl);
+    if (!safeUrl) { showToast("❌ Invalid or unsafe URL", "error"); return; }
+    cleanupBlobUrl();
+    const type = isVideoUrl(safeUrl) ? "video" : "image";
+    setBackground(safeUrl, type, -1);
+    document.getElementById("url-input").value = "";
+    showToast(type === "video" ? "✓ Video loaded" : "✓ Image loaded", "success");
+  });
+
+  document.getElementById("url-input").addEventListener("keypress", e => { if (e.key === "Enter") document.getElementById("url-btn").click(); });
+
+  document.getElementById("file-btn").addEventListener("click", () => { document.getElementById("file-input").click(); });
+  document.getElementById("file-input").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) { showToast("❌ File is too large (max 50MB)", "error"); return; }
+      cleanupBlobUrl();
+      const blobUrl = ResourceManager.createBlobUrl(file);
+      const type = file.type.startsWith("video/") ? "video" : "image";
+      setBackground(blobUrl, type, -1);
+      showToast(type === "video" ? "✓ Video loaded" : "✓ Image loaded", "success");
+    }
+    e.target.value = "";
+  });
+
+  soundBtn.addEventListener("click", () => setSound(!state.soundOn));
+  soundToggleIcon.addEventListener("click", () => setSound(!state.soundOn));
+  document.getElementById("btn-share").addEventListener("click", () => { const url = generateShareUrl(); copyToClipboard(url); });
+  document.getElementById("btn-save").addEventListener("click", saveToLocalStorage);
+  document.getElementById("btn-reset").addEventListener("click", () => { if (confirm("All settings will be reset to defaults. Are you sure?")) { resetToDefaults(); } });
+
+  FullscreenAPI.init();
+  const fullscreenBtn = document.getElementById("btn-fullscreen");
+  if (fullscreenBtn) { fullscreenBtn.addEventListener("click", function (e) { e.preventDefault(); FullscreenAPI.toggle(); }); }
+
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") { return; }
+    if (e.key === "Escape") { togglePanel(false); }
+    if (e.key === "s" && !e.ctrlKey && !e.metaKey) { e.preventDefault(); setSound(!state.soundOn); }
+    if (e.key === "f" && !e.ctrlKey && !e.metaKey) { e.preventDefault(); FullscreenAPI.toggle(); }
+    if (e.key === "p" && !e.ctrlKey && !e.metaKey) { e.preventDefault(); togglePanel(); }
+  });
+
+  window.addEventListener("beforeunload", () => { ResourceManager.cleanup(); });
+
+  document.addEventListener("visibilitychange", () => {
+    if (state.currentType === "video") { if (document.hidden) { customVideo.pause(); } else { customVideo.play().catch(() => {}); } }
+  });
+
+  const handleResize = debounce(() => {
+    if (raindropInstance && typeof raindropInstance.resize === "function") {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      try { raindropInstance.resize(); } catch (e) { initRaindrops(); }
+    }
+  }, 250);
+
+  window.addEventListener("resize", handleResize);
+
+  // Widgets loader
+  (function () {
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error("Failed to load: " + src));
+        document.head.appendChild(s);
+      });
+    }
+
+    function startWidgets() {
+      const run = () => {
+        loadScript("https://fyildiz1974.github.io/web/files/widgets.js").then(() => {
+          if (window.Widgets && typeof window.Widgets.init === "function") { return window.Widgets.init(); }
+        }).catch(e => console.warn("[WidgetsLoader]", e.message));
+      };
+      if ("requestIdleCallback" in window) { requestIdleCallback(run, { timeout: 4000 }); } else { setTimeout(run, 1500); }
+    }
+
+    window.addEventListener("load", startWidgets, { once: true });
+  })();
+});
+  </script>
+
+</body>
+</html>

@@ -128,14 +128,14 @@ const CINEMATIC_SCENES={
       cues:{enter:{from:4,to:9},guard:{from:9,to:9},octavia:{from:9,to:9},exit:{from:10,to:15}},
     },
     hoodie:{
-      src:'../graphics/maps/the_veil/move_block/pharmacy_hoodie.webm',
-      cues:{enter:{from:0,to:2.5},idle:{from:2.5,to:2.5},exit:{from:7.8,to:10.0}},
+      src:'../graphics/maps/the_veil/move_block/pharmacy/pharmacy_hooded.webm',
+      cues:{enter:{from:3,to:4},guard:{from:4,to:4},octavia:{from:4,to:4},pharm_approach:{from:4,to:12},pharmacist:{from:12,to:12},pharmacist_oct:{from:14,to:14}},
     },
   },
   restaurant:{
     cyber_octavia:{
-      src:'../graphics/maps/the_veil/move_block/restaurant_octavia.webm',
-      cues:{enter:{from:0,to:2.5},idle:{from:2.5,to:2.5},exit:{from:7.8,to:10.0}},
+      src:'../graphics/maps/the_veil/move_block/restaurant/restaurant_no_hood_temp.webm',
+      cues:{enter:{from:0,to:2},owner:{from:3,to:3},octavia:{from:4,to:4},chef_approach:{from:6,to:9},chef:{from:9,to:9},exit:{from:10,to:15}},
     },
     hoodie:{
       src:'../graphics/maps/the_veil/move_block/restaurant_hoodie.webm',
@@ -145,11 +145,11 @@ const CINEMATIC_SCENES={
   alley_video_store:{
     cyber_octavia:{
       src:'../graphics/maps/the_veil/move_block/alley_video_store/video_store_no_hood.mp4',
-      cues:{enter:{from:0,to:4},charlie:{from:5,to:5},octavia:{from:6,to:6}},
+      cues:{enter:{from:0,to:5},charlie:{from:6,to:6},octavia:{from:7,to:7},exit:{from:8,to:10}},
     },
     hoodie:{
       src:'../graphics/maps/the_veil/move_block/alley_video_store/video_store_hooded.mp4',
-      cues:{enter:{from:0,to:4},charlie:{from:5,to:5},octavia:{from:6,to:6}},
+      cues:{enter:{from:0,to:5},charlie:{from:5,to:5},octavia:{from:7,to:7},exit:{from:8,to:10}},
     },
   },
 };
@@ -618,7 +618,7 @@ const MUSIC_LIB={
 // reputationRequired: area reputation score needed to receive for free.
 // If player reputation >= reputationRequired → Charlie gives it. Otherwise → pay.
 // TEST_UNLOCK flag overrides all checks during development.
-const VIDEO_TEST_BYPASS=true; // ← set false when reputation system is wired
+const VIDEO_TEST_BYPASS=false; // ← videos only unlock when explicitly granted via act
 const VIDEO_LIBRARY=[
   {
     id:'v1',
@@ -2592,6 +2592,19 @@ const PHARMACY_ITEMS=[
 ];
 const RESTAURANT_ITEMS=[]; // food — to be added with quests
 
+// Restaurant no-hood: cinematic dialogue with owner and chef
+const REST_NHOOD_OWNER_DIALOGUE=[
+  {speaker:'OWNER',  text:"Welcome. First time here?"},
+  {speaker:'OCTAVIA',opts:[{t:"Passing through."},{t:"(nod)",muted:true}]},
+  {speaker:'OWNER',  text:"Well, you found the right place. Everything's fresh."},
+];
+
+const REST_NHOOD_CHEF_DIALOGUE=[
+  {speaker:'CHEF',   text:"Kitchen's got what you need."},
+  {speaker:'OCTAVIA',opts:[{t:"(listen)"},{t:"I'm good.",muted:true}]},
+  {speaker:'CHEF',   text:"Suit yourself. Door's open."},
+];
+
 // ── STORE SCENE ───────────────────────────────────────────────
 // Items: x/y/w/h are screen-space hotspots for browse mode (1280×720 frame).
 // Adjust x/y to match the actual video layout.
@@ -3013,6 +3026,38 @@ const PHARMACY_GUARD_DIALOGUE=[
 
 const PHARM_NHOOD_ACTIONS=['talk','exit'];
 
+// Pharmacy hoodie: guard allows entry, then can talk or go to pharmacist
+const PHARM_HOOD_GUARD_DIALOGUE=[
+  {speaker:'GUARD',   text:"Good. You can go in."},
+  {speaker:'OCTAVIA', opts:[{t:"Thanks."},{t:"(nod)",muted:true}]},
+];
+
+const PHARM_HOOD_PHARMACIST_DIALOGUE=[
+  {speaker:'PHARMACIST', text:"What can I help you with?"},
+  {speaker:'OCTAVIA',    opts:[
+    {t:"Looking for painkillers.",  act:'addPainkillers'},
+    {t:"Bandages, please.",         act:'addBandages'},
+    {t:"Both. Everything you have.", act:'addBoth'},
+  ]},
+  {speaker:'PHARMACIST', text:"Anything else?"},
+  {speaker:'OCTAVIA',    opts:[
+    {t:"Browse more",  act:'browse'},
+    {t:"Purchase",     act:'goPay'},
+    {t:"Exit",         act:'exit'},
+  ]},
+  {speaker:'PHARMACIST', text:"That'll be __TOTAL__."},
+  {speaker:'OCTAVIA',    opts:[
+    {t:"(pay)",         act:'pay'},
+    {t:"Nevermind.",    act:'clearBasket'},
+  ]},
+  {speaker:'PHARMACIST', text:"Anything else?"},
+  {speaker:'OCTAVIA',    opts:[
+    {t:"Browse more",  act:'browse'},
+    {t:"Purchase",     act:'goPay'},
+    {t:"Exit",         act:'exit'},
+  ]},
+];
+
 function PharmacyNoHoodScene({heart,mono,onLeave,currentOutfit,debug,debugGo}){
   const [phase,setPhase]=useState('entering');
   const [menuSel,setMenuSel]=useState(0);
@@ -3133,87 +3178,392 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
     debug={debug} debugGo={debugGo} stamina={stamina} onStaminaChange={onStaminaChange} hudOpen={hudOpen}/>;
 }
 
-function PharmacyHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
-  const GUARD_X=299;
-  const [walking,setWalking]=useState(false);
-  const [px,setPx]=useState(124);
-  const [facing,setFacing]=useState('right');
+function PharmacyHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo}){
+  const [phase,setPhase]=useState('entering');
+  // entering | menu | guard_talk | pharmacist_menu | pharmacist_talk | pharmacist_done | leaving
   const [basket,setBasket]=useState([]);
+  const [menuSel,setMenuSel]=useState(0);
+  const [guardIdx,setGuardIdx]=useState(0);
+  const [guardSel,setGuardSel]=useState(0);
+  const [pharmIdx,setPharmIdx]=useState(0);
+  const [pharmSel,setPharmSel]=useState(0);
   const [paid,setPaid]=useState(false);
-  const [conv,setConv]=useState(null);
-  const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const guardBlocking=currentOutfit!=='hoodie';
-  const nearGuard=Math.abs(px-GUARD_X)<80&&!conv;
-  const nearPharmacist=Math.abs(px-1057)<100&&!conv;
-  const atExit=px<200;
+  const vidRef=useRef(null);
+  const {playCue}=useCineVideo(vidRef,'pharmacy',currentOutfit);
+
   const total=basket.reduce((s,id)=>s+(PHARMACY_ITEMS.find(i=>i.id===id)?.price||0),0);
   const canPay=money>=total&&total>0;
 
-  const handleAct=useCallback((act)=>{
-    if(act==='pay'){if(!canPay)return 'blocked';onSpendMoney(total);onAddItems?.(basket);setPaid(true);}
-    else if(act==='addPainkillers'){setBasket(['painkillers']);}
-    else if(act==='addBandages'){setBasket(['bandages']);}
-    else if(act==='addBoth'){setBasket(['painkillers','bandages']);}
-    else if(act==='clearBasket'){setBasket([]);}
-    else if(act==='giveDrChenCard'){onAddItems?.(['dr_chen_card']);}
-    else if(act==='leave'){setConv(null);setTimeout(onLeave,400);}
-    else if(act==='end')setConv(null);
-  },[total,canPay,onSpendMoney,onLeave,onAddItems,basket]);
-
+  // Mount: play 3→4s then show menu
   useEffect(()=>{
+    const fallback=setTimeout(()=>setPhase(p=>p==='entering'?'menu':p),5000);
+    playCue('enter',()=>setPhase('menu'));
+    return()=>clearTimeout(fallback);
+  },[]);
+
+  const goMenu=useCallback(()=>{
+    setPhase('menu');setMenuSel(0);playCue('guard',()=>{});
+  },[playCue]);
+
+  const handleMenuOption=useCallback((opt)=>{
+    if(opt==='talk'){
+      setPhase('guard_talk');setGuardIdx(0);setGuardSel(0);
+      playCue('guard',()=>{});
+    }else if(opt==='continue'){
+      setPhase('pharmacist_menu');
+      playCue('pharm_approach',()=>{
+        playCue('pharmacist',()=>{});
+      });
+    }
+  },[playCue]);
+
+  // Menu keydown
+  useEffect(()=>{
+    if(phase!=='menu')return;
     const kd=e=>{
-      keys.current[e.code]=true;
-      if(e.code==='Escape'){if(!conv)return;setConv(null);return;}
-      if(e.code==='KeyE'&&!conv){
-        if(atExit)onLeave();
-        else if(nearGuard&&guardBlocking)setConv('guard_blocked');
-        else if(nearGuard&&!guardBlocking)setConv('guard_talk');
-        else if(nearPharmacist)setConv('pharmacist_browse');
-      }
+      if(e.code==='ArrowUp')setMenuSel(s=>Math.max(0,s-1));
+      else if(e.code==='ArrowDown')setMenuSel(s=>Math.min(1,s+1));
+      else if(e.code==='KeyE')handleMenuOption(['talk','continue'][menuSel]);
+      else if(e.key==='1')handleMenuOption('talk');
+      else if(e.key==='2')handleMenuOption('continue');
     };
-    const ku=e=>{delete keys.current[e.code];};
-    window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
-    return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
-  },[nearGuard,nearPharmacist,guardBlocking,atExit,onLeave,conv]);
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,menuSel,handleMenuOption]);
 
+  const advanceGuardDialog=useCallback(()=>{
+    const nextIdx=guardIdx+1;
+    if(nextIdx>=PHARM_HOOD_GUARD_DIALOGUE.length){goMenu();return;}
+    const next=PHARM_HOOD_GUARD_DIALOGUE[nextIdx];
+    playCue(next.speaker==='OCTAVIA'?'octavia':'guard',()=>{});
+    setGuardIdx(nextIdx);setGuardSel(0);
+  },[guardIdx,playCue,goMenu]);
+
+  // Guard dialog keydown
   useEffect(()=>{
-    const loop=()=>{
-      if(!conv){
-        const left=keys.current['ArrowLeft']||keys.current['KeyA'];
-        const right=keys.current['ArrowRight']||keys.current['KeyD'];
-        const {currentSpeed,isKicking}=updateMovement(left||right);
-        const maxRight=guardBlocking?GUARD_X-60:VIEWPORT.maxX;
-        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(!isKicking&&right){setPx(x=>Math.min(maxRight,x+currentSpeed));setFacing('right');setWalking(true);}
-        else setWalking(false);
-      }else setWalking(false);
-      raf.current=requestAnimationFrame(loop);
+    if(phase!=='guard_talk')return;
+    const line=PHARM_HOOD_GUARD_DIALOGUE[guardIdx];
+    const kd=e=>{
+      if(!line)return;
+      if(line.opts){
+        if(e.key==='1')setGuardSel(0);
+        else if(e.key==='2')setGuardSel(1);
+        else if(e.code==='ArrowUp')setGuardSel(s=>Math.max(0,s-1));
+        else if(e.code==='ArrowDown')setGuardSel(s=>Math.min(line.opts.length-1,s+1));
+        else if(e.code==='KeyE')advanceGuardDialog();
+      }else{if(e.code==='KeyE')advanceGuardDialog();}
     };
-    raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
-  },[conv,guardBlocking]); // do NOT include updateMovement — it causes dependency cycles with stamina updates
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,guardIdx,guardSel,advanceGuardDialog]);
+
+  const advancePharmDialog=useCallback((choiceIdx=0)=>{
+    const line=PHARM_HOOD_PHARMACIST_DIALOGUE[pharmIdx];
+    if(line?.opts?.[choiceIdx]?.act){
+      const act=line.opts[choiceIdx].act;
+      if(act==='addPainkillers'){setBasket(['painkillers']);const nextIdx=pharmIdx+1;const next=PHARM_HOOD_PHARMACIST_DIALOGUE[nextIdx];playCue(next.speaker==='PHARMACIST'?'pharmacist':'pharmacist_oct',()=>{});setPharmIdx(nextIdx);setPharmSel(0);return;}
+      else if(act==='addBandages'){setBasket(['bandages']);const nextIdx=pharmIdx+1;const next=PHARM_HOOD_PHARMACIST_DIALOGUE[nextIdx];playCue(next.speaker==='PHARMACIST'?'pharmacist':'pharmacist_oct',()=>{});setPharmIdx(nextIdx);setPharmSel(0);return;}
+      else if(act==='addBoth'){setBasket(['painkillers','bandages']);const nextIdx=pharmIdx+1;const next=PHARM_HOOD_PHARMACIST_DIALOGUE[nextIdx];playCue(next.speaker==='PHARMACIST'?'pharmacist':'pharmacist_oct',()=>{});setPharmIdx(nextIdx);setPharmSel(0);return;}
+      else if(act==='browse'){setPharmIdx(0);setPharmSel(0);playCue('pharmacist',()=>{});return;}
+      else if(act==='goPay'){if(basket.length===0)return;const payIdx=PHARM_HOOD_PHARMACIST_DIALOGUE.findIndex((l,i)=>i>pharmIdx&&l.text?.includes('__TOTAL__'));setPharmIdx(payIdx);setPharmSel(0);playCue('pharmacist',()=>{});return;}
+      else if(act==='pay'){if(canPay){onSpendMoney(total);onAddItems?.(basket);setPaid(true);const doneIdx=pharmIdx+1;setPharmIdx(doneIdx);setPharmSel(0);playCue('pharmacist',()=>{});return;}}
+      else if(act==='clearBasket'){setBasket([]);setPharmIdx(0);setPharmSel(0);playCue('pharmacist',()=>{});return;}
+      else if(act==='exit'){onLeave();return;}
+    }
+    const nextIdx=pharmIdx+1;
+    if(nextIdx>=PHARM_HOOD_PHARMACIST_DIALOGUE.length){goMenu();return;}
+    const next=PHARM_HOOD_PHARMACIST_DIALOGUE[nextIdx];
+    const cueKey=next.speaker==='PHARMACIST'?'pharmacist':'pharmacist_oct';
+    playCue(cueKey,()=>{});
+    setPharmIdx(nextIdx);setPharmSel(0);
+  },[pharmIdx,canPay,onSpendMoney,onAddItems,basket,playCue,onLeave,goMenu]);
+
+  // Pharmacist dialog keydown
+  useEffect(()=>{
+    if(phase!=='pharmacist_menu'&&phase!=='pharmacist_talk'&&phase!=='pharmacist_done')return;
+    const line=PHARM_HOOD_PHARMACIST_DIALOGUE[pharmIdx];
+    const kd=e=>{
+      if(!line)return;
+      if(line.opts){
+        if(e.key==='1')setPharmSel(0);
+        else if(e.key==='2')setPharmSel(1);
+        else if(e.key==='3'&&line.opts.length>2)setPharmSel(2);
+        else if(e.code==='ArrowUp')setPharmSel(s=>Math.max(0,s-1));
+        else if(e.code==='ArrowDown')setPharmSel(s=>Math.min(line.opts.length-1,s+1));
+        else if(e.code==='KeyE')advancePharmDialog(pharmSel);
+      }else{if(e.code==='KeyE')advancePharmDialog();}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,pharmIdx,pharmSel,advancePharmDialog]);
+
+  const guardLine=phase==='guard_talk'?PHARM_HOOD_GUARD_DIALOGUE[guardIdx]:null;
+  const pharmLine=phase.startsWith('pharmacist')?PHARM_HOOD_PHARMACIST_DIALOGUE[pharmIdx]:null;
 
   return(
-    <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0908'}}>
-      <video src={PHARMACY_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
-      {nearPharmacist&&!conv&&<div style={{position:'absolute',bottom:23,left:1057,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}><Prompt text="[ E ] TALK"/></div>}
-      {nearGuard&&!conv&&<div style={{position:'absolute',bottom:23,left:GUARD_X,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}><Prompt text="[ E ] TALK"/></div>}
-      {guardBlocking&&px>=220&&px<=380&&!conv&&<div style={{position:'absolute',bottom:300,left:'50%',transform:'translateX(-50%)',zIndex:150,color:C.red,fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace",textShadow:`0 0 8px ${C.red}`}}>// ACCESS DENIED — COVER MUTATIONS</div>}
-      <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
-      <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      {paid&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// THANK YOU — STAY SAFE</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={23} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+    <CinematicScene vidRef={vidRef}>
+      <Heart state={heart}/>
       <SceneLabel label="PHARMACY — THE VEIL"/>
-      <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
-      {debug&&<DebugOverlay px={px} scene="pharmacy" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName={conv.startsWith('guard')?'GUARD':'PHARMACIST'} npcImg={conv.startsWith('guard')?GUARD_PORTRAIT:PHARMACIST_PORTRAIT} total={total} onAct={handleAct}/>}
-      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] EXIT</div>}
-    </div>
+      {debug&&<DebugOverlay px={0} scene="pharmacy" onSceneChange={debugGo}/>}
+
+      {/* Initial menu: Talk or Continue */}
+      {phase==='menu'&&(
+        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+          background:'rgba(0,0,0,0.82)',borderTop:`1px solid ${C.border}`,
+          padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+          <div style={{color:C.red,fontSize:8,letterSpacing:4,marginBottom:6}}>// GUARD</div>
+          <div style={{color:C.text,fontSize:13,lineHeight:1.9,maxWidth:900,marginBottom:12}}>Good. You can go in.</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {['TALK TO GUARD','CONTINUE'].map((label,i)=>(
+              <div key={i} onClick={()=>handleMenuOption(['talk','continue'][i])}
+                style={{display:'flex',gap:14,cursor:'pointer',padding:'4px 10px',
+                  borderLeft:`2px solid ${menuSel===i?C.red:'transparent'}`}}>
+                <span style={{color:menuSel===i?C.red:'#3a2c1488',fontSize:10,minWidth:16,flexShrink:0}}>{i+1}</span>
+                <span style={{color:C.text,fontSize:12,lineHeight:1.7}}>
+                  {label.split('').map((ch,j)=>(
+                    <span key={j} style={{animation:'letterGlow 0.7s ease both',animationDelay:`${j*0.04}s`,display:'inline',whiteSpace:'pre'}}>{ch}</span>
+                  ))}
+                </span>
+              </div>
+            ))}
+            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,marginTop:8}}>[ 1/2 · ↑↓ ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM</div>
+          </div>
+        </div>
+      )}
+
+      {/* Guard dialogue */}
+      {phase==='guard_talk'&&guardLine&&(
+        <CineDialogBox speaker={guardLine.speaker} text={guardLine.text} opts={guardLine.opts}
+          sel={guardSel} onSel={setGuardSel} onConfirm={advanceGuardDialog}/>
+      )}
+
+      {/* Pharmacist dialogue */}
+      {phase.startsWith('pharmacist')&&pharmLine&&(
+        <CineDialogBox speaker={pharmLine.speaker}
+          text={pharmLine.text?.replace('__TOTAL__',`$${total}`)}
+          opts={pharmLine.opts}
+          sel={pharmSel} onSel={setPharmSel} onConfirm={()=>advancePharmDialog(pharmSel)}/>
+      )}
+
+      {/* Paid confirmation */}
+      {paid&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// THANK YOU — STAY SAFE</div>}
+    </CinematicScene>
   );
 }
 
 // ── RESTAURANT SCENE ──────────────────────────────────────────
+function RestaurantNoHoodScene({heart,mono,onLeave,currentOutfit,debug,debugGo}){
+  const [phase,setPhase]=useState('entering');
+  // entering | owner_menu | owner_talk | chef_menu | chef_approach | chef_talk | exiting
+  const [ownerMenuSel,setOwnerMenuSel]=useState(0);
+  const [chefMenuSel,setChefMenuSel]=useState(0);
+  const [ownerIdx,setOwnerIdx]=useState(0);
+  const [ownerSel,setOwnerSel]=useState(0);
+  const [chefIdx,setChefIdx]=useState(0);
+  const [chefSel,setChefSel]=useState(0);
+  const vidRef=useRef(null);
+  const {playCue}=useCineVideo(vidRef,'restaurant',currentOutfit);
+
+  // Mount: play 0-2s then show owner menu
+  useEffect(()=>{
+    const fallback=setTimeout(()=>setPhase(p=>p==='entering'?'owner_menu':p),3000);
+    playCue('enter',()=>{setPhase('owner_menu');playCue('owner',()=>{});});
+    return()=>clearTimeout(fallback);
+  },[]);
+
+  const handleOwnerMenuOption=useCallback((opt)=>{
+    if(opt==='talk'){
+      setPhase('owner_talk');setOwnerIdx(0);setOwnerSel(0);
+      playCue('owner',()=>{});
+    }else if(opt==='buy'){
+      // TODO: implement buy food
+    }else if(opt==='chef'){
+      setPhase('chef_approach');
+      playCue('chef_approach',()=>{setPhase('chef_menu');playCue('chef',()=>{});});
+    }else if(opt==='exit'){
+      playCue('exit',onLeave);
+    }
+  },[playCue,onLeave]);
+
+  const handleChefMenuOption=useCallback((opt)=>{
+    if(opt==='talk'){
+      setPhase('chef_talk');setChefIdx(0);setChefSel(0);
+      playCue('chef',()=>{});
+    }else if(opt==='exit'){
+      playCue('exit',onLeave);
+    }else if(opt==='owner'){
+      setPhase('owner_menu');setOwnerMenuSel(0);
+      playCue('owner',()=>{});
+    }
+  },[playCue,onLeave]);
+
+  // Owner menu keydown
+  useEffect(()=>{
+    if(phase!=='owner_menu')return;
+    const opts=['talk','buy','chef','exit'];
+    const kd=e=>{
+      if(e.code==='ArrowUp')setOwnerMenuSel(s=>Math.max(0,s-1));
+      else if(e.code==='ArrowDown')setOwnerMenuSel(s=>Math.min(3,s+1));
+      else if(e.code==='KeyE')handleOwnerMenuOption(opts[ownerMenuSel]);
+      else{const n=parseInt(e.key);if(n>=1&&n<=opts.length)handleOwnerMenuOption(opts[n-1]);}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,ownerMenuSel,handleOwnerMenuOption]);
+
+  // Chef menu keydown
+  useEffect(()=>{
+    if(phase!=='chef_menu')return;
+    const opts=['talk','exit','owner'];
+    const kd=e=>{
+      if(e.code==='ArrowUp')setChefMenuSel(s=>Math.max(0,s-1));
+      else if(e.code==='ArrowDown')setChefMenuSel(s=>Math.min(2,s+1));
+      else if(e.code==='KeyE')handleChefMenuOption(opts[chefMenuSel]);
+      else{const n=parseInt(e.key);if(n>=1&&n<=opts.length)handleChefMenuOption(opts[n-1]);}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,chefMenuSel,handleChefMenuOption]);
+
+  const advanceOwnerDialog=useCallback(()=>{
+    const nextIdx=ownerIdx+1;
+    if(nextIdx>=REST_NHOOD_OWNER_DIALOGUE.length){setPhase('menu');setMenuSel(0);return;}
+    const next=REST_NHOOD_OWNER_DIALOGUE[nextIdx];
+    playCue(next.speaker==='OCTAVIA'?'octavia':'owner',()=>{});
+    setOwnerIdx(nextIdx);setOwnerSel(0);
+  },[ownerIdx,playCue]);
+
+  const advanceChefDialog=useCallback(()=>{
+    const nextIdx=chefIdx+1;
+    if(nextIdx>=REST_NHOOD_CHEF_DIALOGUE.length){setPhase('menu');setMenuSel(0);return;}
+    const next=REST_NHOOD_CHEF_DIALOGUE[nextIdx];
+    playCue(next.speaker==='OCTAVIA'?'octavia':'chef',()=>{});
+    setChefIdx(nextIdx);setChefSel(0);
+  },[chefIdx,playCue]);
+
+  // Owner dialogue keydown
+  useEffect(()=>{
+    if(phase!=='owner_talk')return;
+    const line=REST_NHOOD_OWNER_DIALOGUE[ownerIdx];
+    const kd=e=>{
+      if(!line)return;
+      if(line.opts){
+        if(e.key==='1')setOwnerSel(0);
+        else if(e.key==='2')setOwnerSel(1);
+        else if(e.code==='ArrowUp')setOwnerSel(s=>Math.max(0,s-1));
+        else if(e.code==='ArrowDown')setOwnerSel(s=>Math.min(line.opts.length-1,s+1));
+        else if(e.code==='KeyE')advanceOwnerDialog();
+      }else{if(e.code==='KeyE')advanceOwnerDialog();}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,ownerIdx,ownerSel,advanceOwnerDialog]);
+
+  // Chef dialogue keydown
+  useEffect(()=>{
+    if(phase!=='chef_talk')return;
+    const line=REST_NHOOD_CHEF_DIALOGUE[chefIdx];
+    const kd=e=>{
+      if(!line)return;
+      if(line.opts){
+        if(e.key==='1')setChefSel(0);
+        else if(e.key==='2')setChefSel(1);
+        else if(e.code==='ArrowUp')setChefSel(s=>Math.max(0,s-1));
+        else if(e.code==='ArrowDown')setChefSel(s=>Math.min(line.opts.length-1,s+1));
+        else if(e.code==='KeyE')advanceChefDialog();
+      }else{if(e.code==='KeyE')advanceChefDialog();}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,chefIdx,chefSel,advanceChefDialog]);
+
+  const ownerLine=phase==='owner_talk'?REST_NHOOD_OWNER_DIALOGUE[ownerIdx]:null;
+  const chefLine=phase==='chef_talk'?REST_NHOOD_CHEF_DIALOGUE[chefIdx]:null;
+
+  return(
+    <CinematicScene vidRef={vidRef}>
+      <Heart state={heart}/>
+      <SceneLabel label="RESTAURANT — THE VEIL"/>
+      {debug&&<DebugOverlay px={0} scene="restaurant" onSceneChange={debugGo}/>}
+
+      {/* Owner menu */}
+      {phase==='owner_menu'&&(
+        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+          background:'rgba(0,0,0,0.82)',borderTop:`1px solid ${C.border}`,
+          padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+          <div style={{color:C.gold,fontSize:8,letterSpacing:4,marginBottom:6}}>// OWNER</div>
+          <div style={{color:C.text,fontSize:13,lineHeight:1.9,maxWidth:900,marginBottom:12}}>Everything's fresh here.</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {['TALK','BUY FOOD','TALK TO CHEF','EXIT'].map((label,i)=>(
+              <div key={i} onClick={()=>handleOwnerMenuOption(['talk','buy','chef','exit'][i])}
+                style={{display:'flex',gap:14,cursor:'pointer',padding:'4px 10px',
+                  borderLeft:`2px solid ${ownerMenuSel===i?C.red:'transparent'}`}}>
+                <span style={{color:ownerMenuSel===i?C.red:'#3a2c1488',fontSize:10,minWidth:16,flexShrink:0}}>{i+1}</span>
+                <span style={{color:C.text,fontSize:12,lineHeight:1.7}}>
+                  {label.split('').map((ch,j)=>(
+                    <span key={j} style={{animation:'letterGlow 0.7s ease both',animationDelay:`${j*0.04}s`,display:'inline',whiteSpace:'pre'}}>{ch}</span>
+                  ))}
+                </span>
+              </div>
+            ))}
+            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,marginTop:8}}>[ 1–4 · ↑↓ ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM</div>
+          </div>
+        </div>
+      )}
+
+      {/* Chef menu */}
+      {phase==='chef_menu'&&(
+        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+          background:'rgba(0,0,0,0.82)',borderTop:`1px solid ${C.border}`,
+          padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+          <div style={{color:C.gold,fontSize:8,letterSpacing:4,marginBottom:6}}>// CHEF</div>
+          <div style={{color:C.text,fontSize:13,lineHeight:1.9,maxWidth:900,marginBottom:12}}>Kitchen's got what you need.</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {['TALK','EXIT','OWNER'].map((label,i)=>(
+              <div key={i} onClick={()=>handleChefMenuOption(['talk','exit','owner'][i])}
+                style={{display:'flex',gap:14,cursor:'pointer',padding:'4px 10px',
+                  borderLeft:`2px solid ${chefMenuSel===i?C.red:'transparent'}`}}>
+                <span style={{color:chefMenuSel===i?C.red:'#3a2c1488',fontSize:10,minWidth:16,flexShrink:0}}>{i+1}</span>
+                <span style={{color:C.text,fontSize:12,lineHeight:1.7}}>
+                  {label.split('').map((ch,j)=>(
+                    <span key={j} style={{animation:'letterGlow 0.7s ease both',animationDelay:`${j*0.04}s`,display:'inline',whiteSpace:'pre'}}>{ch}</span>
+                  ))}
+                </span>
+              </div>
+            ))}
+            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,marginTop:8}}>[ 1–3 · ↑↓ ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM</div>
+          </div>
+        </div>
+      )}
+
+      {/* Owner dialogue */}
+      {phase==='owner_talk'&&ownerLine&&(
+        <CineDialogBox speaker={ownerLine.speaker} text={ownerLine.text} opts={ownerLine.opts}
+          sel={ownerSel} onSel={setOwnerSel} onConfirm={advanceOwnerDialog}/>
+      )}
+
+      {/* Chef dialogue */}
+      {phase==='chef_talk'&&chefLine&&(
+        <CineDialogBox speaker={chefLine.speaker} text={chefLine.text} opts={chefLine.opts}
+          sel={chefSel} onSel={setChefSel} onConfirm={advanceChefDialog}/>
+      )}
+    </CinematicScene>
+  );
+}
+
 function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+  // No-hood: cinematic video scene
+  if(currentOutfit!=='hoodie'){
+    return <RestaurantNoHoodScene heart={heart} mono={mono} onLeave={onLeave}
+      currentOutfit={currentOutfit} debug={debug} debugGo={debugGo}/>;
+  }
+  // Hoodie: existing walkable interior
+  return <RestaurantHoodieScene heart={heart} mono={mono} onLeave={onLeave} money={money}
+    onSpendMoney={onSpendMoney} onAddItems={onAddItems} currentOutfit={currentOutfit}
+    debug={debug} debugGo={debugGo} stamina={stamina} onStaminaChange={onStaminaChange} hudOpen={hudOpen}/>;
+}
+
+function RestaurantHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
   const [walking,setWalking]=useState(false);
   const [px,setPx]=useState(1200);
   const [facing,setFacing]=useState('left');
@@ -3289,12 +3639,14 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo}){
   const {playCue}=useCineVideo(vidRef,'alley_video_store',currentOutfit);
   const line=dialogIdx>=0?ALLEY_DIALOGUE[dialogIdx]:null;
 
-  // On mount: play enter cue (0→4s), then start dialogue at line 0
+  // On mount: play enter cue, then start dialogue
   useEffect(()=>{
+    const fallback=setTimeout(()=>setDialogIdx(d=>d<0?0:d),6000);
     playCue('enter',()=>{
       setDialogIdx(0);
-      playCue('charlie',()=>{}); // seek to Charlie's frame, hold
+      playCue('charlie',()=>{});
     });
+    return()=>clearTimeout(fallback);
   },[]);
 
   const advance=useCallback((choiceIdx=0)=>{
@@ -3304,14 +3656,15 @@ function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo}){
     }
     const nextIdx=dialogIdx+1;
     if(nextIdx>=ALLEY_DIALOGUE.length){
-      onLeave(); // no exit clip yet — fade transition back to street
+      // Play exit animation (8→10s) then fade to black and return to street
+      playCue('exit',onLeave);
       return;
     }
     const next=ALLEY_DIALOGUE[nextIdx];
     playCue(next.speaker==='CHARLIE'?'charlie':'octavia',()=>{});
     setDialogIdx(nextIdx);
     setSel(0);
-  },[dialogIdx,playCue,onLeave]);
+  },[dialogIdx,currentOutfit,playCue,onLeave]);
 
   useEffect(()=>{
     const kd=e=>{

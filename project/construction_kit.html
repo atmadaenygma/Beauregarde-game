@@ -1548,6 +1548,9 @@ function ScenePopover({node,chars,audio,onSave,onClose}){
   const [sceneChars,setSceneChars]=useState(node.sceneChars||[]);
   const [storeItems,setStoreItems]=useState(node.storeItems||[]);
   const [musicCue,setMusicCue]=useState(node.musicCue||'');
+  const [sceneMode,setSceneMode]=useState(node.sceneMode||'map');
+  const [cinematicClips,setCinematicClips]=useState(node.cinematicClips||{cyber_octavia:'',hoodie:''});
+  const [cinematicCues,setCinematicCues]=useState(node.cinematicCues||[]);
 
   const addChar=()=>setSceneChars(p=>[...p,{id:uid(),charId:'',worldX:0}]);
   const uChar=(id,f)=>setSceneChars(p=>p.map(x=>x.id===id?{...x,...f}:x));
@@ -1557,13 +1560,17 @@ function ScenePopover({node,chars,audio,onSave,onClose}){
   const uItem=(id,f)=>setStoreItems(p=>p.map(x=>x.id===id?{...x,...f}:x));
   const dItem=id=>setStoreItems(p=>p.filter(x=>x.id!==id));
 
+  const addCue=()=>setCinematicCues(p=>[...p,{id:uid(),name:'',from:0,to:0}]);
+  const uCue=(id,f)=>setCinematicCues(p=>p.map(x=>x.id===id?{...x,...f}:x));
+  const dCue=id=>setCinematicCues(p=>p.filter(x=>x.id!==id));
+
   const getChar=cid=>chars.find(c=>c.id===cid);
   const alignColor=a=>a==='foe'?'#c43028':a==='friend'?'#40c080':'#7a7090';
-  const TABS=['INFO','CHARACTERS',...(sceneType==='store'?['STORE']:[])];
+  const TABS=['INFO','CHARACTERS',...(sceneType==='store'?['STORE']:[]),...(sceneMode==='cinematic'?['VIDEO']:[])];
 
   const save=()=>{
     const tr=(audio||[]).find(a=>a.id===musicCue);
-    onSave({...node,label:name,atmosphere:atmo,octaviaWorldX,sceneType,elevatorFloor,sceneChars,storeItems,musicCue,musicCueLabel:tr?tr.label:'',triggerWorldX:triggerWorldX!==''?parseInt(triggerWorldX):undefined});
+    onSave({...node,label:name,atmosphere:atmo,octaviaWorldX,sceneType,elevatorFloor,sceneChars,storeItems,musicCue,musicCueLabel:tr?tr.label:'',triggerWorldX:triggerWorldX!==''?parseInt(triggerWorldX):undefined,sceneMode,cinematicClips,cinematicCues:cinematicCues.map(({id,...c})=>c)});
     onClose();
   };
 
@@ -1630,6 +1637,61 @@ function ScenePopover({node,chars,audio,onSave,onClose}){
                 ))
               )}
             </select>
+          </div>
+          <div className="pf">
+            <label className="pfl" style={{color:'#5090d0'}}>🎬 SCENE MODE</label>
+            <div style={{display:'flex',gap:6}}>
+              {['map','cinematic'].map(m=>(
+                <div key={m} onClick={()=>setSceneMode(m)}
+                  style={{padding:'4px 14px',border:'1px solid',cursor:'pointer',fontSize:11,letterSpacing:1,userSelect:'none',
+                    borderColor:sceneMode===m?'#5090d0':'#444',
+                    background:sceneMode===m?'#1a2a3a':'transparent',
+                    color:sceneMode===m?'#5090d0':'#888'}}>
+                  {m.toUpperCase()}
+                </div>
+              ))}
+              {sceneMode==='cinematic'&&<span style={{fontSize:9,color:'#5090d0',alignSelf:'center',marginLeft:4}}>→ set videos + cues in VIDEO tab</span>}
+            </div>
+          </div>
+          <button className="isave" onClick={save}>SAVE SCENE</button>
+        </div>
+      )}
+
+      {tab==='VIDEO'&&(
+        <div className="pop-tab-body">
+          <div style={{fontSize:'7px',color:'var(--text2)',letterSpacing:'1px',marginBottom:10}}>
+            One file per outfit. Cues are named time ranges — use DevTools to find exact seconds (pause video, read video.currentTime). from===to = hold on that frame.
+          </div>
+          <div className="pf">
+            <label className="pfl" style={{color:'#5090d0'}}>VIDEO — REGULAR (cyber_octavia)</label>
+            <input className="pfi" value={cinematicClips.cyber_octavia||''} placeholder="../graphics/maps/.../scene.mp4"
+              onChange={e=>setCinematicClips(c=>({...c,cyber_octavia:e.target.value}))}/>
+          </div>
+          <div className="pf">
+            <label className="pfl" style={{color:'#4ab8d0'}}>VIDEO — HOODIE (leave blank to use regular)</label>
+            <input className="pfi" value={cinematicClips.hoodie||''} placeholder="../graphics/maps/.../scene_hood.mp4"
+              onChange={e=>setCinematicClips(c=>({...c,hoodie:e.target.value}))}/>
+          </div>
+          <div className="pf">
+            <label className="pfl" style={{color:'#5090d0'}}>VIDEO CUES</label>
+            <div className="itbl-hdr" style={{display:'flex',gap:6,padding:'2px 8px',marginBottom:4}}>
+              <span style={{flex:2}}>CUE NAME</span>
+              <span style={{width:60}}>FROM (s)</span>
+              <span style={{width:60}}>TO (s)</span>
+              <span style={{width:20}}></span>
+            </div>
+            {cinematicCues.map(cue=>(
+              <div key={cue.id} className="irow">
+                <input className="ifield" style={{flex:2}} placeholder="enter / charlie / exit..." value={cue.name}
+                  onChange={e=>uCue(cue.id,{name:e.target.value})}/>
+                <input className="ifield" style={{width:60}} type="number" step="0.1" min="0" value={cue.from}
+                  onChange={e=>uCue(cue.id,{from:parseFloat(e.target.value)||0})}/>
+                <input className="ifield" style={{width:60}} type="number" step="0.1" min="0" value={cue.to}
+                  onChange={e=>uCue(cue.id,{to:parseFloat(e.target.value)||0})}/>
+                <button className="idel" onClick={()=>dCue(cue.id)}>✕</button>
+              </div>
+            ))}
+            <button className="iadd" onClick={addCue}>+ ADD CUE</button>
           </div>
           <button className="isave" onClick={save}>SAVE SCENE</button>
         </div>

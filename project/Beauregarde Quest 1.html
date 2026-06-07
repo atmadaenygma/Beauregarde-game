@@ -107,16 +107,57 @@ const CORNER_STORE_IMG= '../graphics/maps/the_veil/move_block/convenient_store.w
 const PHARMACY_IMG    = '../graphics/maps/the_veil/move_block/pharmacy_interior.webm';
 const RESTAURANT_IMG  = '../graphics/maps/the_veil/move_block/restaurant.webm';
 const ALLEY_VIDEO_STORE_IMG = '../graphics/maps/the_veil/move_block/alley_video_store/alley_video_store.webm';
-const CHARLIE_IDLE_VID = '../graphics/characters/NPCs/charlie_winston_idle.webm';
+
+// ── CINEMATIC SCENE CUES ──────────────────────────────────────────
+// Each store location has one webm per outfit. Cues are named time ranges within that file.
+// { from, to } in seconds. Pause at cue.to then fire callback.
+const CINEMATIC_SCENES={
+  store:{
+    cyber_octavia:{
+      src:'../graphics/maps/the_veil/move_block/corner_store/no_hood_corner_store.webm',
+      cues:{enter:{from:0,to:10},menu:{from:10,to:10},octavia:{from:10,to:10},clerk:{from:12,to:12},browse:{from:0,to:0}},
+    },
+    hoodie:{
+      src:'../graphics/maps/the_veil/move_block/corner_store/hooded_corner_store.webm',
+      cues:{enter:{from:0,to:10},menu:{from:10,to:10},octavia:{from:10,to:10},clerk:{from:12,to:12},browse:{from:0,to:0}},
+    },
+  },
+  pharmacy:{
+    cyber_octavia:{
+      src:'../graphics/maps/the_veil/move_block/pharmacy/pharmacy_no_hood.webm',
+      cues:{enter:{from:4,to:9},guard:{from:9,to:9},octavia:{from:9,to:9},exit:{from:10,to:15}},
+    },
+    hoodie:{
+      src:'../graphics/maps/the_veil/move_block/pharmacy_hoodie.webm',
+      cues:{enter:{from:0,to:2.5},idle:{from:2.5,to:2.5},exit:{from:7.8,to:10.0}},
+    },
+  },
+  restaurant:{
+    cyber_octavia:{
+      src:'../graphics/maps/the_veil/move_block/restaurant_octavia.webm',
+      cues:{enter:{from:0,to:2.5},idle:{from:2.5,to:2.5},exit:{from:7.8,to:10.0}},
+    },
+    hoodie:{
+      src:'../graphics/maps/the_veil/move_block/restaurant_hoodie.webm',
+      cues:{enter:{from:0,to:2.5},idle:{from:2.5,to:2.5},exit:{from:7.8,to:10.0}},
+    },
+  },
+  alley_video_store:{
+    cyber_octavia:{
+      src:'../graphics/maps/the_veil/move_block/alley_video_store/video_store_no_hood.mp4',
+      cues:{enter:{from:0,to:4},charlie:{from:5,to:5},octavia:{from:6,to:6}},
+    },
+    hoodie:{
+      src:'../graphics/maps/the_veil/move_block/alley_video_store/video_store_hooded.mp4',
+      cues:{enter:{from:0,to:4},charlie:{from:5,to:5},octavia:{from:6,to:6}},
+    },
+  },
+};
+
 const EXTERIOR_IMG    = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/exterior/exterior.png';
 const FOURTH_FLOOR_HALLWAY_VID = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/fourth_floor_hallway.mp4';
 const ELEVATOR_HALLWAY_VID     = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/elevator_hallway_.mp4';
 const APT_STAIRWELL_VID        = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/apt_stairwell.mp4';
-const STORE_CLERK_VID      = '../graphics/characters/NPCs/convenient_female_clerk_idle.webm';
-const SECURITY_GUARD_VID   = '../graphics/characters/NPCs/security_guard_idle.webm';
-const PHARMACIST_VID       = '../graphics/characters/NPCs/pharmacist_idle.webm';
-const RESTAURANT_OWNER_VID = '../graphics/characters/NPCs/restaurant_owner_idle.webm';
-const CHEF_VID             = '../graphics/characters/NPCs/chef_idle.webm';
 const DEVICE_HUD_IMG  = '../graphics/assets/ui/device_hud/device_frame.png';
 const DEVICE_MASK_IMG = '../graphics/assets/ui/device_hud/smartphone_mask_black_white.png';
 // HUD size system — every HUD dimension is computed from HUD_SCALE so the
@@ -405,6 +446,21 @@ const CONV={
     ]},
   ],
 };
+
+// ── ALLEY SCENE — CINEMATIC DIALOGUE ─────────────────────────
+// Flat sequence for video-driven dialogue. Charlie lines pause at 5.0s (charlie frame),
+// Octavia lines pause at 6.0s (octavia frame). Both outfits use the same text.
+const ALLEY_DIALOGUE=[
+  {speaker:'CHARLIE',text:"Don't see many new faces down this alley."},
+  {speaker:'OCTAVIA',opts:[{t:"I'm staying nearby."},{t:"(shrug)",muted:true}]},
+  {speaker:'CHARLIE',text:"Mm. You know this neighborhood's name?"},
+  {speaker:'OCTAVIA',opts:[{t:"MOVE."},{t:"I don't know much yet."}]},
+  {speaker:'CHARLIE',text:"Most people just call it the Veil now. MOVE is the old name. This whole block is named after something that happened here. Long time ago."},
+  {speaker:'OCTAVIA',opts:[{t:"What happened?"},{t:"(wait)",muted:true}]},
+  {speaker:'CHARLIE',text:"I got footage. Real footage. You want to see it?"},
+  {speaker:'OCTAVIA',opts:[{t:"Yeah."},{t:"(nod)",muted:true}]},
+  {speaker:'CHARLIE',text:"Check your phone. I'm sending it now.",act:'giveMoveVideo'},
+];
 
 // ── MONOLOGUE + THREADS DATA ──────────────────────────────────
 const MONO={
@@ -897,12 +953,95 @@ function Char({facing,walking,running=false,crouching=false,kicking=false,sweepK
   return null;
 }
 function Prompt({text}){return(<div style={{position:'absolute',bottom:'100%',left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,marginBottom:6,fontFamily:"'TheMurk',monospace",zIndex:9999}}>{text}</div>);}
-function NpcVideo({src,height,width,rate=0.9}){
-  const ref=useRef(null);
-  useEffect(()=>{if(ref.current)ref.current.playbackRate=rate;},[rate]);
-  const sz=width?{width,height}:{height,width:'auto'};
-  return<video ref={ref} src={src} style={{...sz,objectFit:'contain',display:'block'}} autoPlay muted loop/>;
+// ── CINEMATIC VIDEO CUES ──────────────────────────────────────────
+// Hook: seek to cue.from, play to cue.to, pause and callback
+function useCineVideo(vidRef,sceneKey,outfit){
+  const [cueName,setCueName]=useState('enter');
+  const [onCueEnd,setOnCueEnd]=useState(null);
+  const clip=CINEMATIC_SCENES[sceneKey]?.[outfit]??CINEMATIC_SCENES[sceneKey]?.cyber_octavia;
+
+  // Load video once
+  useEffect(()=>{
+    const v=vidRef.current;if(!v)return;
+    v.src=clip.src;v.muted=true;v.preload='auto';v.load();
+  },[clip.src]);
+
+  // Play a cue
+  const playCue=useCallback((name,callback)=>{
+    const v=vidRef.current;if(!v)return;
+    const cue=clip.cues[name];if(!cue)return;
+    setCueName(name);
+    setOnCueEnd(()=>callback);
+    v.currentTime=cue.from;
+    if(cue.from===cue.to){callback?.();return;} // single-frame hold
+    v.play().catch(()=>{});
+  },[clip]);
+
+  // timeupdate → pause at cue.to
+  useEffect(()=>{
+    const v=vidRef.current;if(!v)return;
+    const cue=clip.cues[cueName];if(!cue)return;
+    const check=()=>{
+      if(v.currentTime>=cue.to){
+        v.pause();v.currentTime=cue.to;
+        v.removeEventListener('timeupdate',check);
+        onCueEnd?.();
+      }
+    };
+    v.addEventListener('timeupdate',check);
+    return()=>v.removeEventListener('timeupdate',check);
+  },[cueName,onCueEnd]);
+
+  return{playCue};
 }
+
+// Component: fullscreen video + UI overlay
+function CinematicScene({vidRef,children}){
+  return(
+    <div style={{position:'absolute',inset:0,overflow:'hidden'}}>
+      <video ref={vidRef} muted playsInline preload="auto"
+        style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+      {children}
+    </div>
+  );
+}
+
+// Bottom text bar for cinematic scenes — video frame is the portrait, no blur overlay
+function CineDialogBox({speaker,text,opts,sel,onSel,onConfirm}){
+  const isOct=speaker==='OCTAVIA';
+  return(
+    <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+      background:'rgba(0,0,0,0.82)',borderTop:`1px solid ${C.border}`,
+      padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+      <div style={{color:isOct?C.red:C.gold,fontSize:8,letterSpacing:4,marginBottom:10}}>
+        // {speaker}
+      </div>
+      {!opts?(
+        <>
+          <div style={{color:C.text,fontSize:13,lineHeight:1.9,maxWidth:900}}>{text}</div>
+          <div style={{color:`${C.dim}88`,fontSize:7,letterSpacing:2,marginTop:12}}>[E] CONTINUE</div>
+        </>
+      ):(
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {opts.map((opt,i)=>(
+            <div key={i} onClick={()=>onSel(i)}
+              style={{display:'flex',gap:14,cursor:'pointer',padding:'4px 10px',
+                borderLeft:`2px solid ${sel===i?C.red:'transparent'}`}}>
+              <span style={{color:sel===i?C.red:'#3a2c1488',fontSize:10,minWidth:16,flexShrink:0}}>{i+1}</span>
+              <span style={{color:opt.muted?C.dim:C.text,fontSize:12,lineHeight:1.7,fontStyle:opt.muted?'italic':'normal'}}>
+                {opt.t.split('').map((ch,j)=>(
+                  <span key={j} style={{animation:'letterGlow 0.7s ease both',animationDelay:`${j*0.04}s`,display:'inline',whiteSpace:'pre'}}>{ch}</span>
+                ))}
+              </span>
+            </div>
+          ))}
+          <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,marginTop:8}}>[ 1/2 · ↑↓ ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Fade({on}){return<div style={{position:'absolute',inset:0,zIndex:600,background:C.bg,opacity:on?1:0,transition:'opacity .65s ease',pointerEvents:'none'}}/>;}
 function SceneLabel({label}){return(<div style={{position:'absolute',top:14,left:'50%',transform:'translateX(-50%)',color:C.dim,fontSize:7,letterSpacing:4,zIndex:300,fontFamily:"'TheMurk',monospace"}}>{label}</div>);}
 function Controls({hints}){return(<div style={{position:'absolute',bottom:18,right:20,zIndex:300,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}}>{hints.map(([k,v])=>(<div key={k} style={{display:'flex',gap:8,alignItems:'center'}}><span style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>{v}</span><span style={{color:C.text,fontSize:8,fontFamily:"'TheMurk',monospace",border:`1px solid ${C.border}`,padding:'1px 7px',background:C.panel}}>{k}</span></div>))}</div>);}
@@ -2454,121 +2593,547 @@ const PHARMACY_ITEMS=[
 const RESTAURANT_ITEMS=[]; // food — to be added with quests
 
 // ── STORE SCENE ───────────────────────────────────────────────
+// Items: x/y/w/h are screen-space hotspots for browse mode (1280×720 frame).
+// Adjust x/y to match the actual video layout.
 const STORE_ITEMS=[
-  {id:'water',    wx:685, label:'WATER',    col:'#304860',price:2, look:'the water looks good'},
-  {id:'sandwich', wx:875, label:'SANDWICH', col:'#806030',price:2, look:'the sandwich looks good'},
+  {id:'water',    label:'WATER',       price:2, x:240,y:290,w:90, h:130,desc:'Cold. Clean.'},
+  {id:'sandwich', label:'SANDWICH',    price:4, x:420,y:275,w:110,h:150,desc:'Packed tight. Still good.'},
+  {id:'chips',    label:'CHIPS',       price:2, x:640,y:280,w:95, h:130,desc:'Local brand. Salty.'},
+  {id:'medicine', label:'PAINKILLERS', price:6, x:860,y:265,w:90, h:120,desc:'Generic. Works.'},
 ];
 
-function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
-  const [walking,setWalking]=useState(false);
-  const [px,setPx]=useState(109);
-  const [facing,setFacing]=useState('right');
-  const [basket,setBasket]=useState([]);
-  const [paid,setPaid]=useState(false);
-  const [credit,setCredit]=useState(false);
-  const [stolen,setStolen]=useState(false);
-  const [conv,setConv]=useState(null);
-  const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const nearItem=STORE_ITEMS.find(i=>Math.abs(i.wx-px)<52&&!basket.includes(i.id));
-  const nearLookItem=STORE_ITEMS.find(i=>Math.abs(i.wx-px)<90&&!basket.includes(i.id));
-  const nearCounter=Math.abs(px-1144)<100&&!conv;
-  const atExit=px<200;
-  const total=basket.reduce((s,id)=>s+(STORE_ITEMS.find(i=>i.id===id)?.price||0),0);
-  const canPay=money>=total&&total>0;
+// Talk dialogue: CLERK opens, then alternates OCTAVIA/CLERK via 10s/12s frames.
+const STORE_TALK=[
+  {speaker:'CLERK',   text:"This block's been quiet lately."},
+  {speaker:'OCTAVIA', text:"Mm."},
+  {speaker:'CLERK',   text:"You new around here?"},
+  {speaker:'OCTAVIA', opts:[{t:"Staying nearby."},{t:"(shrug)",muted:true}]},
+  {speaker:'CLERK',   text:"Stay close. People look out here."},
+];
 
-  const handleAct=useCallback((act)=>{
-    if(act==='pay'){if(!canPay)return 'blocked';onSpendMoney(total);onAddItems?.(basket);setPaid(true);}
-    else if(act==='freeItems'){onAddItems?.(basket);setBasket([]);setCredit(true);}
-    else if(act==='stealAttempt')setConv('clerk_caught');
-    else if(act==='stealFinal'){setStolen(true);onAddItems?.(basket);onTheft?.();setConv(null);setTimeout(onLeave,1000);}
-    else if(act==='putback'){setBasket([]);setConv(null);}
-    else if(act==='leave'){setConv(null);setTimeout(onLeave,400);}
-    else if(act==='end')setConv(null);
-  },[total,money,onSpendMoney,onLeave,onAddItems,basket]);
-
-  useEffect(()=>{
-    const kd=e=>{
-      keys.current[e.code]=true;
-      if(e.code==='Escape'){if(!conv)return;setConv(null);return;}
-      if(e.code==='KeyE'&&!conv){
-        if(atExit&&!basket.length)onLeave();
-        else if(atExit&&basket.length>0&&!paid&&!stolen)setConv('raymond_caught');
-        else if(nearItem)setBasket(b=>[...b,nearItem.id]);
-        else if(nearCounter&&basket.length>0)setConv(canPay?'raymond_pay':'store_cant_pay');
-        else if(nearCounter&&basket.length===0)setConv('raymond_browse');
-      }
-    };
-    const ku=e=>{delete keys.current[e.code];};
-    window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
-    return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
-  },[nearItem,nearCounter,canPay,paid,stolen,atExit,basket,onLeave,conv]);
-
-  useEffect(()=>{
-    const loop=()=>{
-      if(!conv){
-        const left=keys.current['ArrowLeft']||keys.current['KeyA'];
-        const right=keys.current['ArrowRight']||keys.current['KeyD'];
-        const {currentSpeed,isKicking}=updateMovement(left||right);
-        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
-        else setWalking(false);
-      }else setWalking(false);
-      raf.current=requestAnimationFrame(loop);
-    };
-    raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
-  },[conv]);
-
-  const flOff=-(px*.7)%80;
+// ── STORE COMPONENTS ──────────────────────────────────────────
+// Matches CineDialogBox exactly — sel/onSel managed in StoreScene so
+// one keydown handler covers keyboard AND controller (via useGamepad).
+const STORE_ACTIONS=['talk','browse','purchase','steal','leave'];
+function StoreOptions({basket,sel,onSel,onChoose}){
+  const opts=[
+    {t:'TALK'},
+    {t:'BROWSE'},
+    {t:'PURCHASE', muted:basket.length===0},
+    {t:'STEAL',    muted:basket.length===0},
+    {t:'LEAVE'},
+  ];
   return(
-    <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0c0a07'}}>
-      <video src={CORNER_STORE_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
-      {[480,720,960].map((sx,i)=><div key={i} style={{position:'absolute',top:40,left:sx-90,width:180,height:220,pointerEvents:'none',background:'radial-gradient(ellipse 40% 55% at 50% 0%,#d4a02014 0%,transparent 70%)'}}/>)
-      }
-      {/* Item look text + take prompts */}
-      {STORE_ITEMS.map(item=>{
-        const inB=basket.includes(item.id);
-        if(inB)return null;
-        const near52=Math.abs(item.wx-px)<52;
-        const near90=Math.abs(item.wx-px)<90;
-        return(<div key={item.id} style={{position:'absolute',bottom:200,left:item.wx,transform:'translateX(-50%)',zIndex:VIEWPORT.promptZ,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-          {near90&&!near52&&<div style={{color:C.dim,fontSize:7,letterSpacing:2,fontFamily:"'TheMurk',monospace",whiteSpace:'nowrap',textShadow:'0 0 6px #000'}}>{item.look}</div>}
-          {near52&&<div style={{position:'relative'}}><Prompt text={`[ E ] TAKE — $${item.price}`}/></div>}
-        </div>);
-      })}
-      {/* Clerk NPC */}
-      <div style={{position:'absolute',bottom:65,left:1144,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
-        <NpcVideo src={STORE_CLERK_VID} height={482}/>
-        {nearCounter&&!conv&&basket.length===0&&<Prompt text="[ E ] TALK"/>}
-        {nearCounter&&!conv&&basket.length>0&&<Prompt text={canPay?`[ E ] PAY — $${total}`:'[ E ] TALK (need cash)'}/>}
+    <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+      background:'rgba(0,0,0,0.82)',borderTop:`1px solid ${C.border}`,
+      padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+      <div style={{color:C.gold,fontSize:8,letterSpacing:4,marginBottom:6}}>// CLERK</div>
+      <div style={{color:C.text,fontSize:13,lineHeight:1.9,maxWidth:900,marginBottom:12}}>"Hey, what do ya need?"</div>
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {opts.map((opt,i)=>(
+          <div key={i} onClick={()=>onChoose(STORE_ACTIONS[i])}
+            style={{display:'flex',gap:14,cursor:'pointer',padding:'4px 10px',
+              borderLeft:`2px solid ${sel===i?C.red:'transparent'}`}}>
+            <span style={{color:sel===i?C.red:'#3a2c1488',fontSize:10,minWidth:16,flexShrink:0}}>{i+1}</span>
+            <span style={{color:opt.muted?C.dim:C.text,fontSize:12,lineHeight:1.7,fontStyle:opt.muted?'italic':'normal'}}>
+              {opt.t.split('').map((ch,j)=>(
+                <span key={j} style={{animation:'letterGlow 0.7s ease both',animationDelay:`${j*0.04}s`,display:'inline',whiteSpace:'pre'}}>{ch}</span>
+              ))}
+            </span>
+          </div>
+        ))}
+        <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,marginTop:8}}>[ 1–5 · ↑↓ ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM</div>
       </div>
-      {/* Exit prompt */}
-      {atExit&&!basket.length&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] EXIT</div>}
-      {atExit&&basket.length>0&&!paid&&!stolen&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.red,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] LEAVE (unpaid)</div>}
-      {/* Floor */}
-      <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
-      <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      {/* Basket */}
-      {basket.length>0&&<div style={{position:'absolute',top:20,right:20,zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'6px 12px',fontFamily:"'TheMurk',monospace",minWidth:120}}>
-        <div style={{color:C.dim,fontSize:8,letterSpacing:2,marginBottom:5}}>BASKET</div>
-        {basket.map(id=>{const it=STORE_ITEMS.find(i=>i.id===id);return<div key={id} style={{display:'flex',justifyContent:'space-between',gap:14,color:C.text,fontSize:8}}><span>{it?.label}</span><span style={{color:C.gold}}>${it?.price}</span></div>;})}
-        <div style={{borderTop:`1px solid ${C.border}33`,marginTop:4,paddingTop:4,display:'flex',justifyContent:'space-between',color:C.text,fontSize:8}}><span>TOTAL</span><span style={{color:C.gold}}>${total}</span></div>
-        <div style={{color:money>=total?'#8ab840':C.red,fontSize:8,marginTop:3}}>{money>=total?`HAVE $${money} — OK`:`NEED $${total-money} MORE`}</div>
-      </div>}
-      {stolen&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.red,fontSize:8,letterSpacing:4,fontFamily:"'TheMurk',monospace",textShadow:`0 0 12px ${C.red}`}}>// THEFT</div>}
-      {paid&&!credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:'#8ab840',fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// PAID — ${money-total} REMAINING</div>}
-      {credit&&<div style={{position:'absolute',top:20,left:'50%',transform:'translateX(-50%)',zIndex:300,color:C.gold,fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace"}}>// CREDIT — COME BACK WHEN YOU CAN</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={65} charHeight={482} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
-      <SceneLabel label="CORNER STORE"/>
-      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
-      {debug&&<DebugOverlay px={px} scene="store" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName="RAYMOND" npcImg={RAYMOND_PORTRAIT} total={total} onAct={handleAct}/>}
     </div>
   );
 }
 
+function StoreBrowse({basket,onAddItem,onRemoveItem,onBack,money}){
+  const [pos,setPos]=useState({x:0,y:0});
+  const [hovered,setHovered]=useState(null);
+  const [inspect,setInspect]=useState(null);
+  const containerRef=useRef(null);
+  const onMove=e=>{
+    const r=containerRef.current?.getBoundingClientRect();if(!r)return;
+    const x=e.clientX-r.left,y=e.clientY-r.top;
+    setPos({x,y});
+    if(!inspect){
+      const h=STORE_ITEMS.find(it=>x>=it.x&&x<=it.x+it.w&&y>=it.y&&y<=it.y+it.h);
+      setHovered(h?.id||null);
+    }
+  };
+  const item=STORE_ITEMS.find(i=>i.id===inspect);
+  const hovItem=STORE_ITEMS.find(i=>i.id===hovered);
+  const total=basket.reduce((s,id)=>s+(STORE_ITEMS.find(i=>i.id===id)?.price||0),0);
+  useEffect(()=>{
+    const kd=e=>{
+      if(inspect){
+        if(e.code==='KeyE'){
+          if(!basket.includes(inspect))onAddItem(inspect);else onRemoveItem(inspect);
+          setInspect(null);
+        }else if(e.code==='Escape')setInspect(null);
+      }else{
+        if(e.code==='KeyE'||e.code==='Escape')onBack();
+      }
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[inspect,basket,onAddItem,onRemoveItem,onBack]);
+  return(
+    <div ref={containerRef} style={{position:'absolute',inset:0,cursor:'crosshair'}}
+      onMouseMove={onMove} onMouseLeave={()=>{if(!inspect)setHovered(null);}}
+      onClick={()=>{if(hovered&&!inspect)setInspect(hovered);}}>
+      {/* Hotspot outlines */}
+      {STORE_ITEMS.map(it=>(
+        <div key={it.id} style={{position:'absolute',left:it.x,top:it.y,width:it.w,height:it.h,
+          border:`1px solid ${hovered===it.id||inspect===it.id?C.gold:'transparent'}`,
+          boxShadow:hovered===it.id?`0 0 10px ${C.gold}44`:'none',
+          transition:'border-color .15s',pointerEvents:'none'}}/>
+      ))}
+      {/* Hover tooltip */}
+      {hovItem&&!inspect&&(
+        <div style={{position:'absolute',left:Math.min(pos.x+14,VW-200),top:Math.max(pos.y-55,10),
+          background:C.panel,border:`1px solid ${C.border}`,padding:'5px 10px',
+          fontFamily:"'TheMurk',monospace",zIndex:400,pointerEvents:'none',minWidth:150}}>
+          <div style={{color:C.gold,fontSize:9,letterSpacing:2}}>{hovItem.label}</div>
+          <div style={{color:C.dim,fontSize:7,marginTop:2,fontStyle:'italic'}}>{hovItem.desc}</div>
+          <div style={{color:C.text,fontSize:7,marginTop:3}}>${hovItem.price} · CLICK TO INSPECT</div>
+        </div>
+      )}
+      {/* Inspect panel */}
+      {item&&(
+        <div style={{position:'absolute',left:'50%',top:'38%',transform:'translate(-50%,-50%)',
+          background:C.panel,border:`1px solid ${C.border}`,padding:'18px 26px',
+          fontFamily:"'TheMurk',monospace",zIndex:500,minWidth:220,
+          boxShadow:'0 0 20px rgba(0,0,0,0.8)'}}
+          onClick={e=>e.stopPropagation()}>
+          <div style={{color:C.gold,fontSize:10,letterSpacing:3,marginBottom:6}}>{item.label}</div>
+          <div style={{color:C.dim,fontSize:8,fontStyle:'italic',marginBottom:14}}>{item.desc}</div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {!basket.includes(item.id)?(
+              <div style={{color:C.text,fontSize:10,cursor:'pointer',
+                borderLeft:`2px solid ${C.red}`,paddingLeft:8,lineHeight:1.9}}
+                onClick={e=>{e.stopPropagation();onAddItem(item.id);setInspect(null);}}>
+                [ E ] ADD TO BASKET — ${item.price}
+              </div>
+            ):(
+              <div style={{color:C.dim,fontSize:10,cursor:'pointer',
+                borderLeft:`2px solid ${C.border}`,paddingLeft:8,lineHeight:1.9}}
+                onClick={e=>{e.stopPropagation();onRemoveItem(item.id);setInspect(null);}}>
+                [ E ] REMOVE FROM BASKET
+              </div>
+            )}
+            <div style={{color:'#2a1c0a',fontSize:9,cursor:'pointer',paddingLeft:8,lineHeight:1.9}}
+              onClick={e=>{e.stopPropagation();setInspect(null);}}>
+              [ ESC ] CLOSE
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Bottom basket bar */}
+      <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+        background:'rgba(0,0,0,0.88)',borderTop:`1px solid ${C.border}`,
+        padding:'8px 30px',display:'flex',alignItems:'center',gap:20,minHeight:54,
+        fontFamily:"'TheMurk',monospace'"}}>
+        <div style={{color:C.dim,fontSize:7,letterSpacing:3,flexShrink:0}}>BASKET</div>
+        <div style={{display:'flex',gap:12,flex:1,flexWrap:'wrap',alignItems:'center'}}>
+          {basket.length===0
+            ?<span style={{color:'#2a1c0a',fontSize:8,fontStyle:'italic'}}>empty — hover items above</span>
+            :basket.map(id=>{
+              const it=STORE_ITEMS.find(i=>i.id===id);
+              return(
+                <div key={id} style={{display:'flex',alignItems:'center',gap:6,
+                  background:C.bg,border:`1px solid ${C.border}`,padding:'2px 8px'}}>
+                  <span style={{color:C.text,fontSize:8}}>{it?.label}</span>
+                  <span style={{color:C.gold,fontSize:8}}>${it?.price}</span>
+                  <span style={{color:C.red,fontSize:8,cursor:'pointer',marginLeft:4}}
+                    onClick={e=>{e.stopPropagation();onRemoveItem(id);}}>✕</span>
+                </div>
+              );
+            })
+          }
+        </div>
+        {basket.length>0&&<div style={{color:C.gold,fontSize:9,flexShrink:0}}>TOTAL ${total}</div>}
+        <div style={{color:C.dim,fontSize:8,cursor:'pointer',padding:'2px 10px',
+          border:`1px solid ${C.border}`,letterSpacing:2,flexShrink:0}}
+          onClick={onBack}>BACK</div>
+      </div>
+    </div>
+  );
+}
+
+function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,currentOutfit,debug,debugGo}){
+  const [phase,setPhase]=useState('entering');
+  // entering | menu | talk | browse | purchase | purchase_done | steal_caught | leaving
+  const [basket,setBasket]=useState([]);
+  const [menuSel,setMenuSel]=useState(0);
+  const [talkIdx,setTalkIdx]=useState(0);
+  const [talkSel,setTalkSel]=useState(0);
+  const [stealSuccess,setStealSuccess]=useState(false);
+  const [leavePrompt,setLeavePrompt]=useState(false);
+  const vidRef=useRef(null);
+  const {playCue}=useCineVideo(vidRef,'store',currentOutfit);
+
+  const total=basket.reduce((s,id)=>s+(STORE_ITEMS.find(i=>i.id===id)?.price||0),0);
+  const canPay=money>=total&&total>0;
+  const talkLine=phase==='talk'?STORE_TALK[talkIdx]:null;
+
+  // Mount: play 0→10s then open menu. Fallback ensures menu shows regardless of video state.
+  useEffect(()=>{
+    const fallback=setTimeout(()=>setPhase(p=>p==='entering'?'menu':p),11000);
+    playCue('enter',()=>{setPhase('menu');playCue('menu',()=>{});});
+    return()=>clearTimeout(fallback);
+  },[]);
+
+  const goMenu=useCallback(()=>{
+    setPhase('menu');setMenuSel(0);playCue('menu',()=>{});
+  },[playCue]);
+
+  const handleOption=useCallback((opt)=>{
+    if(opt==='talk'){
+      setPhase('talk');setTalkIdx(0);setTalkSel(0);
+      const first=STORE_TALK[0];
+      playCue(first.speaker==='OCTAVIA'?'octavia':'clerk',()=>{});
+    }else if(opt==='browse'){
+      setPhase('browse');playCue('browse',()=>{});
+    }else if(opt==='purchase'){
+      if(basket.length===0)return;
+      setPhase('purchase');playCue('clerk',()=>{});
+    }else if(opt==='steal'){
+      if(basket.length===0)return;
+      if(Math.random()>0.4){
+        setStealSuccess(true);
+        onAddItems?.(basket);setBasket([]);onTheft?.();
+        setTimeout(onLeave,2000);
+      }else{
+        setPhase('steal_caught');playCue('clerk',()=>{});
+      }
+    }else if(opt==='leave'){
+      if(basket.length>0)setLeavePrompt(true);else onLeave();
+    }
+  },[basket,playCue,onLeave,onAddItems,onTheft]);
+
+  // Menu navigation — keyboard AND controller (useGamepad dispatches same KeyboardEvents)
+  useEffect(()=>{
+    if(phase!=='menu')return;
+    const kd=e=>{
+      if(e.code==='ArrowUp')setMenuSel(s=>Math.max(0,s-1));
+      else if(e.code==='ArrowDown')setMenuSel(s=>Math.min(STORE_ACTIONS.length-1,s+1));
+      else if(e.code==='KeyE')handleOption(STORE_ACTIONS[menuSel]);
+      else{const n=parseInt(e.key);if(n>=1&&n<=STORE_ACTIONS.length)handleOption(STORE_ACTIONS[n-1]);}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,menuSel,handleOption]);
+
+  const advanceTalk=useCallback((choiceIdx=0)=>{
+    const nextIdx=talkIdx+1;
+    if(nextIdx>=STORE_TALK.length){goMenu();return;}
+    const next=STORE_TALK[nextIdx];
+    playCue(next.speaker==='OCTAVIA'?'octavia':'clerk',()=>{});
+    setTalkIdx(nextIdx);setTalkSel(0);
+  },[talkIdx,playCue,goMenu]);
+
+  // Talk keydown
+  useEffect(()=>{
+    if(phase!=='talk')return;
+    const kd=e=>{
+      if(!talkLine)return;
+      if(talkLine.opts){
+        if(e.key==='1')setTalkSel(0);
+        else if(e.key==='2')setTalkSel(1);
+        else if(e.code==='ArrowUp')setTalkSel(s=>Math.max(0,s-1));
+        else if(e.code==='ArrowDown')setTalkSel(s=>Math.min(talkLine.opts.length-1,s+1));
+        else if(e.code==='KeyE')advanceTalk(talkSel);
+      }else{if(e.code==='KeyE')advanceTalk();}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,talkLine,talkSel,advanceTalk]);
+
+  // Purchase keydown
+  useEffect(()=>{
+    if(phase!=='purchase'&&phase!=='purchase_done')return;
+    const kd=e=>{
+      if(e.code==='KeyE'){
+        if(phase==='purchase'&&canPay){
+          onSpendMoney(total);onAddItems?.(basket);setBasket([]);
+          setPhase('purchase_done');playCue('clerk',()=>{});
+        }else if(phase==='purchase_done'){
+          goMenu();
+        }
+      }else if(e.code==='Escape'&&phase==='purchase'){goMenu();}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,canPay,total,basket,onSpendMoney,onAddItems,playCue,goMenu]);
+
+  // Leave prompt keydown
+  useEffect(()=>{
+    if(!leavePrompt)return;
+    const kd=e=>{
+      if(e.code==='KeyE'){setBasket([]);onLeave();}
+      else if(e.code==='Escape')setLeavePrompt(false);
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[leavePrompt,onLeave]);
+
+  return(
+    <CinematicScene vidRef={vidRef}>
+      <Heart state={heart}/>
+      <SceneLabel label="CORNER STORE — THE VEIL"/>
+      {debug&&<DebugOverlay px={0} scene="store" onSceneChange={debugGo}/>}
+
+      {/* Options menu */}
+      {phase==='menu'&&<StoreOptions basket={basket} sel={menuSel} onSel={setMenuSel} onChoose={handleOption}/>}
+
+      {/* Browse mode — mouse/cursor item interaction */}
+      {phase==='browse'&&(
+        <StoreBrowse
+          basket={basket}
+          onAddItem={id=>setBasket(b=>b.includes(id)?b:[...b,id])}
+          onRemoveItem={id=>setBasket(b=>b.filter(x=>x!==id))}
+          onBack={goMenu}
+          money={money}
+        />
+      )}
+
+      {/* Talk dialogue */}
+      {phase==='talk'&&talkLine&&(
+        <CineDialogBox speaker={talkLine.speaker} text={talkLine.text} opts={talkLine.opts}
+          sel={talkSel} onSel={setTalkSel} onConfirm={()=>advanceTalk(talkSel)}/>
+      )}
+
+      {/* Purchase confirmation — clerk at 12s */}
+      {phase==='purchase'&&(
+        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+          background:'rgba(0,0,0,0.88)',borderTop:`1px solid ${C.border}`,
+          padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+          <div style={{color:C.dim,fontSize:7,letterSpacing:3,marginBottom:12}}>
+            CLERK — <span style={{color:C.text,fontStyle:'italic'}}>"That's ${total}. You good?"</span>
+          </div>
+          <div style={{display:'flex',gap:20,alignItems:'center'}}>
+            {canPay
+              ?<div style={{color:C.text,fontSize:11,cursor:'pointer',
+                  borderLeft:`2px solid ${C.red}`,paddingLeft:10,lineHeight:1.8}}
+                  onClick={()=>{onSpendMoney(total);onAddItems?.(basket);setBasket([]);setPhase('purchase_done');playCue('clerk',()=>{});}}>
+                  [ E ] PAY ${total}
+                </div>
+              :<div style={{color:C.red,fontSize:9,letterSpacing:1}}>NOT ENOUGH — NEED ${total-money} MORE</div>
+            }
+            <div style={{color:C.dim,fontSize:10,cursor:'pointer',marginLeft:12,letterSpacing:1}}
+              onClick={goMenu}>[ ESC ] BACK</div>
+          </div>
+        </div>
+      )}
+
+      {/* Purchase done — "anything else?" */}
+      {phase==='purchase_done'&&(
+        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+          background:'rgba(0,0,0,0.88)',borderTop:`1px solid ${C.border}`,
+          padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+          <div style={{color:'#8ab840',fontSize:8,letterSpacing:4,marginBottom:8}}>// PAID</div>
+          <div style={{color:C.dim,fontSize:7,letterSpacing:3,marginBottom:12}}>
+            CLERK — <span style={{color:C.text,fontStyle:'italic'}}>"Anything else?"</span>
+          </div>
+          <div style={{color:C.text,fontSize:11,cursor:'pointer',
+            borderLeft:`2px solid ${C.red}`,paddingLeft:10,lineHeight:1.8}}
+            onClick={goMenu}>[ E ] CONTINUE</div>
+        </div>
+      )}
+
+      {/* Steal caught — clerk at 12s */}
+      {phase==='steal_caught'&&(
+        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+          background:'rgba(0,0,0,0.90)',borderTop:`2px solid ${C.red}`,
+          padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+          <div style={{color:C.red,fontSize:7,letterSpacing:4,marginBottom:8}}>// DANGER — CAUGHT</div>
+          <div style={{color:C.dim,fontSize:7,letterSpacing:3,marginBottom:12}}>
+            CLERK — <span style={{color:C.text,fontStyle:'italic'}}>"Are you going to pay for that?"</span>
+          </div>
+          <div style={{display:'flex',gap:16}}>
+            {canPay&&(
+              <div style={{color:C.text,fontSize:10,cursor:'pointer',
+                borderLeft:`2px solid ${C.red}`,paddingLeft:8,lineHeight:1.8}}
+                onClick={()=>{onSpendMoney(total);onAddItems?.(basket);setBasket([]);goMenu();}}>
+                PAY ${total}
+              </div>
+            )}
+            <div style={{color:C.dim,fontSize:10,cursor:'pointer',paddingLeft:8,lineHeight:1.8}}
+              onClick={()=>{setBasket([]);onLeave();}}>RUN</div>
+            <div style={{color:C.dim,fontSize:10,cursor:'pointer',paddingLeft:8,lineHeight:1.8}}
+              onClick={()=>{setBasket([]);goMenu();}}>PUT BACK</div>
+          </div>
+        </div>
+      )}
+
+      {/* Steal success overlay */}
+      {stealSuccess&&(
+        <div style={{position:'absolute',top:'40%',left:'50%',transform:'translate(-50%,-50%)',
+          zIndex:400,textAlign:'center',fontFamily:"'TheMurk',monospace",pointerEvents:'none'}}>
+          <div style={{color:C.red,fontSize:14,letterSpacing:8,
+            textShadow:`0 0 20px ${C.red}`,animation:'ng 0.4s steps(1) infinite'}}>// STOLEN</div>
+          <div style={{color:C.dim,fontSize:8,marginTop:12,letterSpacing:2}}>leaving...</div>
+        </div>
+      )}
+
+      {/* Leave prompt — warn about basket items */}
+      {leavePrompt&&(
+        <div style={{position:'absolute',inset:0,zIndex:400,
+          background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:C.panel,border:`1px solid ${C.border}`,
+            padding:'26px 40px',fontFamily:"'TheMurk',monospace",textAlign:'center',maxWidth:420}}>
+            <div style={{color:C.red,fontSize:8,letterSpacing:3,marginBottom:10}}>// NOTICE</div>
+            <div style={{color:C.text,fontSize:10,lineHeight:1.9,marginBottom:20}}>
+              Items in your basket will be returned to the shelf.
+            </div>
+            <div style={{display:'flex',gap:24,justifyContent:'center'}}>
+              <div style={{color:C.gold,fontSize:10,cursor:'pointer',
+                border:`1px solid ${C.border}`,padding:'4px 16px',letterSpacing:2}}
+                onClick={()=>{setBasket([]);onLeave();}}>[ E ] LEAVE</div>
+              <div style={{color:C.dim,fontSize:10,cursor:'pointer',padding:'4px 4px',letterSpacing:2}}
+                onClick={()=>setLeavePrompt(false)}>[ ESC ] STAY</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </CinematicScene>
+  );
+}
+
 // ── PHARMACY SCENE ────────────────────────────────────────────
+// No-hood: cinematic video (4→9s enter, 9s guard, 10→15s exit).
+// Hoodie: existing walkable interior.
+const PHARMACY_GUARD_DIALOGUE=[
+  {speaker:'GUARD',   text:"Can't let you in. Need to cover those modifications."},
+  {speaker:'OCTAVIA', opts:[{t:"...understood."},{t:"I just need medicine.",muted:true}]},
+  {speaker:'GUARD',   text:"Pharmacy policy. Come back covered."},
+];
+
+const PHARM_NHOOD_ACTIONS=['talk','exit'];
+
+function PharmacyNoHoodScene({heart,mono,onLeave,currentOutfit,debug,debugGo}){
+  const [phase,setPhase]=useState('entering');
+  const [menuSel,setMenuSel]=useState(0);
+  const [dialogIdx,setDialogIdx]=useState(0);
+  const [dialogSel,setDialogSel]=useState(0);
+  const vidRef=useRef(null);
+  const {playCue}=useCineVideo(vidRef,'pharmacy',currentOutfit);
+
+  // Mount: play 4→9s then show menu. Fallback if video stalls.
+  useEffect(()=>{
+    const fallback=setTimeout(()=>setPhase(p=>p==='entering'?'menu':p),11000);
+    playCue('enter',()=>setPhase('menu'));
+    return()=>clearTimeout(fallback);
+  },[]);
+
+  const handleMenu=useCallback((opt)=>{
+    if(opt==='talk'){
+      setPhase('talk');setDialogIdx(0);setDialogSel(0);
+      playCue('guard',()=>{});
+    }else if(opt==='exit'){
+      setPhase('exiting');
+      playCue('exit',onLeave);
+    }
+  },[playCue,onLeave]);
+
+  // Menu keydown + controller
+  useEffect(()=>{
+    if(phase!=='menu')return;
+    const kd=e=>{
+      if(e.code==='ArrowUp')setMenuSel(s=>Math.max(0,s-1));
+      else if(e.code==='ArrowDown')setMenuSel(s=>Math.min(1,s+1));
+      else if(e.code==='KeyE')handleMenu(PHARM_NHOOD_ACTIONS[menuSel]);
+      else if(e.key==='1')handleMenu('talk');
+      else if(e.key==='2')handleMenu('exit');
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,menuSel,handleMenu]);
+
+  const advanceDialog=useCallback(()=>{
+    const nextIdx=dialogIdx+1;
+    if(nextIdx>=PHARMACY_GUARD_DIALOGUE.length){setPhase('menu');setMenuSel(0);return;}
+    const next=PHARMACY_GUARD_DIALOGUE[nextIdx];
+    playCue(next.speaker==='GUARD'?'guard':'octavia',()=>{});
+    setDialogIdx(nextIdx);setDialogSel(0);
+  },[dialogIdx,playCue]);
+
+  // Dialog keydown + controller
+  useEffect(()=>{
+    if(phase!=='talk')return;
+    const line=PHARMACY_GUARD_DIALOGUE[dialogIdx];
+    const kd=e=>{
+      if(!line)return;
+      if(line.opts){
+        if(e.key==='1')setDialogSel(0);
+        else if(e.key==='2')setDialogSel(1);
+        else if(e.code==='ArrowUp')setDialogSel(s=>Math.max(0,s-1));
+        else if(e.code==='ArrowDown')setDialogSel(s=>Math.min(line.opts.length-1,s+1));
+        else if(e.code==='KeyE')advanceDialog();
+      }else{if(e.code==='KeyE')advanceDialog();}
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,dialogIdx,dialogSel,advanceDialog]);
+
+  const talkLine=phase==='talk'?PHARMACY_GUARD_DIALOGUE[dialogIdx]:null;
+
+  return(
+    <CinematicScene vidRef={vidRef}>
+      <Heart state={heart}/>
+      <SceneLabel label="PHARMACY — THE VEIL"/>
+      {debug&&<DebugOverlay px={0} scene="pharmacy" onSceneChange={debugGo}/>}
+
+      {/* Options menu */}
+      {phase==='menu'&&(
+        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
+          background:'rgba(0,0,0,0.82)',borderTop:`1px solid ${C.border}`,
+          padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
+          <div style={{color:C.red,fontSize:8,letterSpacing:4,marginBottom:6}}>// ACCESS DENIED</div>
+          <div style={{color:C.text,fontSize:13,lineHeight:1.9,maxWidth:900,marginBottom:12}}>You cannot enter the pharmacy like this.</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {['TALK TO GUARD','LEAVE'].map((label,i)=>(
+              <div key={i} onClick={()=>handleMenu(PHARM_NHOOD_ACTIONS[i])}
+                style={{display:'flex',gap:14,cursor:'pointer',padding:'4px 10px',
+                  borderLeft:`2px solid ${menuSel===i?C.red:'transparent'}`}}>
+                <span style={{color:menuSel===i?C.red:'#3a2c1488',fontSize:10,minWidth:16,flexShrink:0}}>{i+1}</span>
+                <span style={{color:C.text,fontSize:12,lineHeight:1.7}}>
+                  {label.split('').map((ch,j)=>(
+                    <span key={j} style={{animation:'letterGlow 0.7s ease both',animationDelay:`${j*0.04}s`,display:'inline',whiteSpace:'pre'}}>{ch}</span>
+                  ))}
+                </span>
+              </div>
+            ))}
+            <div style={{color:'#2a1c0a',fontSize:8,letterSpacing:2,marginTop:8}}>[ 1/2 · ↑↓ ] SELECT &nbsp;·&nbsp; [ E ] CONFIRM</div>
+          </div>
+        </div>
+      )}
+
+      {/* Guard dialogue */}
+      {phase==='talk'&&talkLine&&(
+        <CineDialogBox speaker={talkLine.speaker} text={talkLine.text} opts={talkLine.opts}
+          sel={dialogSel} onSel={setDialogSel} onConfirm={advanceDialog}/>
+      )}
+    </CinematicScene>
+  );
+}
+
 function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+  // No-hood outfit gets the cinematic guard scene — she cannot enter.
+  if(currentOutfit!=='hoodie'){
+    return <PharmacyNoHoodScene heart={heart} mono={mono} onLeave={onLeave}
+      currentOutfit={currentOutfit} debug={debug} debugGo={debugGo}/>;
+  }
+  // Hoodie: existing walkable pharmacy interior.
+  // eslint-disable-next-line no-shadow -- intentional redeclaration scope
+  return <PharmacyHoodieScene heart={heart} mono={mono} onLeave={onLeave} money={money}
+    onSpendMoney={onSpendMoney} onAddItems={onAddItems} currentOutfit={currentOutfit}
+    debug={debug} debugGo={debugGo} stamina={stamina} onStaminaChange={onStaminaChange} hudOpen={hudOpen}/>;
+}
+
+function PharmacyHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
   const GUARD_X=299;
   const [walking,setWalking]=useState(false);
   const [px,setPx]=useState(124);
@@ -2631,16 +3196,8 @@ function PharmacyScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,current
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0908'}}>
       <video src={PHARMACY_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
-      {/* Pharmacist NPC */}
-      <div style={{position:'absolute',bottom:23,left:1057,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
-        <NpcVideo src={PHARMACIST_VID} height={530}/>
-        {nearPharmacist&&!conv&&<Prompt text="[ E ] TALK"/>}
-      </div>
-      {/* Security guard NPC */}
-      <div style={{position:'absolute',bottom:23,left:GUARD_X,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
-        <NpcVideo src={SECURITY_GUARD_VID} height={554}/>
-        {nearGuard&&!conv&&<Prompt text="[ E ] TALK"/>}
-      </div>
+      {nearPharmacist&&!conv&&<div style={{position:'absolute',bottom:23,left:1057,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}><Prompt text="[ E ] TALK"/></div>}
+      {nearGuard&&!conv&&<div style={{position:'absolute',bottom:23,left:GUARD_X,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}><Prompt text="[ E ] TALK"/></div>}
       {guardBlocking&&px>=220&&px<=380&&!conv&&<div style={{position:'absolute',bottom:300,left:'50%',transform:'translateX(-50%)',zIndex:150,color:C.red,fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace",textShadow:`0 0 8px ${C.red}`}}>// ACCESS DENIED — COVER MUTATIONS</div>}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
@@ -2710,16 +3267,8 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0a08'}}>
       <video src={RESTAURANT_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
-      {/* Restaurant owner NPC */}
-      <div style={{position:'absolute',bottom:109,left:821,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
-        <NpcVideo src={RESTAURANT_OWNER_VID} height={337}/>
-        {nearOwner&&!conv&&<Prompt text="[ E ] TALK"/>}
-      </div>
-      {/* Chef NPC */}
-      <div style={{position:'absolute',bottom:109,left:384,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
-        <NpcVideo src={CHEF_VID} height={354}/>
-        {nearChef&&!conv&&<Prompt text="[ E ] TALK"/>}
-      </div>
+      {nearOwner&&!conv&&<div style={{position:'absolute',bottom:109,left:821,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}><Prompt text="[ E ] TALK"/></div>}
+      {nearChef&&!conv&&<div style={{position:'absolute',bottom:109,left:384,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}><Prompt text="[ E ] TALK"/></div>}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={95} charHeight={317} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
@@ -2733,63 +3282,62 @@ function RestaurantScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,curre
 }
 
 // ── ALLEY WAY SCENE ───────────────────────────────────────────
-function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
-  const [walking,setWalking]=useState(false);
-  const [px,setPx]=useState(200);
-  const [facing,setFacing]=useState('right');
-  const [conv,setConv]=useState(null);
-  const raf=useRef(null);
-  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const nearCounter=px>900&&px<1200&&!conv;
-  const atExit=px<200;
+function AlleyWayScene({heart,mono,onLeave,currentOutfit,debug,debugGo}){
+  const [dialogIdx,setDialogIdx]=useState(-1); // -1 = enter clip playing
+  const [sel,setSel]=useState(0);
+  const vidRef=useRef(null);
+  const {playCue}=useCineVideo(vidRef,'alley_video_store',currentOutfit);
+  const line=dialogIdx>=0?ALLEY_DIALOGUE[dialogIdx]:null;
+
+  // On mount: play enter cue (0→4s), then start dialogue at line 0
+  useEffect(()=>{
+    playCue('enter',()=>{
+      setDialogIdx(0);
+      playCue('charlie',()=>{}); // seek to Charlie's frame, hold
+    });
+  },[]);
+
+  const advance=useCallback((choiceIdx=0)=>{
+    const current=ALLEY_DIALOGUE[dialogIdx];
+    if(current?.act==='giveMoveVideo'){
+      window.dispatchEvent(new CustomEvent('beau_unlockVideo',{detail:{id:'v1'}}));
+    }
+    const nextIdx=dialogIdx+1;
+    if(nextIdx>=ALLEY_DIALOGUE.length){
+      onLeave(); // no exit clip yet — fade transition back to street
+      return;
+    }
+    const next=ALLEY_DIALOGUE[nextIdx];
+    playCue(next.speaker==='CHARLIE'?'charlie':'octavia',()=>{});
+    setDialogIdx(nextIdx);
+    setSel(0);
+  },[dialogIdx,playCue,onLeave]);
 
   useEffect(()=>{
     const kd=e=>{
-      if(e.code==='Escape'){if(!conv)return;setConv(null);return;}
-      if(e.code==='KeyE'&&!conv){
-        if(atExit)onLeave();
-        else if(nearCounter)setConv('charlie_first_meeting');
+      if(!line)return;
+      if(line.opts){
+        if(e.key==='1')setSel(0);
+        else if(e.key==='2')setSel(1);
+        else if(e.code==='ArrowUp')setSel(s=>Math.max(0,s-1));
+        else if(e.code==='ArrowDown')setSel(s=>Math.min(line.opts.length-1,s+1));
+        else if(e.code==='KeyE')advance(sel);
+      }else{
+        if(e.code==='KeyE')advance();
       }
     };
     window.addEventListener('keydown',kd);
     return()=>window.removeEventListener('keydown',kd);
-  },[nearCounter,atExit,onLeave,conv]);
-
-  useEffect(()=>{
-    const loop=()=>{
-      if(!conv){
-        const left=keys.current['ArrowLeft']||keys.current['KeyA'];
-        const right=keys.current['ArrowRight']||keys.current['KeyD'];
-        const {currentSpeed,isKicking}=updateMovement(left||right);
-        if(!isKicking&&left){setPx(x=>Math.max(VIEWPORT.minX,x-currentSpeed));setFacing('left');setWalking(true);}
-        else if(!isKicking&&right){setPx(x=>Math.min(VIEWPORT.maxX,x+currentSpeed));setFacing('right');setWalking(true);}
-        else setWalking(false);
-      }else setWalking(false);
-      raf.current=requestAnimationFrame(loop);
-    };
-    raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
-  },[conv]); // do NOT include updateMovement — it causes dependency cycles with stamina updates
+  },[line,sel,advance]);
 
   return(
-    <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#0a0908'}}>
-      <video src={ALLEY_VIDEO_STORE_IMG} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} autoPlay muted loop/>
-      <div style={{position:'absolute',bottom:29,left:850,zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
-        <div style={{color:C.gold,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",marginBottom:4,whiteSpace:'nowrap',textAlign:'center'}}>// CHARLIE</div>
-        <NpcVideo src={CHARLIE_IDLE_VID} height={408} width={408}/>
-        {nearCounter&&!conv&&<div style={{position:'absolute',bottom:-35,left:'50%',transform:'translateX(-50%)',whiteSpace:'nowrap',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 8px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] TALK</div>}
-      </div>
-      <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
-      <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={29} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+    <CinematicScene vidRef={vidRef}>
+      <Heart state={heart}/>
       <SceneLabel label="ALLEY WAY — THE VEIL"/>
-      <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
-      {debug&&<DebugOverlay px={px} scene="alley_video_store" onSceneChange={debugGo}/>}
-      {conv&&<ChatBox convKey={conv} npcName="CHARLIE" npcImg={CHARLIE_PORTRAIT} total={0} onAct={(act)=>{
-        if(act==='giveMoveVideo'){window.dispatchEvent(new CustomEvent('beau_unlockVideo',{detail:{id:'v1'}}));setConv(null);return;}
-        if(act==='end'||!act)setConv(null);
-      }}/>}
-      {atExit&&!conv&&<div style={{position:'absolute',bottom:240,left:'50%',transform:'translateX(-50%)',zIndex:150,background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:7,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>[ E ] EXIT</div>}
-    </div>
+      {debug&&<DebugOverlay px={0} scene="alley_video_store" onSceneChange={debugGo}/>}
+      {line&&<CineDialogBox speaker={line.speaker} text={line.text} opts={line.opts}
+        sel={sel} onSel={setSel} onConfirm={()=>advance(sel)}/>}
+    </CinematicScene>
   );
 }
 

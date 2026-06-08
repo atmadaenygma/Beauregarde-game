@@ -160,6 +160,14 @@ const ELEVATOR_HALLWAY_VID     = '../graphics/maps/the_veil/move_block/residenti
 const APT_STAIRWELL_VID        = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/apt_stairwell.mp4';
 const DEVICE_HUD_IMG  = '../graphics/assets/ui/device_hud/device_frame.png';
 const DEVICE_MASK_IMG = '../graphics/assets/ui/device_hud/smartphone_mask_black_white.png';
+// In-game HUD (always-on bottom-left device). The mask's white region defines the
+// usable screen area as fractions of the frame: L,T,W,H. Frame is 1080×581.
+const INGAME_HUD_IMG  = '../graphics/assets/ui/game_hud/in_game_hud.png';
+const INGAME_HUD_SCREEN={x:0.1315,y:0.1721,w:0.63,h:0.6971}; // w trimmed — mask over-measured the thick right border
+const HUD_OCTAVIA_IMG = '../graphics/portraits/02_cyber_octavia_portrait.png';
+const HUD_INKBLAST_IMG= '../graphics/assets/ui/game_hud/ink_blast.png';
+const HUD_HOODIE_IMG  = '../graphics/inventory/clothes/black_hoodie.png';
+const HUD_RAGGED_IMG  = '../graphics/inventory/clothes/raggedy_clothes.png';
 // HUD size system — every HUD dimension is computed from HUD_SCALE so the
 // device frame, the mask, and the screen-region positions stay in lockstep.
 // The SYS tab will let the player swap presets at runtime.
@@ -343,6 +351,7 @@ const CONV={
       {t:"Just the painkillers.",         next:'s_pain',  act:'addPainkillers'},
       {t:"Just the bandages.",            next:'s_band',  act:'addBandages'},
       {t:"I don't have enough.",          next:'s_nomoney',muted:true},
+      {t:"Actually, never mind.",         next:'s_cancel',act:'clearBasket',muted:true},
     ]},
     {id:'s_nomoney',npc:"Come back when you can. Pharmacy is always open.",opts:[
       {t:"Thank you.",                    next:null,       act:'clearBasket'},
@@ -804,17 +813,10 @@ function useMonologue(lines){
 
 // ── SHARED COMPONENTS ─────────────────────────────────────────
 function Mono({text}){return text?(<div style={{position:'absolute',bottom:210,left:'50%',transform:'translateX(-50%)',color:'#e8d2a072',fontSize:8,fontStyle:'italic',fontFamily:"'TheMurk',monospace",textAlign:'center',maxWidth:720,zIndex:200,pointerEvents:'none',letterSpacing:.3,textShadow:'0 0 30px #000,0 2px 16px #000',lineHeight:1.7}}>{text}</div>):null;}
-function Heart({state='red'}){
-  const col={red:C.red,yellow:C.gold,blue:'#2070d0'}[state]||C.red;
-  return(<div style={{position:'absolute',bottom:20,left:22,zIndex:300,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-    <svg width={38} height={34} viewBox="0 0 38 34" style={{filter:`drop-shadow(0 0 8px ${col})`,animation:'beat 1.5s ease-in-out infinite'}}>
-      <path d="M19 31C19 31 2 20 2 11C2 6 6 2 11 2C14 2 17 4 19 7C21 4 24 2 27 2C32 2 36 6 36 11C36 20 19 31 19 31Z" fill={col}/>
-      <path d="M19 26C19 26 7 18 7 12C7 9 9 7 12 7C14 7 16 8.5 19 12C22 8.5 24 7 26 7C29 7 31 9 31 12C31 18 19 26 19 26Z" fill={col} opacity={.28}/>
-    </svg>
-    <span style={{color:col,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",textShadow:`0 0 6px ${col}`}}>VITALS</span>
-  </div>);
-}
-function MoneyHUD({amount}){return amount>0?(<div style={{position:'absolute',bottom:20,left:78,zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'3px 10px',fontFamily:"'TheMurk',monospace",display:'flex',alignItems:'center',gap:5}}><img src="../graphics/inventory/currency/money.png" style={{width:14,height:14,objectFit:'contain',imageRendering:'pixelated'}}/><span style={{color:'#8ab840',fontSize:8,letterSpacing:2}}>${amount}</span></div>):null;}
+// Vitals (health/stamina/mood/money) now live in the always-on in-game HUD (InGameHUD).
+// Kept as a no-op so existing <Heart/> usages across scenes need no edits.
+function Heart(){return null;}
+function MoneyHUD({amount}){return amount>0?(<div style={{position:'absolute',bottom:146,left:14,zIndex:300,background:C.panel,border:`1px solid ${C.border}`,padding:'3px 10px',fontFamily:"'TheMurk',monospace",display:'flex',alignItems:'center',gap:5}}><img src="../graphics/inventory/currency/money.png" style={{width:14,height:14,objectFit:'contain',imageRendering:'pixelated'}}/><span style={{color:'#8ab840',fontSize:8,letterSpacing:2}}>${amount}</span></div>):null;}
 function StaminaBar({stamina}){const pct=Math.max(0,Math.min(100,stamina));const col=pct>50?'#88e030':pct>25?'#e0a030':'#d04030';return(<div style={{position:'absolute',bottom:20,right:22,zIndex:300,display:'flex',alignItems:'center',gap:6}}><div style={{width:60,height:12,background:C.panel,border:`1px solid ${C.border}`,padding:'1px'}}><div style={{height:'100%',width:`${pct}%`,background:col,transition:'width 0.1s linear'}}></div></div><span style={{color:col,fontSize:7,letterSpacing:1,fontFamily:"'TheMurk',monospace",width:25,textAlign:'right'}}>{Math.round(pct)}%</span></div>);}
 // Canvas-based chroma key for videos exported without alpha channel (solid green background).
 // Replace the source video with a proper VP9+alpha WebM to remove this component.
@@ -1009,6 +1011,7 @@ function CinematicScene({vidRef,children}){
 // Bottom text bar for cinematic scenes — video frame is the portrait, no blur overlay
 function CineDialogBox({speaker,text,opts,sel,onSel,onConfirm}){
   const isOct=speaker==='OCTAVIA';
+  useSuppressHud(); // hide the always-on HUD while this dialogue is up
   return(
     <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
       background:'rgba(0,0,0,0.82)',borderTop:`1px solid ${C.border}`,
@@ -1060,6 +1063,75 @@ function DebugOverlay({px,scene,onSceneChange}){
       <a href="dev.html"                      target="_blank" rel="noopener" style={linkStyle}>↗ DEV HUB</a>
     </div>
   </div>);
+}
+
+// ── SCENE GRID ────────────────────────────────────────────────
+// Debug coordinate grid. Shows every 50px (minor) and 100px (major) lines across
+// the 1280×720 scene, with axis labels and a live mouse-position readout.
+// Drop <SceneGrid/> inside any scene when debug=true.
+function SceneGrid(){
+  const [mouse,setMouse]=useState({x:0,y:0});
+  const containerRef=useRef(null);
+  useEffect(()=>{
+    const sw=document.getElementById('scale-wrap');
+    const mm=e=>{
+      const r=sw?sw.getBoundingClientRect():{left:0,top:0,width:VW,height:VH};
+      setMouse({
+        x:Math.round((e.clientX-r.left)*(VW/r.width)),
+        y:Math.round((e.clientY-r.top)*(VH/r.height)),
+      });
+    };
+    window.addEventListener('mousemove',mm);
+    return()=>window.removeEventListener('mousemove',mm);
+  },[]);
+  const MINOR=50,MAJOR=100;
+  const cols=Math.floor(VW/MINOR), rows=Math.floor(VH/MINOR);
+  return(
+    <div ref={containerRef} style={{position:'absolute',inset:0,zIndex:800,pointerEvents:'none'}}>
+      <svg width={VW} height={VH} style={{position:'absolute',inset:0}}>
+        {/* Minor grid lines */}
+        {Array.from({length:cols+1},(_,i)=>{
+          const x=i*MINOR; const major=x%MAJOR===0;
+          return<line key={'vx'+i} x1={x} y1={0} x2={x} y2={VH}
+            stroke={major?'rgba(255,215,0,0.35)':'rgba(255,255,255,0.10)'} strokeWidth={major?1:0.5}/>;
+        })}
+        {Array.from({length:rows+1},(_,i)=>{
+          const y=i*MINOR; const major=y%MAJOR===0;
+          return<line key={'vy'+i} x1={0} y1={y} x2={VW} y2={y}
+            stroke={major?'rgba(255,215,0,0.35)':'rgba(255,255,255,0.10)'} strokeWidth={major?1:0.5}/>;
+        })}
+        {/* X axis labels (major columns) */}
+        {Array.from({length:Math.floor(VW/MAJOR)+1},(_,i)=>{
+          const x=i*MAJOR;
+          return<text key={'xl'+i} x={x+2} y={11} fill='rgba(255,215,0,0.8)' fontSize={9} fontFamily="monospace">{x}</text>;
+        })}
+        {/* Y axis labels (major rows) */}
+        {Array.from({length:Math.floor(VH/MAJOR)+1},(_,i)=>{
+          const y=i*MAJOR;
+          return<text key={'yl'+i} x={2} y={y>0?y-2:10} fill='rgba(255,215,0,0.8)' fontSize={9} fontFamily="monospace">{y}</text>;
+        })}
+        {/* Mouse crosshair */}
+        <line x1={mouse.x} y1={0} x2={mouse.x} y2={VH} stroke='rgba(47,212,230,0.7)' strokeWidth={1} strokeDasharray="4 4"/>
+        <line x1={0} y1={mouse.y} x2={VW} y2={mouse.y} stroke='rgba(47,212,230,0.7)' strokeWidth={1} strokeDasharray="4 4"/>
+        {/* Interaction radius ring — matches INTERACT_R */}
+        <circle cx={mouse.x} cy={mouse.y} r={INTERACT_R} fill='rgba(47,212,230,0.06)' stroke='rgba(47,212,230,0.55)' strokeWidth={1.5} strokeDasharray="6 3"/>
+        <circle cx={mouse.x} cy={mouse.y} r={INTERACT_R} fill='none' stroke='rgba(255,59,82,0.25)' strokeWidth={8}/>
+        {/* Radius label */}
+        <text x={mouse.x+INTERACT_R+4} y={mouse.y-4} fill='rgba(47,212,230,0.85)' fontSize={8} fontFamily="monospace">r:{INTERACT_R}</text>
+        {/* Centre dot */}
+        <circle cx={mouse.x} cy={mouse.y} r={4} fill='rgba(47,212,230,0.9)'/>
+      </svg>
+      {/* Coordinate readout — follows mouse, stays on screen */}
+      <div style={{
+        position:'absolute',
+        left:Math.min(mouse.x+12,VW-120),
+        top:Math.max(mouse.y-24,4),
+        background:'rgba(0,0,0,0.82)',border:'1px solid rgba(47,212,230,0.6)',
+        color:'#2fd4e6',fontSize:9,fontFamily:'monospace',padding:'2px 8px',letterSpacing:1,
+        whiteSpace:'nowrap'
+      }}>x:{mouse.x} y:{mouse.y}</div>
+    </div>
+  );
 }
 
 // ── VOICE BOX (internal monologue / scene choices) ────────────
@@ -1132,6 +1204,7 @@ function VoiceBox({seq,onChoose,onFinish}){
 
 // ── CHATBOX COMPONENT ─────────────────────────────────────────
 function ChatBox({convKey,npcName,npcImg,total,onAct}){
+  useSuppressHud(); // hide the always-on HUD while this conversation is up
   const [nodeId,setNodeId]=useState(null);
   const [sel,setSel]=useState(0);
   const [history,setHistory]=useState([]);
@@ -2608,11 +2681,22 @@ const REST_NHOOD_CHEF_DIALOGUE=[
 // ── STORE SCENE ───────────────────────────────────────────────
 // Items: x/y/w/h are screen-space hotspots for browse mode (1280×720 frame).
 // Adjust x/y to match the actual video layout.
+// Items use CENTER coordinates (x,y). Detection = circular radius INTERACT_R.
+// type:'npc' = dialogue trigger (no cart). img falls back to a color swatch.
+const INTERACT_R=48;
 const STORE_ITEMS=[
-  {id:'water',    label:'WATER',       price:2, x:240,y:290,w:90, h:130,desc:'Cold spring water. Clean, drinkable.', img:'../graphics/assets/ui/device_hud/device_frame.png'},
-  {id:'sandwich', label:'SANDWICH',    price:4, x:420,y:275,w:110,h:150,desc:'Wrapped tight. Still fresh. Protein.', img:'../graphics/assets/ui/device_hud/device_frame.png'},
-  {id:'chips',    label:'CHIPS',       price:2, x:640,y:280,w:95, h:130,desc:'Local snack. Crunchy, salty.', img:'../graphics/assets/ui/device_hud/device_frame.png'},
-  {id:'medicine', label:'PAINKILLERS', price:6, x:860,y:265,w:90, h:120,desc:'Over-the-counter. Reliable pain relief.', img:'../graphics/assets/ui/device_hud/device_frame.png'},
+  {id:'cashier',     label:'CASHIER',      type:'npc',  x:360, y:400,col:'#d4a020',desc:'The store attendant. Talk to buy or get information.',         img:null, price:0},
+  {id:'exit',        label:'EXIT',         type:'exit', x:225, y:435,col:'#d04030',desc:'The way out. Talk to the clerk to pay — or slip out unpaid. Get caught stealing and your MOVE standing drops.', img:null, price:0},
+  {id:'sodas',       label:'SODAS',        type:'item', x:668, y:256,col:'#2e5a78',desc:'Assorted sodas. Cold and fizzy.',                               img:'../graphics/inventory/food/water.png', price:2},
+  {id:'ramen',       label:'RAMEN',        type:'item', x:508, y:311,col:'#a06020',desc:'Instant ramen. Must be cooked first.',                           img:null, price:3},
+  {id:'spices',      label:'SPICE PACK',   type:'item', x:577, y:268,col:'#c04820',desc:'Variety spice pack. Ingredient used for cooking.',               img:null, price:2},
+  {id:'milk',        label:'MILK',         type:'item', x:740, y:253,col:'#d8d0c0',desc:'Full-fat milk. Versatile — good for cooking and health.',        img:null, price:2},
+  {id:'energy',      label:'ENERGY DRINK', type:'item', x:845, y:260,col:'#40c840',desc:'Boosts power output. Use when you need a surge.',                img:null, price:4},
+  {id:'fruit_drink', label:'FRUIT DRINK',  type:'item', x:936, y:260,col:'#e87030',desc:'Pressed fruit. Good for stamina recovery.',                      img:null, price:3},
+  {id:'junk_food',   label:'JUNK FOOD',    type:'item', x:1013,y:315,col:'#d0a030',desc:'Quick calories. Fast power boost on the go.',                    img:null, price:2},
+  {id:'medicine',    label:'OTC MEDICINE', type:'item', x:556, y:439,col:'#7a8a40',desc:'Over-the-counter pain relief. Helps with pain.',                 img:'../graphics/inventory/food/pain_killers.png', price:5},
+  {id:'chips',       label:'CHIPS',        type:'item', x:882, y:456,col:'#a8702a',desc:'Chips. A perfect snack for on the go.',                          img:null, price:2},
+  {id:'canned',      label:'CANNED GOODS', type:'item', x:868, y:352,col:'#607050',desc:'Canned goods. Better than snacks — great for cooking.',          img:null, price:4},
 ];
 
 // Talk dialogue: CLERK opens, then alternates OCTAVIA/CLERK via 10s/12s frames.
@@ -2661,128 +2745,553 @@ function StoreOptions({basket,sel,onSel,onChoose}){
   );
 }
 
-function StoreBrowse({basket,onAddItem,onRemoveItem,onBack,money}){
-  const [pos,setPos]=useState({x:0,y:0});
-  const [hovered,setHovered]=useState(null);
-  const [inspect,setInspect]=useState(null);
-  const containerRef=useRef(null);
-  const onMove=e=>{
-    const r=containerRef.current?.getBoundingClientRect();if(!r)return;
-    const x=e.clientX-r.left,y=e.clientY-r.top;
-    setPos({x,y});
-    if(!inspect){
-      const h=STORE_ITEMS.find(it=>x>=it.x&&x<=it.x+it.w&&y>=it.y&&y<=it.y+it.h);
-      setHovered(h?.id||null);
-    }
-  };
-  const item=STORE_ITEMS.find(i=>i.id===inspect);
-  const hovItem=STORE_ITEMS.find(i=>i.id===hovered);
-  const total=basket.reduce((s,id)=>s+(STORE_ITEMS.find(i=>i.id===id)?.price||0),0);
+// Small thumbnail: real img if provided, else a colored swatch with the label initial.
+function ItemThumb({item,size}){
+  if(item?.img){
+    return <img src={item.img} alt="" style={{width:size,height:size,objectFit:'cover',
+      flexShrink:0,border:`1px solid ${C.border}`}}/>;
+  }
+  return(
+    <div style={{width:size,height:size,flexShrink:0,background:item?.col||C.bg,
+      border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <span style={{color:'#0c0a08cc',fontSize:size*0.5,fontWeight:'bold',
+        fontFamily:"'TheMurk',monospace"}}>{item?.label?.[0]||'?'}</span>
+    </div>
+  );
+}
+
+// Pages cycled by d-pad ←/→ (BracketLeft/BracketRight). Each page replaces the whole
+// screen. 'home' = vitals, 'power' = ability icon, 'gear' = clothing icons; rest dummy.
+const HUD_TABS_INGAME=[
+  {id:'home',  label:'VITALS'},
+  {id:'power', label:'POWER', title:'EQUIPPED POWER'},
+  {id:'gear',  label:'GEAR',  title:'FAST EQUIP'},
+  {id:'stats', label:'STATS', title:'STATS',          lines:['STR 6    AGI 7','PERCEPTION 5','STEALTH 4','MOVE REP 100']},
+  {id:'intel', label:'INTEL', title:'INVESTIGATION',  lines:['"The Veil / MOVE"','Charlie has footage','→ find MOVE history','lead: pharmacy']},
+  {id:'map',   label:'MAP',   title:'MOVE BLOCK',     lines:['you are here ◦','› corner store','› pharmacy · alley','› lobby']},
+];
+// Powers — d-pad ↑↓ cycles the selected one (dummy 2nd entry reuses the icon for now).
+const HUD_POWERS=[
+  {name:'INK BLAST',    icon:HUD_INKBLAST_IMG, lines:['tier II · cooldown 8s','range: short','dmg: 24']},
+  {name:'TENTACLE LASH',icon:HUD_INKBLAST_IMG, lines:['tier I · cooldown 5s','range: melee','dmg: 16']},
+];
+// Fast-equip clothing tiles (icons). d-pad ↑↓ moves focus; ✓ = currently worn.
+const HUD_GEAR=[
+  {id:'cyber_octavia', label:'CYBER',  icon:HUD_OCTAVIA_IMG},
+  {id:'hoodie',        label:'HOODIE', icon:HUD_HOODIE_IMG},
+  {id:'raggedy',       label:'STREET', icon:HUD_RAGGED_IMG},
+];
+
+// ── HUD SUPPRESSION ──────────────────────────────────────────
+// Dialogue boxes / menus call this so the always-on in-game HUD slides away while
+// they're up. Reference-counted (multiple sources can stack) via a window event.
+let __hudSuppress=0;
+function beauSuppressHud(delta){
+  __hudSuppress=Math.max(0,__hudSuppress+delta);
+  window.dispatchEvent(new CustomEvent('beau_hudSuppress',{detail:{count:__hudSuppress}}));
+}
+function useSuppressHud(){
+  useEffect(()=>{beauSuppressHud(1);return()=>beauSuppressHud(-1);},[]);
+}
+// Drop-in: render <HudSuppressor/> while any custom (non-CineDialogBox) menu is open.
+function HudSuppressor(){useSuppressHud();return null;}
+
+// Always-on in-game HUD device (it IS Octavia's phone — only after she finds it).
+// Two modes inside the mask screen region:
+//  • inStore → 2×4 shopping cart grid (hover a slot → PUT BACK)
+//  • otherwise → paged status. Each page fills the screen; 'home' shows a large
+//    Octavia portrait (left) + big HEALTH/STAMINA bars (right). d-pad ←/→ cycles.
+function InGameHUD({inStore=false,basket=[],onRemoveItem,heartNum=0,stamina=0,money=0,currentOutfit,onEquipItem}){
+  const [hov,setHov]=useState(null);
+  const [tab,setTab]=useState(0);
+  const [sel,setSel]=useState(0); // selected item within the current page (power/gear)
+  const [glitch,setGlitch]=useState(false); // random CRT glitch burst
+  const [visible,setVisible]=useState(true); // auto-hide after idle
+  const [suppressed,setSuppressed]=useState(()=>__hudSuppress>0); // hidden while a dialogue/menu is open
+  const hideTimerRef=useRef(null);
+  const HUD_W=211, HUD_H=Math.round(HUD_W*581/1080); // 176 + ~20%
+  const S=INGAME_HUD_SCREEN;
+  const sx=HUD_W*S.x, sy=HUD_H*S.y, sw=HUD_W*S.w, sh=HUD_H*S.h;
+  // Content is authored at a fixed design canvas (BW×BH = the 440-frame screen),
+  // then uniformly scaled to fit the actual mask region — shrink without reflow.
+  const BW=325, BH=165, scale=sw/BW;
+  const PAD=10, PAD_R=16; // inset content from the screen edges (extra on the right)
+
+  // d-pad ←/→ (or keyboard [ ]) cycle status pages
+  // d-pad ←/→ (BracketLeft/Right) change page; d-pad ↑/↓ (ArrowUp/Down) cycle items within a page.
   useEffect(()=>{
+    if(inStore||suppressed)return; // dialogue/menu open → HUD ignores d-pad (no accidental equip)
+    const L=HUD_TABS_INGAME.length;
+    const pid=HUD_TABS_INGAME[tab].id;
+    const count=pid==='power'?HUD_POWERS.length:pid==='gear'?HUD_GEAR.length:0;
     const kd=e=>{
-      if(inspect){
-        if(e.code==='KeyE'){
-          if(!basket.includes(inspect))onAddItem(inspect);else onRemoveItem(inspect);
-          setInspect(null);
-        }else if(e.code==='Escape')setInspect(null);
-      }else{
-        if(e.code==='KeyE'||e.code==='Escape')onBack();
+      if(e.code==='BracketLeft'){setTab(t=>(t-1+L)%L);setSel(0);}
+      else if(e.code==='BracketRight'){setTab(t=>(t+1)%L);setSel(0);}
+      else if(count>0&&e.code==='ArrowUp'){
+        setSel(s=>{const n=(s-1+count)%count;if(pid==='gear')onEquipItem?.(HUD_GEAR[n].id);return n;});
+      }
+      else if(count>0&&e.code==='ArrowDown'){
+        setSel(s=>{const n=(s+1)%count;if(pid==='gear')onEquipItem?.(HUD_GEAR[n].id);return n;});
       }
     };
     window.addEventListener('keydown',kd);
     return()=>window.removeEventListener('keydown',kd);
-  },[inspect,basket,onAddItem,onRemoveItem,onBack]);
+  },[inStore,tab,suppressed]);
+
+  // Random glitch blip — fires every few seconds for a short burst
+  useEffect(()=>{
+    let t1,t2;
+    const schedule=()=>{
+      t1=setTimeout(()=>{
+        setGlitch(true);
+        t2=setTimeout(()=>{setGlitch(false);schedule();},140+Math.random()*180);
+      },3500+Math.random()*6500);
+    };
+    schedule();
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[]);
+
+  // Hide while a dialogue/menu is open
+  useEffect(()=>{
+    const h=e=>setSuppressed((e.detail?.count||0)>0);
+    window.addEventListener('beau_hudSuppress',h);
+    return()=>window.removeEventListener('beau_hudSuppress',h);
+  },[]);
+
+  // Auto-hide after 3s idle; any d-pad key wakes it back up
+  const resetHideTimer=useCallback(()=>{
+    setVisible(true);
+    clearTimeout(hideTimerRef.current);
+    hideTimerRef.current=setTimeout(()=>setVisible(false),3000);
+  },[]);
+
+  useEffect(()=>{
+    resetHideTimer(); // start the first timer on mount
+    const DPAD=['ArrowUp','ArrowDown','BracketLeft','BracketRight'];
+    const kd=e=>{if(DPAD.includes(e.code))resetHideTimer();};
+    window.addEventListener('keydown',kd);
+    return()=>{window.removeEventListener('keydown',kd);clearTimeout(hideTimerRef.current);};
+  },[resetHideTimer]);
+
+  // Wake HUD and switch to VITALS when health or stamina drops low
+  const HEALTH_WARN=30, STAMINA_WARN=25;
+  useEffect(()=>{
+    if(heartNum<HEALTH_WARN||stamina<STAMINA_WARN){
+      setTab(0); // force VITALS page so the bars are visible
+      resetHideTimer();
+    }
+  },[heartNum,stamina]);
+
+  const page=HUD_TABS_INGAME[tab];
+  const show=visible&&!suppressed; // dialogue/menu open → slide away
+
   return(
-    <div ref={containerRef} style={{position:'absolute',inset:0,cursor:'crosshair'}}
-      onMouseMove={onMove} onMouseLeave={()=>{if(!inspect)setHovered(null);}}
-      onClick={()=>{if(hovered&&!inspect)setInspect(hovered);}}>
-      {/* Hotspot outlines */}
-      {STORE_ITEMS.map(it=>(
-        <div key={it.id} style={{position:'absolute',left:it.x,top:it.y,width:it.w,height:it.h,
-          border:`1px solid ${hovered===it.id||inspect===it.id?C.gold:'transparent'}`,
-          boxShadow:hovered===it.id?`0 0 10px ${C.gold}44`:'none',
-          transition:'border-color .15s',pointerEvents:'none'}}/>
-      ))}
-      {/* Hover tooltip */}
-      {hovItem&&!inspect&&(
-        <div style={{position:'absolute',left:Math.min(pos.x+14,VW-200),top:Math.max(pos.y-55,10),
-          background:C.panel,border:`1px solid ${C.border}`,padding:'5px 10px',
-          fontFamily:"'TheMurk',monospace",zIndex:400,pointerEvents:'none',minWidth:150}}>
-          <div style={{color:C.gold,fontSize:9,letterSpacing:2}}>{hovItem.label}</div>
-          <div style={{color:C.dim,fontSize:7,marginTop:2,fontStyle:'italic'}}>{hovItem.desc}</div>
-          <div style={{color:C.text,fontSize:7,marginTop:3}}>${hovItem.price} · CLICK TO INSPECT</div>
-        </div>
-      )}
-      {/* Inspect panel */}
-      {item&&(
-        <div style={{position:'absolute',left:'50%',top:'38%',transform:'translate(-50%,-50%)',
-          background:C.panel,border:`1px solid ${C.border}`,padding:'18px 26px',
-          fontFamily:"'TheMurk',monospace",zIndex:500,minWidth:220,
-          boxShadow:'0 0 20px rgba(0,0,0,0.8)'}}
-          onClick={e=>e.stopPropagation()}>
-          <div style={{color:C.gold,fontSize:10,letterSpacing:3,marginBottom:6}}>{item.label}</div>
-          <div style={{color:C.dim,fontSize:8,fontStyle:'italic',marginBottom:14}}>{item.desc}</div>
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {!basket.includes(item.id)?(
-              <div style={{color:C.text,fontSize:10,cursor:'pointer',
-                borderLeft:`2px solid ${C.red}`,paddingLeft:8,lineHeight:1.9}}
-                onClick={e=>{e.stopPropagation();onAddItem(item.id);setInspect(null);}}>
-                [ E ] ADD TO BASKET — ${item.price}
-              </div>
-            ):(
-              <div style={{color:C.dim,fontSize:10,cursor:'pointer',
-                borderLeft:`2px solid ${C.border}`,paddingLeft:8,lineHeight:1.9}}
-                onClick={e=>{e.stopPropagation();onRemoveItem(item.id);setInspect(null);}}>
-                [ E ] REMOVE FROM BASKET
-              </div>
-            )}
-            <div style={{color:'#2a1c0a',fontSize:9,cursor:'pointer',paddingLeft:8,lineHeight:1.9}}
-              onClick={e=>{e.stopPropagation();setInspect(null);}}>
-              [ ESC ] CLOSE
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Bottom basket bar */}
-      <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
-        background:'rgba(0,0,0,0.88)',borderTop:`1px solid ${C.border}`,
-        padding:'8px 30px',display:'flex',alignItems:'center',gap:20,minHeight:54,
-        fontFamily:"'TheMurk',monospace'"}}>
-        <div style={{color:C.dim,fontSize:7,letterSpacing:3,flexShrink:0}}>BASKET</div>
-        <div style={{display:'flex',gap:12,flex:1,flexWrap:'wrap',alignItems:'center'}}>
-          {basket.length===0
-            ?<span style={{color:'#2a1c0a',fontSize:8,fontStyle:'italic'}}>empty — hover items above</span>
-            :basket.map(id=>{
-              const it=STORE_ITEMS.find(i=>i.id===id);
+    <div style={{position:'absolute',left:12,bottom:12,width:HUD_W,height:HUD_H,zIndex:160,
+      fontFamily:"'TheMurk',monospace",userSelect:'none',opacity:0.82,
+      animation:show?'hudSlideUp 0.4s ease-out forwards':'hudSlideDown 0.4s ease-in forwards',
+      pointerEvents:show?'auto':'none'}}>
+      {/* Device frame */}
+      <img src={INGAME_HUD_IMG} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',
+        objectFit:'fill',pointerEvents:'none'}}/>
+
+      {/* Screen — fixed design canvas scaled to fit the mask region */}
+      <div style={{position:'absolute',left:sx,top:sy,width:BW,height:BH,
+        transform:`scale(${scale})`,transformOrigin:'top left',overflow:'visible'}}>
+        {inStore?(
+          /* ── CART MODE: 2×4 grid ── */
+          <div style={{position:'absolute',top:PAD,left:PAD,bottom:PAD,right:PAD_R,display:'grid',
+            gridTemplateColumns:'repeat(4,1fr)',gridTemplateRows:'1fr 1fr',gap:3,padding:1}}>
+            {Array.from({length:8}).map((_,i)=>{
+              const id=basket[i];
+              const it=id?STORE_ITEMS.find(x=>x.id===id):null;
+              if(!it)return <div key={'e'+i} style={{border:`1px solid ${C.border}33`,background:C.selBg+'55'}}/>;
+              const isHov=hov===id;
               return(
-                <div key={id} style={{display:'flex',alignItems:'center',gap:6,
-                  background:C.bg,border:`1px solid ${C.border}`,padding:'2px 8px'}}>
-                  <span style={{color:C.text,fontSize:8}}>{it?.label}</span>
-                  <span style={{color:C.gold,fontSize:8}}>${it?.price}</span>
-                  <span style={{color:C.red,fontSize:8,cursor:'pointer',marginLeft:4}}
-                    onClick={e=>{e.stopPropagation();onRemoveItem(id);}}>✕</span>
+                <div key={id} onMouseEnter={()=>setHov(id)} onMouseLeave={()=>setHov(null)}
+                  style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'stretch',
+                    border:`1px solid ${isHov?C.gold:C.border+'66'}`,
+                    background:isHov?C.selBg:C.selBg+'88',cursor:'pointer'}}>
+                  <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+                    {it.img?<img src={it.img} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                      :<span style={{color:it.col||C.gold,fontSize:22,fontWeight:'bold'}}>{it.label[0]}</span>}
+                  </div>
+                  <span style={{fontSize:9,color:isHov?C.gold:C.dim,letterSpacing:0.5,
+                    maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>
+                    {it.label.split(' ')[0]}
+                  </span>
+                  {isHov&&(
+                    <div style={{position:'absolute',bottom:'100%',left:'50%',transform:'translateX(-50%)',
+                      marginBottom:6,width:168,background:C.selBg,border:`1px solid ${C.border}`,
+                      boxShadow:'0 6px 22px rgba(0,0,0,0.85)',zIndex:400,textAlign:'left'}}>
+                      <div style={{padding:'7px 9px 8px'}}>
+                        <div style={{color:C.gold,fontSize:9,letterSpacing:2,marginBottom:3}}>{it.label} · ${it.price}</div>
+                        <div style={{color:C.dim,fontSize:7,fontStyle:'italic',lineHeight:1.6}}>{it.desc}</div>
+                      </div>
+                      <div onClick={e=>{e.stopPropagation();onRemoveItem?.(id);setHov(null);}}
+                        style={{background:C.selBg,borderTop:`1px solid ${C.border}`,color:C.dim,
+                          fontSize:6,letterSpacing:1,padding:'4px 9px',cursor:'pointer'}}>
+                        <span style={{color:C.red,border:`1px solid ${C.border}`,padding:'1px 5px',marginRight:6}}>[ E ]</span>PUT BACK
+                      </div>
+                      <div style={{position:'absolute',top:'100%',left:'50%',transform:'translateX(-50%)',
+                        width:0,height:0,borderLeft:'6px solid transparent',borderRight:'6px solid transparent',
+                        borderTop:`6px solid ${C.border}`}}/>
+                    </div>
+                  )}
                 </div>
               );
-            })
-          }
+            })}
+          </div>
+        ):(
+          /* ── STATUS MODE — each page fills the whole screen ── */
+          <div style={{position:'absolute',top:PAD,left:PAD,bottom:PAD,right:PAD_R,display:'flex',flexDirection:'column'}}>
+            {/* Thin top strip: page name (active), dots, money */}
+            <div style={{display:'flex',alignItems:'center',gap:6,borderBottom:`1px solid ${C.border}66`,
+              paddingBottom:2,marginBottom:4,flexShrink:0}}>
+              <span style={{color:C.gold,fontSize:15,letterSpacing:2,flex:1}}>{page.label}</span>
+              <div style={{display:'flex',gap:4}}>
+                {HUD_TABS_INGAME.map((t,i)=>(
+                  <span key={t.id} onClick={()=>setTab(i)} style={{cursor:'pointer',width:7,height:7,borderRadius:7,
+                    background:i===tab?C.gold:C.border+'66'}}/>
+                ))}
+              </div>
+              <span style={{color:'#8ab840',fontSize:13,letterSpacing:1,flexShrink:0}}>${money}</span>
+            </div>
+
+            {/* Page body */}
+            {page.id==='home'?(
+              /* VITALS: big portrait left, large bars right */
+              <div style={{flex:1,display:'flex',gap:8,minHeight:0}}>
+                <div style={{width:150,flexShrink:0,border:`1px solid ${C.border}88`,background:C.selBg+'88',overflow:'hidden'}}>
+                  <img src={HUD_OCTAVIA_IMG} alt="" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top center'}}/>
+                </div>
+                <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',gap:18}}>
+                  {[['HEALTH',heartNum,'#ff3b52'],['STAMINA',stamina,'#2fd4e6']].map(([lbl,val,col])=>{
+                    const v=Math.max(0,Math.min(100,val||0));
+                    return(
+                      <div key={lbl}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
+                          <span style={{color:col,fontSize:17,fontWeight:'bold',letterSpacing:2,textShadow:`0 0 7px ${col}aa`}}>{lbl}</span>
+                          <span style={{color:col,fontSize:17,fontWeight:'bold',letterSpacing:1,textShadow:`0 0 7px ${col}aa`}}>{Math.round(v)}%</span>
+                        </div>
+                        <div style={{height:22,background:'#0a0704',border:`1px solid ${col}99`}}>
+                          <div style={{height:'100%',width:`${v}%`,background:col,boxShadow:`0 0 9px ${col}`,transition:'width .15s'}}/>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ):page.id==='power'?(
+              /* POWER: big ability icon + details; d-pad ↑↓ cycles powers */
+              (()=>{const pwr=HUD_POWERS[Math.min(sel,HUD_POWERS.length-1)];return(
+              <div style={{flex:1,display:'flex',gap:10,minHeight:0,alignItems:'center'}}>
+                <div style={{width:110,height:110,flexShrink:0,border:`1px solid ${C.border}88`,
+                  background:'#05080a',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+                  <img src={pwr.icon} alt="" style={{width:'100%',height:'100%',objectFit:'contain'}}/>
+                </div>
+                <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:6}}>
+                    <span style={{color:C.gold,fontSize:17,letterSpacing:2}}>{pwr.name}</span>
+                    <span style={{color:C.dim,fontSize:10}}>{sel+1}/{HUD_POWERS.length}</span>
+                  </div>
+                  {pwr.lines.map((ln,i)=>(
+                    <div key={i} style={{color:C.text,fontSize:12,letterSpacing:0.5,lineHeight:1.8,
+                      overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ln}</div>
+                  ))}
+                </div>
+              </div>);})()
+            ):page.id==='gear'?(
+              /* GEAR: clothing icon tiles. d-pad ↑↓ moves focus (gold ring); ✓ = worn */
+              <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>
+                <div style={{color:C.gold,fontSize:16,letterSpacing:2,marginBottom:8}}>{page.title}</div>
+                <div style={{flex:1,display:'flex',gap:8,alignItems:'center'}}>
+                  {HUD_GEAR.map((g,i)=>{
+                    const worn=g.id===currentOutfit;
+                    const focus=i===sel;
+                    return(
+                      <div key={g.id} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                        <div style={{width:'100%',aspectRatio:'1/1',border:`2px solid ${focus?C.gold:worn?C.gold+'88':C.border+'88'}`,
+                          boxShadow:focus?`0 0 10px ${C.gold}66`:'none',
+                          background:focus||worn?C.selBg:C.selBg+'77',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+                          <img src={g.icon} alt="" style={{width:'88%',height:'88%',objectFit:'contain'}}/>
+                        </div>
+                        <span style={{color:focus?C.gold:worn?C.text:C.dim,fontSize:11,letterSpacing:1}}>{g.label}{worn?' ✓':''}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ):(
+              /* Other pages: title + dummy content filling the screen */
+              <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>
+                <div style={{color:C.gold,fontSize:16,letterSpacing:2,marginBottom:8}}>{page.title}</div>
+                {page.lines.map((ln,i)=>(
+                  <div key={i} style={{color:C.text,fontSize:13,letterSpacing:0.5,lineHeight:1.75,
+                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ln}</div>
+                ))}
+              </div>
+            )}
+
+            {/* Footer hint */}
+            <div style={{flexShrink:0,marginTop:4,color:C.dim,fontSize:10,letterSpacing:1,display:'flex',gap:10}}>
+              <span><span style={{color:C.gold,border:`1px solid ${C.border}`,padding:'0 4px'}}>← →</span> PAGES</span>
+              {(page.id==='power'||page.id==='gear')&&
+                <span><span style={{color:C.gold,border:`1px solid ${C.border}`,padding:'0 4px'}}>↑ ↓</span> {page.id==='gear'?'EQUIP':'POWER'}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* CRT / old-monitor overlay — scanlines, vignette, flicker, rolling scan bar */}
+        <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:50,overflow:'hidden'}}>
+          <div style={{position:'absolute',inset:0,
+            backgroundImage:'repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 1px,rgba(0,0,0,0.30) 2px,rgba(0,0,0,0.30) 3px)'}}/>
+          <div style={{position:'absolute',inset:0,
+            background:'radial-gradient(ellipse 100% 100% at 50% 45%,transparent 52%,rgba(0,0,0,0.6) 100%)'}}/>
+          <div style={{position:'absolute',inset:0,background:'#000',animation:'crtFlicker 2.4s steps(3) infinite'}}/>
+          <div style={{position:'absolute',left:0,right:0,height:'10%',
+            background:'linear-gradient(rgba(255,255,255,0),rgba(180,255,240,0.07),rgba(255,255,255,0))',
+            animation:'crtScan 5.5s linear infinite'}}/>
+          {/* Random glitch burst */}
+          {glitch&&(
+            <div style={{position:'absolute',inset:0,animation:'glitchShift 0.16s steps(2) infinite'}}>
+              <div style={{position:'absolute',inset:0,
+                background:'repeating-linear-gradient(0deg,rgba(47,212,230,0.10) 0px,rgba(47,212,230,0.10) 2px,transparent 2px,transparent 5px,rgba(255,59,82,0.10) 5px,rgba(255,59,82,0.10) 7px,transparent 7px,transparent 12px)'}}/>
+              <div style={{position:'absolute',left:0,right:0,top:'28%',height:'9%',background:'rgba(47,212,230,0.20)',transform:'translateX(7px)'}}/>
+              <div style={{position:'absolute',left:0,right:0,top:'58%',height:'6%',background:'rgba(255,59,82,0.20)',transform:'translateX(-8px)'}}/>
+              <div style={{position:'absolute',left:0,right:0,top:'78%',height:'4%',background:'rgba(255,255,255,0.12)',transform:'translateX(4px)'}}/>
+            </div>
+          )}
         </div>
-        {basket.length>0&&<div style={{color:C.gold,fontSize:9,flexShrink:0}}>TOTAL ${total}</div>}
-        <div style={{color:C.dim,fontSize:8,cursor:'pointer',padding:'2px 10px',
-          border:`1px solid ${C.border}`,letterSpacing:2,flexShrink:0}}
-          onClick={onBack}>BACK</div>
       </div>
     </div>
   );
 }
 
-function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,currentOutfit,debug,debugGo}){
+// Point-and-click shopping. Video is paused (browse cue). Hover a shelf item →
+// popover with thumbnail + ADD TO CART. Cart lives in the always-on in-game HUD
+// (bottom-left, 2×4 grid); hover a slot to PUT BACK. ESC / DONE returns to clerk menu.
+function StoreBrowse({basket,onAddItem,onRemoveItem,onBack,onSteal,money,debug=false}){
+  const [hovered,setHovered]=useState(null);
+  const containerRef=useRef(null);
+  const inputSrc=useInputSource();
+  const cursorRef=useRef({x:640,y:360});
+  const [cursorPos,setCursorPos]=useState({x:640,y:360});
+  const prevHoverRef=useRef(null);
+  const total=basket.reduce((s,id)=>s+(STORE_ITEMS.find(i=>i.id===id)?.price||0),0);
+
+  // Popover anchors (top-left) to where the cursor entered the item radius, then stays put.
+  // Stays alive while the cursor is within the radius OR over the popover box itself,
+  // so you can move down into the description / ADD button without it vanishing.
+  const POP_W=215, POP_H=190, POP_OFF=14;
+  const [popoverPos,setPopoverPos]=useState({x:0,y:0});
+  const popoverPosRef=useRef({x:0,y:0});
+  const hoveredRef=useRef(null);
+  // Computes the popover box (game-space) for a given anchor — shared by detection + render.
+  const popBox=(p)=>({
+    left:Math.min(p.x+POP_OFF, VW-POP_W-8),
+    top: Math.min(Math.max(p.y+POP_OFF, 8), VH-POP_H-8),
+    w:POP_W, h:POP_H,
+  });
+  useEffect(()=>{
+    const sw=document.getElementById('scale-wrap');
+    const mm=e=>{
+      const r=sw?sw.getBoundingClientRect():{left:0,top:0,width:VW,height:VH};
+      const mx=(e.clientX-r.left)*(VW/r.width);
+      const my=(e.clientY-r.top)*(VH/r.height);
+      let newId=null, fromRadius=false;
+      // PRIORITY 1: an open popover keeps focus while the cursor is over its box —
+      // a nearby item's radius cannot hijack it mid-interaction.
+      if(hoveredRef.current){
+        const b=popBox(popoverPosRef.current);
+        if(mx>=b.left&&mx<=b.left+b.w&&my>=b.top&&my<=b.top+b.h) newId=hoveredRef.current;
+      }
+      // PRIORITY 2: otherwise, nearest item within radius
+      if(!newId){
+        let best=null,bestD=INTERACT_R;
+        for(const it of STORE_ITEMS){
+          const dx=mx-it.x, dy=my-it.y, d=Math.sqrt(dx*dx+dy*dy);
+          if(d<=bestD){best=it;bestD=d;}
+        }
+        if(best){newId=best.id;fromRadius=true;}
+      }
+      if(newId!==hoveredRef.current){
+        hoveredRef.current=newId;
+        if(fromRadius){const np={x:mx,y:my};popoverPosRef.current=np;setPopoverPos(np);} // lock on fresh radius entry
+        setHovered(newId);
+      }
+    };
+    window.addEventListener('mousemove',mm);
+    return()=>window.removeEventListener('mousemove',mm);
+  },[]);
+
+  useEffect(()=>{
+    const kd=e=>{
+      if(e.code==='Escape'||e.code==='KeyY'){onBack();return;} // Y / Triangle = back to menu
+      if(e.code==='KeyE'){
+        setHovered(id=>{
+          if(id){
+            const it=STORE_ITEMS.find(i=>i.id===id);
+            if(it?.type==='npc') onBack();         // cashier → back to main dialogue
+            else if(it?.type==='exit') onSteal?.(); // exit → steal/leave die roll
+            else if(basket.includes(id)) onRemoveItem(id);
+            else onAddItem(id);
+          }
+          return id;
+        });
+      }
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[onBack,onSteal,basket,onAddItem,onRemoveItem]);
+
+  // Controller cursor: poll left stick, dispatch real mouse events so hotspots respond
+  useEffect(()=>{
+    if(inputSrc!=='controller')return;
+    let rafId;
+    const loop=()=>{
+      const pads=navigator.getGamepads?navigator.getGamepads():[];
+      let moved=false;
+      for(const gp of pads){
+        if(!gp)continue;
+        const ax=gp.axes[0]??0, ay=gp.axes[1]??0;
+        if(Math.abs(ax)>0.12||Math.abs(ay)>0.12){
+          cursorRef.current.x=Math.max(0,Math.min(1279,cursorRef.current.x+ax*10));
+          cursorRef.current.y=Math.max(0,Math.min(719,cursorRef.current.y+ay*10));
+          setCursorPos({x:cursorRef.current.x,y:cursorRef.current.y});
+          moved=true;
+        }
+      }
+      if(moved){
+        const sw=document.getElementById('scale-wrap');
+        const r=sw?sw.getBoundingClientRect():{left:0,top:0,width:1280,height:720};
+        const vx=r.left+cursorRef.current.x*(r.width/1280);
+        const vy=r.top+cursorRef.current.y*(r.height/720);
+        const el=document.elementFromPoint(vx,vy);
+        if(el!==prevHoverRef.current){
+          if(prevHoverRef.current) prevHoverRef.current.dispatchEvent(new MouseEvent('mouseout',{bubbles:true,cancelable:true}));
+          if(el) el.dispatchEvent(new MouseEvent('mouseover',{bubbles:true,cancelable:true,clientX:vx,clientY:vy}));
+          prevHoverRef.current=el;
+        }
+        if(el) el.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,cancelable:true,clientX:vx,clientY:vy}));
+      }
+      rafId=requestAnimationFrame(loop);
+    };
+    rafId=requestAnimationFrame(loop);
+    return()=>cancelAnimationFrame(rafId);
+  },[inputSrc]);
+
+  return(
+    <div style={{position:'absolute',inset:0}}>
+      {/* Top hint */}
+      <div style={{position:'absolute',top:36,left:'50%',transform:'translateX(-50%)',zIndex:140,
+        color:C.dim,fontSize:7,letterSpacing:3,fontFamily:"'TheMurk',monospace",pointerEvents:'none'}}>
+        HOVER A SHELF ITEM · PRESS [ {inputSrc==='controller'?'B':'E'} ] TO ADD TO CART
+      </div>
+
+      {/* Circular interaction hotspots — centred on item.x/y, radius INTERACT_R */}
+      {STORE_ITEMS.map(it=>{
+        const inCart=basket.includes(it.id);
+        const isHov=hovered===it.id;
+        const isNpc=it.type==='npc';
+        const accentCol=isNpc?C.gold:it.col||C.gold;
+        return(
+          <div key={it.id} style={{
+            position:'absolute',
+            left:it.x-INTERACT_R, top:it.y-INTERACT_R,
+            width:INTERACT_R*2, height:INTERACT_R*2,
+            borderRadius:'50%', cursor:'pointer', zIndex:isHov?200:60,
+            border:`1.5px solid ${isHov?accentCol:'transparent'}`,
+            boxShadow:isHov?`0 0 18px ${accentCol}66,0 0 6px ${accentCol}44`:'none',
+            background:isHov?`${accentCol}0d`:'transparent',
+            transition:'border-color .12s,box-shadow .15s,background .12s'
+          }}>
+            {/* Popover is now rendered as a fixed-position overlay at the cursor — see below */}
+          </div>
+        );
+      })}
+
+      {/* Fixed-position popover — follows cursor, avoids screen edges */}
+      {(()=>{
+        const it=STORE_ITEMS.find(i=>i.id===hovered);
+        if(!it) return null;
+        const inCart=basket.includes(it.id);
+        const isNpc=it.type==='npc';
+        const isExit=it.type==='exit';
+        const accentCol=isNpc?C.gold:isExit?C.red:it.col||C.gold;
+        // Anchored at the cursor entry point (tooltip-style, below-right); shared with detection
+        const b=popBox(popoverPos);
+        return(
+          <div style={{
+            position:'absolute', left:b.left, top:b.top, width:POP_W,
+            background:C.panel, border:`1px solid ${accentCol}88`,
+            boxShadow:`0 6px 26px rgba(0,0,0,0.88),0 0 12px ${accentCol}22`,
+            padding:12, zIndex:9998, fontFamily:"'TheMurk',monospace",
+            pointerEvents:'auto'
+          }}>
+            <div style={{display:'flex',gap:10,marginBottom:8,alignItems:'flex-start'}}>
+              <ItemThumb item={it} size={48}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:accentCol,fontSize:10,letterSpacing:2,marginBottom:3}}>{it.label}</div>
+                {!isNpc&&<div style={{color:accentCol,fontSize:10}}>${it.price}</div>}
+              </div>
+            </div>
+            <div style={{color:C.dim,fontSize:8,fontStyle:'italic',lineHeight:1.6,marginBottom:10}}>{it.desc}</div>
+            {(()=>{
+              const key=inputSrc==='controller'?'B':'E';
+              const label=isNpc?'TALK':isExit?(basket.length>0?'STEAL & LEAVE':'LEAVE'):inCart?'REMOVE FROM CART':'ADD TO CART';
+              const col=isNpc?C.gold:isExit?C.red:inCart?C.dim:C.text;
+              const act=()=>{ if(isNpc)onBack(); else if(isExit)onSteal?.(); else if(inCart)onRemoveItem(it.id); else onAddItem(it.id); };
+              // Action prompt (also clickable as a fallback). Cues the user to press the action button.
+              return(
+                <div onClick={e=>{e.stopPropagation();act();}}
+                  style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+                    color:col,fontSize:9,cursor:'pointer',letterSpacing:2,padding:'5px 0'}}>
+                  <span style={{color:C.gold,border:`1px solid ${C.gold}`,borderRadius:3,
+                    padding:'1px 6px',fontSize:9,fontWeight:'bold',boxShadow:`0 0 6px ${C.gold}55`}}>{key}</span>
+                  <span>{label}</span>
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })()}
+
+      {/* Debug coordinate grid */}
+      {debug&&<SceneGrid/>}
+
+      {/* Controller cursor — same gold SVG as DeviceHUD, only shown when controller active */}
+      {inputSrc==='controller'&&(
+        <div style={{position:'fixed',left:cursorPos.x,top:cursorPos.y,pointerEvents:'none',zIndex:9999,willChange:'transform'}}>
+          <svg width="18" height="22" viewBox="0 0 18 22" fill="none">
+            <polygon points="0,0 0,18 5,13 8,20 12,18 9,11 15,11" fill={C.gold} stroke="#040302" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      )}
+
+      {/* Cart lives in the always-on in-game HUD (rendered at app level, bottom-left). */}
+
+      {/* Total + DONE control (bottom-center, clear of the HUD and stamina bar) */}
+      <div style={{position:'absolute',bottom:18,left:'50%',transform:'translateX(-50%)',zIndex:170,
+        display:'flex',alignItems:'center',gap:16,fontFamily:"'TheMurk',monospace"}}>
+        {basket.length>0&&<div style={{color:C.gold,fontSize:10}}>TOTAL ${total}</div>}
+        <div onClick={onBack} style={{color:C.gold,fontSize:9,cursor:'pointer',padding:'6px 14px',
+          border:`1px solid ${C.border}`,background:C.panel,letterSpacing:2}}>
+          DONE [ESC]
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,currentOutfit,debug,debugGo,basket,setBasket}){
   const [phase,setPhase]=useState('entering');
-  // entering | menu | talk | browse | purchase | purchase_done | steal_caught | leaving
-  const [basket,setBasket]=useState([]);
+  // entering | menu | talk | browse | purchase | purchase_done | steal_caught | steal_broke | leaving
+  // basket/setBasket are lifted to QuestApp so the always-on in-game HUD can show the cart.
   const [menuSel,setMenuSel]=useState(0);
   const [talkIdx,setTalkIdx]=useState(0);
   const [talkSel,setTalkSel]=useState(0);
   const [stealSuccess,setStealSuccess]=useState(false);
+  const [stealSel,setStealSel]=useState(0);
   const [leavePrompt,setLeavePrompt]=useState(false);
   const vidRef=useRef(null);
   const {playCue}=useCineVideo(vidRef,'store',currentOutfit);
@@ -2802,6 +3311,26 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
     setPhase('menu');setMenuSel(0);playCue('menu',()=>{});
   },[playCue]);
 
+  // Caught-stealing dialogue options — PAY is always offered; if you can't afford it
+  // the clerk just takes the goods back (steal_broke line) rather than blocking.
+  const caughtOpts=[
+    {t:`(pay) — $${total}`,act:'pay'},
+    {t:"Run for it.",act:'run'},
+    {t:"Put it back.",act:'putback',muted:true},
+  ];
+  const resolveCaught=useCallback((act)=>{
+    if(act==='pay'){
+      if(canPay){onSpendMoney(total);onAddItems?.(basket);setBasket([]);goMenu();}
+      else{setPhase('steal_broke');playCue('clerk',()=>{});}
+    }
+    else if(act==='run'){setBasket([]);onLeave();}
+    else if(act==='putback'){setBasket([]);goMenu();}
+  },[canPay,total,onSpendMoney,onAddItems,basket,onLeave,goMenu,playCue,setBasket]);
+
+  // Clerk's "not enough cash" follow-up — single CONTINUE that returns the goods
+  const brokeOpts=[{t:"(hand them back)",act:'ok'}];
+  const resolveBroke=useCallback(()=>{setBasket([]);goMenu();},[goMenu,setBasket]);
+
   const handleOption=useCallback((opt)=>{
     if(opt==='talk'){
       setPhase('talk');setTalkIdx(0);setTalkSel(0);
@@ -2819,12 +3348,25 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
         onAddItems?.(basket);setBasket([]);onTheft?.();
         setTimeout(onLeave,2000);
       }else{
-        setPhase('steal_caught');playCue('clerk',()=>{});
+        setStealSel(0);setPhase('steal_caught');playCue('clerk',()=>{});
       }
     }else if(opt==='leave'){
       if(basket.length>0)setLeavePrompt(true);else onLeave();
     }
   },[basket,playCue,onLeave,onAddItems,onTheft]);
+
+  // Steal-or-leave from the browse-view EXIT hotspot: empty cart just leaves;
+  // a loaded cart triggers a die roll (60% success). Caught → clerk confrontation + MOVE rep hit.
+  const handleStealLeave=useCallback(()=>{
+    if(basket.length===0){onLeave();return;}
+    if(Math.random()>0.4){
+      setStealSuccess(true);
+      onAddItems?.(basket);setBasket([]);onTheft?.();
+      setTimeout(onLeave,2000);
+    }else{
+      setStealSel(0);setPhase('steal_caught');playCue('clerk',()=>{});
+    }
+  },[basket,onLeave,onAddItems,onTheft,playCue,setBasket]);
 
   // Menu navigation — keyboard AND controller (useGamepad dispatches same KeyboardEvents)
   useEffect(()=>{
@@ -2892,11 +3434,34 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
     return()=>window.removeEventListener('keydown',kd);
   },[leavePrompt,onLeave]);
 
+  // Caught-stealing dialogue keydown — same nav as other CineDialogBox options
+  useEffect(()=>{
+    if(phase!=='steal_caught')return;
+    const kd=e=>{
+      if(e.code==='ArrowUp')setStealSel(s=>Math.max(0,s-1));
+      else if(e.code==='ArrowDown')setStealSel(s=>Math.min(caughtOpts.length-1,s+1));
+      else if(/^[1-9]$/.test(e.key)){const n=+e.key-1;if(n<caughtOpts.length)setStealSel(n);}
+      else if(e.code==='KeyE')resolveCaught(caughtOpts[stealSel]?.act);
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,stealSel,caughtOpts,resolveCaught]);
+
+  // "Not enough cash" follow-up keydown — any confirm hands the goods back
+  useEffect(()=>{
+    if(phase!=='steal_broke')return;
+    const kd=e=>{if(e.code==='KeyE')resolveBroke();};
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[phase,resolveBroke]);
+
   return(
     <CinematicScene vidRef={vidRef}>
       <Heart state={heart}/>
       <SceneLabel label="CORNER STORE — THE VEIL"/>
       {debug&&<DebugOverlay px={0} scene="store" onSceneChange={debugGo}/>}
+      {/* Hide the always-on HUD during the clerk menu / purchase dialogue (cart stays during browse) */}
+      {phase!=='browse'&&phase!=='entering'&&<HudSuppressor/>}
 
       {/* Options menu */}
       {phase==='menu'&&<StoreOptions basket={basket} sel={menuSel} onSel={setMenuSel} onChoose={handleOption}/>}
@@ -2908,7 +3473,9 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
           onAddItem={id=>setBasket(b=>b.includes(id)?b:[...b,id])}
           onRemoveItem={id=>setBasket(b=>b.filter(x=>x!==id))}
           onBack={goMenu}
+          onSteal={handleStealLeave}
           money={money}
+          debug={debug}
         />
       )}
 
@@ -2958,27 +3525,14 @@ function StoreScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,onTheft,cu
 
       {/* Steal caught — clerk at 12s */}
       {phase==='steal_caught'&&(
-        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:300,
-          background:'rgba(0,0,0,0.90)',borderTop:`2px solid ${C.red}`,
-          padding:'18px 40px 22px',fontFamily:"'TheMurk',monospace"}}>
-          <div style={{color:C.red,fontSize:7,letterSpacing:4,marginBottom:8}}>// DANGER — CAUGHT</div>
-          <div style={{color:C.dim,fontSize:7,letterSpacing:3,marginBottom:12}}>
-            CLERK — <span style={{color:C.text,fontStyle:'italic'}}>"Are you going to pay for that?"</span>
-          </div>
-          <div style={{display:'flex',gap:16}}>
-            {canPay&&(
-              <div style={{color:C.text,fontSize:10,cursor:'pointer',
-                borderLeft:`2px solid ${C.red}`,paddingLeft:8,lineHeight:1.8}}
-                onClick={()=>{onSpendMoney(total);onAddItems?.(basket);setBasket([]);goMenu();}}>
-                PAY ${total}
-              </div>
-            )}
-            <div style={{color:C.dim,fontSize:10,cursor:'pointer',paddingLeft:8,lineHeight:1.8}}
-              onClick={()=>{setBasket([]);onLeave();}}>RUN</div>
-            <div style={{color:C.dim,fontSize:10,cursor:'pointer',paddingLeft:8,lineHeight:1.8}}
-              onClick={()=>{setBasket([]);goMenu();}}>PUT BACK</div>
-          </div>
-        </div>
+        <CineDialogBox speaker="CLERK" text={'"Are you going to pay for that?"'} opts={caughtOpts}
+          sel={stealSel} onSel={setStealSel} onConfirm={()=>resolveCaught(caughtOpts[stealSel]?.act)}/>
+      )}
+
+      {phase==='steal_broke'&&(
+        <CineDialogBox speaker="CLERK"
+          text={'"Not enough on you. I\'ll take these back — come back with the cash and we\'ll do business."'}
+          opts={brokeOpts} sel={0} onSel={()=>{}} onConfirm={resolveBroke}/>
       )}
 
       {/* Steal success overlay */}
@@ -3038,11 +3592,13 @@ const PHARM_HOOD_PHARMACIST_DIALOGUE=[
     {t:"Looking for painkillers.",  act:'addPainkillers'},
     {t:"Bandages, please.",         act:'addBandages'},
     {t:"Both. Everything you have.", act:'addBoth'},
+    {t:"Nevermind.",                act:'exit',muted:true},
   ]},
   {speaker:'PHARMACIST', text:"Anything else?"},
   {speaker:'OCTAVIA',    opts:[
     {t:"Browse more",  act:'browse'},
     {t:"Purchase",     act:'goPay'},
+    {t:"Nevermind.",   act:'clearBasket',muted:true},
     {t:"Exit",         act:'exit'},
   ]},
   {speaker:'PHARMACIST', text:"That'll be __TOTAL__."},
@@ -3054,6 +3610,7 @@ const PHARM_HOOD_PHARMACIST_DIALOGUE=[
   {speaker:'OCTAVIA',    opts:[
     {t:"Browse more",  act:'browse'},
     {t:"Purchase",     act:'goPay'},
+    {t:"Nevermind.",   act:'clearBasket',muted:true},
     {t:"Exit",         act:'exit'},
   ]},
 ];
@@ -3127,6 +3684,7 @@ function PharmacyNoHoodScene({heart,mono,onLeave,currentOutfit,debug,debugGo}){
 
   return(
     <CinematicScene vidRef={vidRef}>
+      <HudSuppressor/>
       <Heart state={heart}/>
       <SceneLabel label="PHARMACY — THE VEIL"/>
       {debug&&<DebugOverlay px={0} scene="pharmacy" onSceneChange={debugGo}/>}
@@ -3302,6 +3860,7 @@ function PharmacyHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,c
 
   return(
     <CinematicScene vidRef={vidRef}>
+      <HudSuppressor/>
       <Heart state={heart}/>
       <SceneLabel label="PHARMACY — THE VEIL"/>
       {debug&&<DebugOverlay px={0} scene="pharmacy" onSceneChange={debugGo}/>}
@@ -3314,7 +3873,7 @@ function PharmacyHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,c
           <div style={{color:C.red,fontSize:8,letterSpacing:4,marginBottom:6}}>// GUARD</div>
           <div style={{color:C.text,fontSize:13,lineHeight:1.9,maxWidth:900,marginBottom:12}}>Good. You can go in.</div>
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {['TALK TO GUARD','CONTINUE'].map((label,i)=>(
+            {['TALK TO GUARD','TALK TO PHARMACIST'].map((label,i)=>(
               <div key={i} onClick={()=>handleMenuOption(['talk','continue'][i])}
                 style={{display:'flex',gap:14,cursor:'pointer',padding:'4px 10px',
                   borderLeft:`2px solid ${menuSel===i?C.red:'transparent'}`}}>
@@ -3482,6 +4041,7 @@ function RestaurantNoHoodScene({heart,mono,onLeave,currentOutfit,debug,debugGo})
 
   return(
     <CinematicScene vidRef={vidRef}>
+      <HudSuppressor/>
       <Heart state={heart}/>
       <SceneLabel label="RESTAURANT — THE VEIL"/>
       {debug&&<DebugOverlay px={0} scene="restaurant" onSceneChange={debugGo}/>}
@@ -4072,25 +4632,26 @@ function useGamepad() {
     const DEAD=0.25;
     // Standard gamepad layout (Xbox / PS / generic) — mirrors KEYS constant
     const BTN={
-      0:KEYS.RUN,      // A / Cross  — run (ShiftRight)
-      1:KEYS.CONFIRM,  // B / Circle — interact, confirm dialogue
-      2:KEYS.JUMP,     // X / Square — jump
+      0:KEYS.RUN,      // A / Cross    — run (ShiftRight)
+      1:KEYS.CONFIRM,  // B / Circle   — interact, confirm dialogue
+      2:KEYS.JUMP,     // X / Square   — jump
+      3:'KeyY',        // Y / Triangle — back / return to main dialogue
       4:KEYS.TAB_PREV, // LB / L1     — HUD tab prev / standing kick / crouch sweep kick
       5:KEYS.TAB_NEXT, // RB / R1     — HUD tab next / double kick
       6:'KeyF',        // LT / L2     — roundhouse kick
       7:'KeyG',        // RT / R2     — block / parry (hold)
       8:'KeyI',        // Back/Select — toggle device HUD (KeyI, not Shift)
       9:'Pause',       // Start/Menu  — pause menu
-      12:KEYS.UP,      // D-pad up
-      13:KEYS.DOWN,    // D-pad down — also acts as crouch in scenes (ArrowDown)
-      14:KEYS.LEFT,    // D-pad left
-      15:KEYS.RIGHT,   // D-pad right
+      12:KEYS.UP,      // D-pad up   — menu / HUD item select (ArrowUp)
+      13:KEYS.DOWN,    // D-pad down — menu / HUD item select (ArrowDown); no longer crouch
+      14:'BracketLeft', // D-pad left  — in-game HUD tab prev (movement = left stick)
+      15:'BracketRight',// D-pad right — in-game HUD tab next
     };
     const ALL=Object.values(KEYS);
-    ALL.push('KeyI','Escape','Pause','KeyF','KeyG'); // Add non-KEYS buttons
+    ALL.push('KeyI','Escape','Pause','KeyF','KeyG','BracketLeft','BracketRight','KeyY'); // Add non-KEYS buttons
     const held={};
     let raf;
-    const keyMap={ShiftLeft:'ShiftLeft',ShiftRight:'ShiftRight',Escape:'Escape',KeyI:'KeyI',Enter:'Enter',Space:'Space',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',KeyE:'KeyE',KeyQ:'KeyQ',KeyW:'KeyW',KeyF:'KeyF',KeyG:'KeyG'};
+    const keyMap={ShiftLeft:'ShiftLeft',ShiftRight:'ShiftRight',Escape:'Escape',KeyI:'KeyI',Enter:'Enter',Space:'Space',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',KeyE:'KeyE',KeyQ:'KeyQ',KeyW:'KeyW',KeyF:'KeyF',KeyG:'KeyG',BracketLeft:'BracketLeft',BracketRight:'BracketRight',KeyY:'KeyY'};
     const kd=code=>document.documentElement.dispatchEvent(new KeyboardEvent('keydown',{key:code,code:keyMap[code]||code,bubbles:true,cancelable:true}));
     const ku=code=>document.documentElement.dispatchEvent(new KeyboardEvent('keyup',  {key:code,code:keyMap[code]||code,bubbles:true,cancelable:true}));
     const poll=()=>{
@@ -4099,11 +4660,17 @@ function useGamepad() {
       for(const gp of pads){
         if(!gp)continue;
         gp.buttons.forEach((b,i)=>{ if(BTN[i]&&b.pressed) want[BTN[i]]=true; });
+        // Left stick drives movement & speed:
+        //   • horizontal: partial tilt = walk, full tilt = run (ShiftRight)
+        //   • down: crouch (ShiftLeft)
+        // Vertical-up / menu navigation are the D-pad's job, not the stick — so the
+        // stick never fires Arrow up/down (which would fight d-pad menu selection).
         const lx=gp.axes[0]||0, ly=gp.axes[1]||0;
+        const RUN_THRESH=0.72, CROUCH_THRESH=0.5;
         if(lx<-DEAD) want['ArrowLeft']=true;
         if(lx> DEAD) want['ArrowRight']=true;
-        if(ly<-DEAD) want['ArrowUp']=true;
-        if(ly> DEAD) want['ArrowDown']=true;
+        if(Math.abs(lx)>=RUN_THRESH) want['ShiftRight']=true; // full tilt = run
+        if(ly> CROUCH_THRESH) want['ShiftLeft']=true;          // push down = crouch
       }
       ALL.forEach(code=>{
         if( want[code]&&!held[code]){held[code]=true; kd(code);}
@@ -4278,7 +4845,7 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
     const outfitAllowsRun=outfit==='cyber_octavia';
     const outfitAllowsStealth=outfit==='cyber_octavia';
     const canRun=isRunning&&stam>0&&outfitAllowsRun;
-    const wantsCrouch=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
+    const wantsCrouch=!!keys.current['ShiftLeft']; // crouch = analog down / Shift (d-pad ↑↓ is HUD/menu nav)
     let barkMsg=null;
 
     if(isRunning&&isMoving&&!outfitAllowsRun){
@@ -4331,7 +4898,7 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
         }
         const isRun=isRunningRef.current;
         const isMove=isMovingRef.current;
-        const isCrouch=!!(keys.current['ShiftLeft']||keys.current['ArrowDown']);
+        const isCrouch=!!keys.current['ShiftLeft'];
         const jScale=jumpScaleRef.current;
         // Hierarchy: standing (lowest) < walking < crouched jump < running (highest/furthest)
         jumpPeakRef.current=(isRun?240:isCrouch?190:isMove?200:130)*jScale;
@@ -4341,7 +4908,7 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
       }
       // Combat — only cyber_octavia, only in gameplay (not paused)
       if(!pausedRef.current&&outfitRef.current==='cyber_octavia'&&!jumpingRef.current){
-        const isCrouch=keys.current['ShiftLeft']||keys.current['ArrowDown'];
+        const isCrouch=keys.current['ShiftLeft'];
         const isMoving=keys.current['ArrowLeft']||keys.current['ArrowRight'];
         const isRunning=keys.current['ShiftRight'];
         // LB (Q): crouching = sweep kick · moving = roll · standing = powerful kick
@@ -6047,6 +6614,7 @@ function QuestApp(){
   const prevScene=useRef('opening');
   const [fading,setFading]=useState(true);
   const [money,setMoney]=useState(0);
+  const [storeCart,setStoreCart]=useState([]); // shopping cart — shown in always-on in-game HUD
   const [inventory,setInventory]=useState(['hoodie']);
   const [heartNum,setHeartNum]=useState(35);
   const [stamina,setStamina]=useState(100); // 0-100, depletes while running, recovers while idle
@@ -6184,6 +6752,9 @@ function QuestApp(){
         @keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.2)}30%{transform:scale(1.07)}45%{transform:scale(1.15)}}
         @keyframes letterGlow{0%{opacity:0;text-shadow:0 0 1px rgba(255,255,255,.1)}66%{opacity:1;text-shadow:0 0 20px rgba(255,255,255,.9)}77%{opacity:1}100%{opacity:.7;text-shadow:0 0 20px rgba(255,255,255,0)}}
         @keyframes flicker{0%,90%,100%{opacity:1}91%{opacity:.55}94%{opacity:.85}97%{opacity:.45}}
+        @keyframes crtScan{0%{transform:translateY(-100%)}100%{transform:translateY(2200%)}}
+        @keyframes crtFlicker{0%,100%{opacity:.10}50%{opacity:.16}}
+        @keyframes glitchShift{0%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}100%{transform:translateX(4px)}}
         @keyframes ng{0%,85%,100%{transform:none}86%{transform:translateX(-3px)}88%{transform:translateX(3px)}90%{transform:none}}
         @keyframes flash{0%{opacity:.25}100%{opacity:0}}
         @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
@@ -6225,8 +6796,9 @@ function QuestApp(){
           currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='store'&&
         <StoreScene heart={heart} mono={moState.text} money={money}
+          basket={storeCart} setBasket={setStoreCart}
           onSpendMoney={amt=>setMoney(m=>m-amt)}
-          onAddItems={addItems} onLeave={()=>{setStreetSpawnX(406);go('returning');}}
+          onAddItems={addItems} onLeave={()=>{setStoreCart([]);setStreetSpawnX(406);go('returning');}}
           onTheft={()=>setMoveRep(r=>Math.max(0,r-15))}
           currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} debug={debug} debugGo={go}/>}
       {scene==='pharmacy'&&
@@ -6262,8 +6834,14 @@ function QuestApp(){
         hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='lobby'&&<LobbyScene spawnX={lobbySpawnX} onExit={()=>{setStreetSpawnX(1245);go('street');}} currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
       <Fade on={fading}/>
-      {money>0&&scene!=='nightmare'&&scene!=='opening'&&scene!=='bathroom'&&<MoneyHUD amount={money}/>}
-      {(scene==='apartment'||scene==='hallway'||scene==='hallway_in'||scene==='street'||scene==='returning'||scene==='store'||scene==='pharmacy'||scene==='restaurant'||scene==='alley_video_store'||scene==='lobby'||scene==='fourth_floor_hallway'||scene==='elevator_hallway'||scene==='apt_stairwell')&&<StaminaBar stamina={stamina}/>}
+      {/* Always-on in-game HUD (bottom-left) — it's Octavia's phone, shown once found.
+          In the store it shows the cart; otherwise status (portraits/health/stamina/mood/pages). */}
+      {hasPhone&&scene!=='nightmare'&&scene!=='opening'&&scene!=='bathroom'&&
+        <InGameHUD inStore={scene==='store'} basket={storeCart}
+          onRemoveItem={id=>setStoreCart(c=>c.filter(x=>x!==id))}
+          heartNum={heartNum} stamina={stamina} money={money} currentOutfit={currentOutfit}
+          onEquipItem={handleEquipItem}/>}
+      {/* Money & stamina now shown in the in-game HUD (InGameHUD) — old standalone overlays removed. */}
       {showDevice&&<div style={{position:'absolute',inset:0,zIndex:499,backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',background:'rgba(0,0,0,0.55)',pointerEvents:'auto'}}/>}
       {showDevice&&<DeviceHUD show={showDevice} isClosing={isClosingDevice} onClose={closeDevice}
         inventory={inventory} heartNum={heartNum} onUseItem={useItem} money={money}

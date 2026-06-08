@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BEAUREGARDE — Investigation Lens (clone of PointC/KRWgOK)</title>
+<!--
+  Detective "examine the scene" mechanic.
+  Faithful clone of https://codepen.io/PointC/pen/KRWgOK ("Interactive SVG mask w/full screen image, GSAP3")
+  rebuilt dependency-free:
+    • original used GSAP 3 + the PAID DrawSVGPlugin — replaced here with requestAnimationFrame
+      easing (lerp) and a stroke-dasharray progress ring, so it runs offline and ports straight
+      into the React game with no external libraries.
+
+  HOW IT WORKS
+    Two full-screen images are stacked inside one SVG (viewBox 1600x900):
+      #lines    — the "sketch" layer (what Octavia sees at a glance), drawn underneath.
+      #regular  — the "true / colour" layer, on top but only visible through #theMask.
+    #theMask contains #masker, a circle filled with a radial gradient (white centre -> black edge),
+    so the true layer bleeds through as a soft-edged spotlight wherever the lens sits.
+    A crimson reticle (#ring + #dot) tracks the cursor. Screen coords are converted to SVG space
+    with getScreenCTM().inverse() so it stays accurate at any window size / aspect.
+    HOLD the mouse button to expand the lens radius (150 -> 2400 = reveal the whole scene);
+    RELEASE to contract. A dial shows the reveal progress %.
+
+  GAME INTEGRATION NOTES
+    - Swap the two image hrefs for per-scene art: a sketch/blurred pass + the true pass.
+    - Hidden clues live in the #regular (true) layer; reward the player for sweeping the lens.
+    - In the React game this becomes <InvestigationLens sketch=... truth=... onClue=.../>; the
+      math here (CTM inverse, lerp follow, hold-to-expand timeline) lifts over unchanged.
+-->
+<style>
+  body{padding:0;margin:0;font-family:'TheMurk',monospace;background:#0b0a08;height:100vh;width:100%;overflow:hidden;color:#e8d2a0;}
+  *{box-sizing:border-box;}
+  p{margin:0;text-align:center;white-space:nowrap;}
+  #demo{cursor:none;position:absolute;}
+  #instructions{
+    position:absolute;padding:12px;bottom:20px;background:rgba(0,0,0,0.78);left:50%;
+    cursor:none;padding-top:96px;user-select:none;border-radius:4px;border:1px solid #3a2c14;
+    font-size:11px;letter-spacing:1px;
+  }
+  #instructions p{line-height:1.9;color:#cbb88a;}
+  #dial{position:absolute;top:6px;left:50%;}
+</style>
+</head>
+<body translate="no">
+  <svg id="demo" xmlns="http://www.w3.org/2000/svg" x="0" y="0" width="1600" height="900" viewBox="0 0 1600 900">
+    <defs>
+      <radialGradient id="maskGradient">
+        <stop offset="50%" stop-color="#fff"/>
+        <stop offset="100%" stop-color="#000"/>
+      </radialGradient>
+      <mask id="theMask">
+        <circle id="masker" r="150" fill="url(#maskGradient)" cx="800" cy="450"/>
+      </mask>
+    </defs>
+    <!-- SKETCH layer (replace href with the scene's sketch/blurred art) -->
+    <image id="lines" href="https://s3-us-west-2.amazonaws.com/s.cdpn.io/314556/roomSketch.jpg"
+           xlink:href="https://s3-us-west-2.amazonaws.com/s.cdpn.io/314556/roomSketch.jpg"
+           x="0" y="0" width="1600" height="900"/>
+    <!-- TRUE / COLOUR layer, revealed only through the lens (replace href with the scene's true art) -->
+    <g id="maskReveal" mask="url(#theMask)">
+      <image id="regular" href="https://s3-us-west-2.amazonaws.com/s.cdpn.io/314556/roomColor.jpg"
+             xlink:href="https://s3-us-west-2.amazonaws.com/s.cdpn.io/314556/roomColor.jpg"
+             x="0" y="0" width="1600" height="900"/>
+    </g>
+    <!-- crimson reticle -->
+    <circle id="ring" r="20" fill="none" stroke="#dc143c" stroke-width="2" cx="800" cy="450"/>
+    <circle id="dot"  r="4"  fill="#dc143c" cx="800" cy="450"/>
+  </svg>
+
+  <div id="instructions">
+    <svg id="dial" xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+      <!-- progress ring: animated via stroke-dasharray (free DrawSVG replacement) -->
+      <circle id="progressRing" r="40" fill="none" stroke="#dc143c" stroke-miterlimit="10" stroke-width="6"
+              cx="50" cy="50" transform="rotate(-90 50 50)"/>
+      <circle r="43" fill="none" stroke="#fff" cx="50" cy="50" stroke-width="2" opacity="0.5"/>
+      <circle r="37" fill="none" stroke="#fff" cx="50" cy="50" stroke-width="2" opacity="0.5"/>
+      <text transform="translate(55 56)" text-anchor="start" font-size="20" fill="#fff">%</text>
+      <text id="counter" transform="translate(55 56)" text-anchor="end" font-size="20" fill="#fff">0</text>
+    </svg>
+    <p>Move the cursor to sweep the lens.</p>
+    <p>Hold &amp; release the mouse button to expand &amp; contract it.</p>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  const svg     = document.querySelector("#demo");
+  const masker  = document.querySelector("#masker");
+  const ring    = document.querySelector("#ring");
+  const dot     = document.querySelector("#dot");
+  const ringEl  = document.querySelector("#progressRing");
+  const counter = document.querySelector("#counter");
+  const ratio   = 0.5625;            // 9/16
+  const R_MIN   = 150, R_MAX = 2400; // lens radius bounds (matches the pen)
+  const EXPAND_MS = 2000;            // hold-to-expand duration
+
+  // progress-ring circumference for stroke-dasharray drawing
+  const RING_LEN = 2 * Math.PI * 40;
+  ringEl.style.strokeDasharray = RING_LEN;
+  ringEl.style.strokeDashoffset = RING_LEN; // start empty
+
+  // ── lens reveal "timeline" (progress 0..1), replaces the GSAP tl ──
+  let progress = 0;        // 0 = contracted (R_MIN), 1 = expanded (R_MAX)
+  let expanding = false;   // true while mouse held
+  // power2.in easing on the radius, matching tl.to(..., ease:"power2.in")
+  const easeIn = t => t * t;
+
+  // ── cursor follow with smooth lag (replaces gsap.to ring/masker, 0.88s power2.out) ──
+  // target (instant, from mouse) vs current (eased) position in SVG coords.
+  let targX = 800, targY = 450;   // dot snaps here instantly
+  let curX  = 800, curY  = 450;   // ring + masker ease toward here
+  const FOLLOW = 0.12;            // lerp factor ~ power2.out lag feel
+
+  const ptObj = svg.createSVGPoint();
+  function toSVG(evt){
+    ptObj.x = evt.clientX; ptObj.y = evt.clientY;
+    return ptObj.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function onMove(evt){
+    const p = toSVG(evt);
+    targX = p.x; targY = p.y;
+    dot.setAttribute("cx", p.x);   // dot is instant
+    dot.setAttribute("cy", p.y);
+  }
+  function press(){ expanding = true; }
+  function release(){ expanding = false; }
+
+  let last = performance.now();
+  function frame(now){
+    const dt = Math.min(64, now - last); last = now;
+
+    // eased cursor follow
+    curX += (targX - curX) * FOLLOW;
+    curY += (targY - curY) * FOLLOW;
+    ring.setAttribute("cx", curX);   ring.setAttribute("cy", curY);
+    masker.setAttribute("cx", curX); masker.setAttribute("cy", curY);
+
+    // expand / contract reveal
+    const step = dt / EXPAND_MS;
+    progress += expanding ? step : -step;
+    progress = Math.max(0, Math.min(1, progress));
+
+    const r = R_MIN + (R_MAX - R_MIN) * easeIn(progress);
+    masker.setAttribute("r", r);
+
+    // progress dial
+    ringEl.style.strokeDashoffset = RING_LEN * (1 - progress);
+    counter.textContent = Math.round(progress * 100);
+
+    requestAnimationFrame(frame);
+  }
+
+  // ── responsive cover-fit at 16:9, centred (mirrors the pen's newSize) ──
+  function newSize(){
+    const w = window.innerWidth, h = window.innerHeight;
+    if (w > h * (16/9)) { svg.setAttribute("width", w);          svg.setAttribute("height", w * ratio); }
+    else                { svg.setAttribute("width", h / ratio);  svg.setAttribute("height", h); }
+    const box = svg.getBoundingClientRect();
+    svg.style.left = (w/2 - box.width/2) + "px";
+    svg.style.top  = (h/2 - box.height/2) + "px";
+  }
+
+  window.addEventListener("mousedown", press);
+  window.addEventListener("mouseup",   release);
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("resize",    newSize);
+  // touch support (mobile / pen tablet)
+  window.addEventListener("touchstart", e=>{ press(); if(e.touches[0]) onMove(e.touches[0]); }, {passive:true});
+  window.addEventListener("touchmove",  e=>{ if(e.touches[0]) onMove(e.touches[0]); }, {passive:true});
+  window.addEventListener("touchend",   release);
+
+  newSize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1698,6 +1698,8 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
   const raf=useRef(null);
   const aptSPD=SPD*0.42;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const APT_CLIMB_ZONES=[];
+  const {charBottom:aptCharBottom,climbPrompt:aptClimbPrompt}=useWorldY(53,APT_CLIMB_ZONES,px,keys);
   const near=APT_OBJ.find(o=>{
     if(!o.prompt)return false;
     if(o.id==='money'&&money>0)return false;
@@ -1814,7 +1816,8 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
           <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
         )}
       </div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charHeight={297} charBottom={53} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      {aptClimbPrompt&&<div style={{position:'absolute',bottom:aptCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${aptClimbPrompt}`}/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charHeight={297} charBottom={aptCharBottom} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="OAKWOOD ARMS — 4C"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="apartment" onSceneChange={debugGo}/>}
@@ -2002,6 +2005,7 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
   const raf=useRef(null);
   const hallwaySPD=SPD*0.2;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(hallwaySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {charBottom:hallCharBottom,climbPrompt:hallClimbPrompt}=useWorldY(30,[],px,keys);
   const near=HALL_OBJ.find(o=>Math.abs(o.wx-px)<70&&o.prompt);
 
   useEffect(()=>{
@@ -2089,7 +2093,8 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
         <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
         <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
       </div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      {hallClimbPrompt&&<div style={{position:'absolute',bottom:hallCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${hallClimbPrompt}`}/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={hallCharBottom} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="hallway" onSceneChange={debugGo}/>}
@@ -2196,6 +2201,7 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
   const raf=useRef(null);
   const lobbySPD=2.8;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(lobbySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {charBottom:lobbyCharBottom,climbPrompt:lobbyClimbPrompt}=useWorldY(92,[],px,keys);
 
   const elevRange={xMin:560,xMax:840};
   const nearElev=px>=elevRange.xMin&&px<=elevRange.xMax?{id:'elevator'}:null;
@@ -2239,7 +2245,8 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
       <img src="../graphics/maps/the_veil/move_block/residential_zone/apartment_building/lobby/lobby.png"
         style={{position:'absolute',top:0,width:'170%',height:'100%',objectFit:'contain',zIndex:0,left:`${200-px*1.0}px`,objectPosition:'left'}}
         alt="lobby"/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={92} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      {lobbyClimbPrompt&&<div style={{position:'absolute',bottom:lobbyCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${lobbyClimbPrompt}`}/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={lobbyCharBottom} charHeight={364} currentOutfit={currentOutfit}/><Mono text={bark}/>
       {(nearObj||nearElev)&&(nearObj?.prompt||nearElev?.id==='elevator')&&(
         <div style={{position:'absolute',bottom:130,left:'50%',transform:'translateX(-50%)',background:C.panel,border:`1px solid ${C.border}`,color:C.gold,fontSize:8,padding:'2px 9px',letterSpacing:2,fontFamily:"'TheMurk',monospace",zIndex:300}}>
           {nearObj?.prompt||'[ E ] ELEVATOR'}
@@ -2319,6 +2326,7 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
   const [nearTrigger,setNearTrigger]=useState(null);
   const raf=useRef(null);
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.5,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {charBottom:f4CharBottom,climbPrompt:f4ClimbPrompt}=useWorldY(102,[],px,keys);
   const kickHitbox=useKickHitbox(kicking,px,facing,102);
   const atElevatorHall=px>=80&&px<=124;
   const atApt=px>=991&&px<=1057;
@@ -2398,7 +2406,8 @@ function FourthFloorHallwayScene({onExit,onReturn,spawnX=1035,currentOutfit,debu
       {nearBusyDoor&&!doorMsg&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
       {nearNoAnswerDoor&&!doorMsg&&!conv&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] KNOCK"/></div>}
       {doorMsg&&<div style={{position:'absolute',bottom:200,left:'50%',transform:'translateX(-50%)',zIndex:300,background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:8,padding:'4px 14px',letterSpacing:2,fontFamily:"'TheMurk',monospace",whiteSpace:'nowrap'}}>{doorMsg}</div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={102} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      {f4ClimbPrompt&&<div style={{position:'absolute',bottom:f4CharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${f4ClimbPrompt}`}/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={f4CharBottom} charHeight={216} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="fourth_floor_hallway" onSceneChange={debugGo}/>}
@@ -2434,6 +2443,7 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
   const [walking,setWalking]=useState(false);
   const raf=useRef(null);
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.55,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {charBottom:elvHallCharBottom,climbPrompt:elvHallClimbPrompt}=useWorldY(30,[],px,keys);
   const nearStairwell=px>=612&&px<=732;
   const nearElevator=px>=138&&px<=302;
   const atReturn=px>=951&&px<=1121;
@@ -2468,7 +2478,8 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
       {nearStairwell&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] STAIRWELL"/></div>}
       {nearElevator&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR"/></div>}
       {atReturn&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] 4TH FLOOR HALL"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={354} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      {elvHallClimbPrompt&&<div style={{position:'absolute',bottom:elvHallCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${elvHallClimbPrompt}`}/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={elvHallCharBottom} charHeight={354} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="ELEVATOR HALL — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="elevator_hallway" onSceneChange={debugGo}/>}
@@ -2483,6 +2494,9 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
   const [walking,setWalking]=useState(false);
   const raf=useRef(null);
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.25,stamina,onStaminaChange,currentOutfit,hudOpen);
+  // Stairwell: the whole scene is a staircase — Y rises as character walks left (toward lower floor)
+  const STAIRWELL_ZONES=[{id:'stair_main',xMin:100,xMax:900,yMin:0,yMax:55,type:'stair'}];
+  const {charBottom:stairCharBottom,climbPrompt:stairClimbPrompt}=useWorldY(30,STAIRWELL_ZONES,px,keys);
   const atReturn=px>=VIEWPORT.maxX-20;
   const atDown=px<=VIEWPORT.minX+20;
   useEffect(()=>{
@@ -2514,7 +2528,8 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
       <video src={APT_STAIRWELL_VID} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}} autoPlay muted loop playsInline/>
       {atReturn&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR HALL"/></div>}
       {atDown&&<div style={{position:'absolute',bottom:120,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] GROUND FLOOR"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={30} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark}/>
+      {stairClimbPrompt&&<div style={{position:'absolute',bottom:stairCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${stairClimbPrompt}`}/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={stairCharBottom} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark}/>
       <SceneLabel label="STAIRWELL — OAKWOOD ARMS"/>
       <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="apt_stairwell" onSceneChange={debugGo}/>}
@@ -2552,6 +2567,7 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
   const raf=useRef(null);
   const strSPD=SPD*0.1024;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen,0.35);
+  const {charBottom:strCharBottom,climbPrompt:strClimbPrompt}=useWorldY(25,[],worldX,keys);
   // Camera: follows worldX but stops at image edges — never shows black
   const cam=clamp(worldX-VW/2,0,STR_CAM_MAX);
   const nearNpc=STR_NPCS.find(n=>Math.abs(n.wx-worldX)<85);
@@ -2643,7 +2659,8 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
       <div style={{position:'absolute',inset:0,zIndex:0,backgroundImage:`url('${EXTERIOR_IMG}')`,backgroundSize:'auto 120%',backgroundPosition:`${-cam}px 105%`,backgroundRepeat:'no-repeat',backgroundColor:'#0a0907'}}/>
       {nearLoc&&!conv&&<div style={{position:'absolute',bottom:25,left:worldX-cam,zIndex:9999}}><Prompt text={`[ E ] ${nearLoc.label}`}/></div>}
       {nearNpc&&!conv&&<div style={{position:'absolute',bottom:25,left:worldX-cam,zIndex:9999}}><Prompt text="[ E ] TALK"/></div>}
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={worldX-cam} charHeight={74} charBottom={25} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      {strClimbPrompt&&<div style={{position:'absolute',bottom:strCharBottom+30,left:worldX-cam,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${strClimbPrompt}`}/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={worldX-cam} charHeight={74} charBottom={strCharBottom} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label={mode==='return'?'THE VEIL — RETURNING':'THE VEIL — MOVE BLOCK'}/>
       <Controls hints={[['← →','MOVE'],['E','TALK/ENTER'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={worldX} scene="street" onSceneChange={debugGo}/>}
@@ -2804,6 +2821,7 @@ function HudSuppressor(){useSuppressHud();return null;}
 function InGameHUD({inStore=false,basket=[],onRemoveItem,heartNum=0,stamina=0,money=0,currentOutfit,onEquipItem}){
   const [hov,setHov]=useState(null);
   const [tab,setTab]=useState(0);
+  const [dir,setDir]=useState('right'); // slide direction for page transitions
   const [sel,setSel]=useState(0); // selected item within the current page (power/gear)
   const [glitch,setGlitch]=useState(false); // random CRT glitch burst
   const [visible,setVisible]=useState(true); // auto-hide after idle
@@ -2825,8 +2843,8 @@ function InGameHUD({inStore=false,basket=[],onRemoveItem,heartNum=0,stamina=0,mo
     const pid=HUD_TABS_INGAME[tab].id;
     const count=pid==='power'?HUD_POWERS.length:pid==='gear'?HUD_GEAR.length:0;
     const kd=e=>{
-      if(e.code==='BracketLeft'){setTab(t=>(t-1+L)%L);setSel(0);}
-      else if(e.code==='BracketRight'){setTab(t=>(t+1)%L);setSel(0);}
+      if(e.code==='BracketLeft'){setDir('left');setTab(t=>(t-1+L)%L);setSel(0);}
+      else if(e.code==='BracketRight'){setDir('right');setTab(t=>(t+1)%L);setSel(0);}
       else if(count>0&&e.code==='ArrowUp'){
         setSel(s=>{const n=(s-1+count)%count;if(pid==='gear')onEquipItem?.(HUD_GEAR[n].id);return n;});
       }
@@ -2890,13 +2908,19 @@ function InGameHUD({inStore=false,basket=[],onRemoveItem,heartNum=0,stamina=0,mo
       fontFamily:"'TheMurk',monospace",userSelect:'none',opacity:0.82,
       animation:show?'hudSlideUp 0.4s ease-out forwards':'hudSlideDown 0.4s ease-in forwards',
       pointerEvents:show?'auto':'none'}}>
+      <style>{`
+        @keyframes hudSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+        @keyframes hudSlideDown{from{transform:translateY(0);opacity:1}to{transform:translateY(100%);opacity:0}}
+        @keyframes hudPageInR{from{transform:translateX(60%);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes hudPageInL{from{transform:translateX(-60%);opacity:0}to{transform:translateX(0);opacity:1}}
+      `}</style>
       {/* Device frame */}
       <img src={INGAME_HUD_IMG} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',
         objectFit:'fill',pointerEvents:'none'}}/>
 
       {/* Screen — fixed design canvas scaled to fit the mask region */}
       <div style={{position:'absolute',left:sx,top:sy,width:BW,height:BH,
-        transform:`scale(${scale})`,transformOrigin:'top left',overflow:'visible'}}>
+        transform:`scale(${scale})`,transformOrigin:'top left',overflow:inStore?'visible':'hidden'}}>
         {inStore?(
           /* ── CART MODE: 2×4 grid ── */
           <div style={{position:'absolute',top:PAD,left:PAD,bottom:PAD,right:PAD_R,display:'grid',
@@ -2950,14 +2974,16 @@ function InGameHUD({inStore=false,basket=[],onRemoveItem,heartNum=0,stamina=0,mo
               <span style={{color:C.gold,fontSize:15,letterSpacing:2,flex:1}}>{page.label}</span>
               <div style={{display:'flex',gap:4}}>
                 {HUD_TABS_INGAME.map((t,i)=>(
-                  <span key={t.id} onClick={()=>setTab(i)} style={{cursor:'pointer',width:7,height:7,borderRadius:7,
+                  <span key={t.id} onClick={()=>{setDir(i>tab?'right':'left');setTab(i);}} style={{cursor:'pointer',width:7,height:7,borderRadius:7,
                     background:i===tab?C.gold:C.border+'66'}}/>
                 ))}
               </div>
               <span style={{color:'#8ab840',fontSize:13,letterSpacing:1,flexShrink:0}}>${money}</span>
             </div>
 
-            {/* Page body */}
+            {/* Page body — keyed so it remounts on tab change, triggering the slide animation */}
+            <div key={tab} style={{flex:1,minHeight:0,overflow:'hidden',display:'flex',flexDirection:'column',
+              animation:dir==='right'?'hudPageInR 0.22s ease-out':'hudPageInL 0.22s ease-out'}}>
             {page.id==='home'?(
               /* VITALS: big portrait left, large bars right */
               <div style={{flex:1,display:'flex',gap:8,minHeight:0}}>
@@ -3031,6 +3057,7 @@ function InGameHUD({inStore=false,basket=[],onRemoveItem,heartNum=0,stamina=0,mo
                 ))}
               </div>
             )}
+            </div>
 
             {/* Footer hint */}
             <div style={{flexShrink:0,marginTop:4,color:C.dim,fontSize:10,letterSpacing:1,display:'flex',gap:10}}>
@@ -3592,6 +3619,7 @@ const PHARM_HOOD_PHARMACIST_DIALOGUE=[
     {t:"Looking for painkillers.",  act:'addPainkillers'},
     {t:"Bandages, please.",         act:'addBandages'},
     {t:"Both. Everything you have.", act:'addBoth'},
+    {t:"Just talking.",             act:'talkInfo'},
     {t:"Nevermind.",                act:'exit',muted:true},
   ]},
   {speaker:'PHARMACIST', text:"Anything else?"},
@@ -3612,6 +3640,17 @@ const PHARM_HOOD_PHARMACIST_DIALOGUE=[
     {t:"Purchase",     act:'goPay'},
     {t:"Nevermind.",   act:'clearBasket',muted:true},
     {t:"Exit",         act:'exit'},
+  ]},
+  // ── conversation branch ('talkInfo' jumps here; loops back to the shop menu via 'browse') ──
+  {id:'talk0', speaker:'PHARMACIST', text:"You're safe here. No questions asked — we don't turn anyone away."},
+  {speaker:'OCTAVIA', opts:[
+    {t:"Is there a doctor nearby?", act:'talkChen'},
+    {t:"That's good to know.",      act:'browse'},
+  ]},
+  {id:'talkChen', speaker:'PHARMACIST', text:"Three blocks up. Dr. Chen runs a clinic out of her apartment — knows about modifications. Tell her the pharmacy sent you."},
+  {speaker:'OCTAVIA', opts:[
+    {t:"I'll remember that.", act:'browse'},
+    {t:"(nod)",               act:'browse', muted:true},
   ]},
 ];
 
@@ -3823,6 +3862,8 @@ function PharmacyHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,c
       else if(act==='addBandages'){setBasket(['bandages']);const nextIdx=pharmIdx+1;const next=PHARM_HOOD_PHARMACIST_DIALOGUE[nextIdx];playCue(next.speaker==='PHARMACIST'?'pharmacist':'pharmacist_oct',()=>{});setPharmIdx(nextIdx);setPharmSel(0);return;}
       else if(act==='addBoth'){setBasket(['painkillers','bandages']);const nextIdx=pharmIdx+1;const next=PHARM_HOOD_PHARMACIST_DIALOGUE[nextIdx];playCue(next.speaker==='PHARMACIST'?'pharmacist':'pharmacist_oct',()=>{});setPharmIdx(nextIdx);setPharmSel(0);return;}
       else if(act==='browse'){setPharmIdx(0);setPharmSel(0);playCue('pharmacist',()=>{});return;}
+      else if(act==='talkInfo'){const i=PHARM_HOOD_PHARMACIST_DIALOGUE.findIndex(l=>l.id==='talk0');if(i>=0){setPharmIdx(i);setPharmSel(0);playCue('pharmacist',()=>{});}return;}
+      else if(act==='talkChen'){const i=PHARM_HOOD_PHARMACIST_DIALOGUE.findIndex(l=>l.id==='talkChen');if(i>=0){setPharmIdx(i);setPharmSel(0);playCue('pharmacist',()=>{});}return;}
       else if(act==='goPay'){if(basket.length===0)return;const payIdx=PHARM_HOOD_PHARMACIST_DIALOGUE.findIndex((l,i)=>i>pharmIdx&&l.text?.includes('__TOTAL__'));setPharmIdx(payIdx);setPharmSel(0);playCue('pharmacist',()=>{});return;}
       else if(act==='pay'){if(canPay){onSpendMoney(total);onAddItems?.(basket);setPaid(true);const doneIdx=pharmIdx+1;setPharmIdx(doneIdx);setPharmSel(0);playCue('pharmacist',()=>{});return;}}
       else if(act==='clearBasket'){setBasket([]);setPharmIdx(0);setPharmSel(0);playCue('pharmacist',()=>{});return;}
@@ -3843,9 +3884,8 @@ function PharmacyHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems,c
     const kd=e=>{
       if(!line)return;
       if(line.opts){
-        if(e.key==='1')setPharmSel(0);
-        else if(e.key==='2')setPharmSel(1);
-        else if(e.key==='3'&&line.opts.length>2)setPharmSel(2);
+        const n=parseInt(e.key,10);
+        if(n>=1&&n<=line.opts.length)setPharmSel(n-1);
         else if(e.code==='ArrowUp')setPharmSel(s=>Math.max(0,s-1));
         else if(e.code==='ArrowDown')setPharmSel(s=>Math.min(line.opts.length-1,s+1));
         else if(e.code==='KeyE')advancePharmDialog(pharmSel);
@@ -4132,6 +4172,7 @@ function RestaurantHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
+  const {charBottom:restCharBottom,climbPrompt:restClimbPrompt}=useWorldY(95,[],px,keys);
   const nearOwner=Math.abs(px-821)<100&&!conv;
   const nearChef=Math.abs(px-384)<80&&!conv;
   const atExit=px>=1054;
@@ -4181,7 +4222,8 @@ function RestaurantHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems
       {nearChef&&!conv&&<div style={{position:'absolute',bottom:109,left:384,transform:'translateX(-50%)',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center'}}><Prompt text="[ E ] TALK"/></div>}
       <div style={{position:'absolute',inset:0,zIndex:49,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000014 3px,#00000014 4px)'}}/>
       <div style={{position:'absolute',inset:0,zIndex:48,pointerEvents:'none',background:'radial-gradient(ellipse 85% 72% at 50% 50%,transparent 38%,#060402a0 100%)'}}/>
-      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={95} charHeight={317} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
+      {restClimbPrompt&&<div style={{position:'absolute',bottom:restCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${restClimbPrompt}`}/></div>}
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={restCharBottom} charHeight={317} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="RESTAURANT — THE VEIL"/>
       <Controls hints={[['← →','MOVE'],['E','TALK'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="restaurant" onSceneChange={debugGo}/>}
@@ -4950,6 +4992,80 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
   return {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,setBark,updateMovement};
 }
 
+// ── Y-AXIS / CLIMB SYSTEM ─────────────────────────────────────
+// Adds a worldY coordinate to any walkable scene, making charBottom dynamic
+// instead of a per-scene constant. Scenes with no climbZones behave identically
+// to before (worldY stays 0, charBottom === groundBase).
+//
+// climbZone shape:
+//   { id, xMin, xMax, yMin, yMax,
+//     type: 'stair'|'ladder'
+//     dir?: 'up'|'down'  (stair only — which direction the y increases as x increases) }
+//
+// STAIR: Y is derived automatically from the character's X position within the zone.
+//   As you walk left/right through a stair zone, charBottom interpolates smoothly.
+// LADDER: Y is updated by ArrowUp/Down when the character is inside the X range.
+//   ArrowLeft/Right still work for entering/leaving but Y only changes while in zone.
+//
+// Returns:
+//   worldY          — current vertical offset (0 = ground)
+//   charBottom      — groundBase + worldY  (pass directly to <Char charBottom={charBottom}/>)
+//   inClimbZone     — the active zone object, or null
+//   climbPrompt     — hint string to show on screen ('↑↓ CLIMB' | '↑↓ STAIRS' | null)
+
+function useWorldY(groundBase, climbZones=[], worldX, keys){
+  const [worldY,setWorldY]=useState(0);
+  const worldYRef=useRef(0);
+  const rafRef=useRef(null);
+
+  // Derive which zone is active
+  const activeZone=climbZones.find(z=>worldX>=z.xMin&&worldX<=z.xMax)||null;
+
+  // STAIR: update Y from worldX whenever it changes
+  useEffect(()=>{
+    if(!activeZone||activeZone.type!=='stair'){return;}
+    const t=Math.max(0,Math.min(1,(worldX-activeZone.xMin)/(activeZone.xMax-activeZone.xMin)));
+    const y=Math.round(activeZone.yMin+t*(activeZone.yMax-activeZone.yMin));
+    worldYRef.current=y;
+    setWorldY(y);
+  },[worldX,activeZone?.id]);
+
+  // Reset to ground when leaving all zones
+  useEffect(()=>{
+    if(!activeZone){
+      worldYRef.current=0;
+      setWorldY(0);
+    }
+  },[activeZone?.id]);
+
+  // LADDER: ArrowUp/Down drives Y while in zone
+  useEffect(()=>{
+    if(!activeZone||activeZone.type!=='ladder')return;
+    const LADDER_SPD=1.8;
+    const loop=()=>{
+      const up=keys?.current?.['ArrowUp'];
+      const down=keys?.current?.['ArrowDown'];
+      if(up){
+        const next=Math.min(activeZone.yMax,worldYRef.current+LADDER_SPD);
+        worldYRef.current=next;
+        setWorldY(Math.round(next));
+      }else if(down){
+        const next=Math.max(activeZone.yMin,worldYRef.current-LADDER_SPD);
+        worldYRef.current=next;
+        setWorldY(Math.round(next));
+      }
+      rafRef.current=requestAnimationFrame(loop);
+    };
+    rafRef.current=requestAnimationFrame(loop);
+    return()=>cancelAnimationFrame(rafRef.current);
+  },[activeZone?.id]);
+
+  const charBottom=groundBase+worldY;
+  const climbPrompt=activeZone?`↑↓ ${activeZone.type==='ladder'?'CLIMB':'STAIRS'}`:null;
+
+  return {worldY,charBottom,inClimbZone:activeZone,climbPrompt};
+}
+
 // ── KICK HIT DETECTION ────────────────────────────────────────
 // Splits the kick animation into startup / active / recovery windows.
 // Returns the live hitbox rect during active frames, null otherwise.
@@ -5023,6 +5139,8 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
   const [eqBars,setEqBars]=useState(Array.from({length:18},()=>0.12));
   const eqIntervalRef=useRef(null);
   const [recordAnimKey,setRecordAnimKey]=useState(0);
+  const [glitch,setGlitch]=useState(false);
+  const [tabDir,setTabDir]=useState('right');
 
   // Auto-scroll selected item into view (skip in controller mode — cursor handles positioning)
   useEffect(()=>{
@@ -5115,6 +5233,19 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
     }
     return()=>clearInterval(eqIntervalRef.current);
   },[musicPlaying]);
+
+  // Random glitch burst — same cadence as InGameHUD
+  useEffect(()=>{
+    let t1,t2;
+    const schedule=()=>{
+      t1=setTimeout(()=>{
+        setGlitch(true);
+        t2=setTimeout(()=>{setGlitch(false);schedule();},140+Math.random()*180);
+      },3500+Math.random()*6500);
+    };
+    schedule();
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[]);
 
   // Audio track load & sync
   useEffect(()=>{
@@ -5498,7 +5629,7 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
               const active=i===activeTabIdx;
               const hov=i===hoveredTabIdx&&!active;
               return(
-                <div key={t.id} onClick={()=>{setActiveTabIdx(i);setSelectedIdx(0);setActiveInvSubTabIdx(0);}} data-hudtab={i}
+                <div key={t.id} onClick={()=>{setTabDir(i>activeTabIdx?'right':'left');setActiveTabIdx(i);setSelectedIdx(0);setActiveInvSubTabIdx(0);}} data-hudtab={i}
                   style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',
                     fontSize:Math.round(8*F),letterSpacing:1,
                     color:active?C.gold:hov?C.text:C.dim,
@@ -5805,8 +5936,8 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         }
       }
       // Tab switching (Q/W = keyboard, LB/RB = controller via keyMap)
-      if(e.code==='KeyQ'){stop();setActiveTabIdx(i=>Math.max(0,i-1));setSelectedIdx(0);setActiveInvSubTabIdx(0);setPhoneSubApp(null);return;}
-      if(e.code==='KeyW'){stop();setActiveTabIdx(i=>Math.min(HUD_TABS.length-1,i+1));setSelectedIdx(0);setActiveInvSubTabIdx(0);setPhoneSubApp(null);return;}
+      if(e.code==='KeyQ'){stop();setTabDir('left');setActiveTabIdx(i=>Math.max(0,i-1));setSelectedIdx(0);setActiveInvSubTabIdx(0);setPhoneSubApp(null);return;}
+      if(e.code==='KeyW'){stop();setTabDir('right');setActiveTabIdx(i=>Math.min(HUD_TABS.length-1,i+1));setSelectedIdx(0);setActiveInvSubTabIdx(0);setPhoneSubApp(null);return;}
       // D-pad disabled in controller mode — left stick cursor handles all navigation
       if(s.inputSrc==='controller'&&(e.code==='ArrowUp'||e.code==='ArrowDown'||e.code==='ArrowLeft'||e.code==='ArrowRight')){stop();return;}
       // SYS tab — left/right switches mode, up/down navigates items (save slots)
@@ -6410,13 +6541,19 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
           WebkitMaskImage:`url(${DEVICE_MASK_IMG})`,WebkitMaskSize:'100% 100%',WebkitMaskRepeat:'no-repeat',
         }}>
           {/* Top screen */}
-          <div style={{position:'absolute',left:`${TOP_SCREEN.left+3}px`,top:`${TOP_SCREEN.top+3}px`,width:`${TOP_SCREEN.width-6}px`,height:`${TOP_SCREEN.height-6}px`,background:C.bg,overflow:'auto',overflowX:'hidden'}}>
-            {renderTopScreen()}
+          <div style={{position:'absolute',left:`${TOP_SCREEN.left+3}px`,top:`${TOP_SCREEN.top+3}px`,width:`${TOP_SCREEN.width-6}px`,height:`${TOP_SCREEN.height-6}px`,background:C.bg,overflow:'hidden'}}>
+            <div key={activeTabIdx} style={{width:'100%',height:'100%',overflowY:'auto',overflowX:'hidden',
+              animation:tabDir==='right'?'hudPageInR 0.22s ease-out':'hudPageInL 0.22s ease-out'}}>
+              {renderTopScreen()}
+            </div>
           </div>
 
           {/* Bottom screen */}
           <div style={{position:'absolute',left:`${BOTTOM_SCREEN.left+3}px`,top:`${BOTTOM_SCREEN.top+3}px`,width:`${BOTTOM_SCREEN.width-6}px`,height:`${BOTTOM_SCREEN.height-6}px`,background:C.bg,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-            {renderBottomScreen()}
+            <div key={activeTabIdx} style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',overflow:'hidden',
+              animation:tabDir==='right'?'hudPageInR 0.22s ease-out':'hudPageInL 0.22s ease-out'}}>
+              {renderBottomScreen()}
+            </div>
           </div>
 
           {/* ── VINTAGE EFFECT STACK (all clipped to screen regions by parent mask) ── */}
@@ -6443,6 +6580,26 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
           <div style={{position:'absolute',inset:0,zIndex:5,pointerEvents:'none',
             background:'radial-gradient(ellipse at center, rgba(255,228,150,0.05) 0%, rgba(255,228,150,0.02) 60%, transparent 100%)',
             mixBlendMode:'soft-light'}}/>
+
+          {/* CRT flicker */}
+          <div style={{position:'absolute',inset:0,zIndex:6,pointerEvents:'none',
+            background:'#000',animation:'crtFlicker 2.4s steps(3) infinite'}}/>
+
+          {/* Rolling scan bar */}
+          <div style={{position:'absolute',left:0,right:0,height:'8%',zIndex:7,pointerEvents:'none',
+            background:'linear-gradient(rgba(255,255,255,0),rgba(180,255,240,0.06),rgba(255,255,255,0))',
+            animation:'crtScan 6s linear infinite'}}/>
+
+          {/* Random glitch burst */}
+          {glitch&&(
+            <div style={{position:'absolute',inset:0,zIndex:8,pointerEvents:'none',animation:'glitchShift 0.16s steps(2) infinite'}}>
+              <div style={{position:'absolute',inset:0,
+                background:'repeating-linear-gradient(0deg,rgba(47,212,230,0.08) 0px,rgba(47,212,230,0.08) 2px,transparent 2px,transparent 5px,rgba(255,59,82,0.08) 5px,rgba(255,59,82,0.08) 7px,transparent 7px,transparent 12px)'}}/>
+              <div style={{position:'absolute',left:0,right:0,top:'25%',height:'8%',background:'rgba(47,212,230,0.18)',transform:'translateX(6px)'}}/>
+              <div style={{position:'absolute',left:0,right:0,top:'55%',height:'5%',background:'rgba(255,59,82,0.18)',transform:'translateX(-7px)'}}/>
+              <div style={{position:'absolute',left:0,right:0,top:'76%',height:'3%',background:'rgba(255,255,255,0.10)',transform:'translateX(4px)'}}/>
+            </div>
+          )}
         </div>
       </div>
 
@@ -6489,6 +6646,10 @@ function DeviceHUD({show,isClosing,onClose,inventory,heartNum,onUseItem,money,on
         @keyframes hudFadeOut{from{opacity:1}to{opacity:0}}
         @keyframes hudSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes hudSlideDown{from{transform:translateY(0);opacity:1}to{transform:translateY(100%);opacity:0}}
+        @keyframes hudSlideInL{from{transform:translateX(-115%);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes hudSlideOutL{from{transform:translateX(0);opacity:1}to{transform:translateX(-115%);opacity:0}}
+        @keyframes hudPageInR{from{transform:translateX(55%);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes hudPageInL{from{transform:translateX(-55%);opacity:0}to{transform:translateX(0);opacity:1}}
         @keyframes vinylSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes vinylSwap{0%,100%{opacity:1;transform:scale(1)}35%,65%{opacity:.05;transform:scale(.88)}}
         @keyframes hudGrain{

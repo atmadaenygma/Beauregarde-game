@@ -1698,7 +1698,9 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
   const raf=useRef(null);
   const aptSPD=SPD*0.42;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const APT_CLIMB_ZONES=[];
+  const APT_CLIMB_ZONES=[
+    {id:'apt_kitchen', xMin:820, xMax:1100, yMin:0, yMax:8, type:'stair'},
+  ];
   const {charBottom:aptCharBottom,climbPrompt:aptClimbPrompt}=useWorldY(53,APT_CLIMB_ZONES,px,keys);
   const near=APT_OBJ.find(o=>{
     if(!o.prompt)return false;
@@ -2005,7 +2007,12 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
   const raf=useRef(null);
   const hallwaySPD=SPD*0.2;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(hallwaySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const {charBottom:hallCharBottom,climbPrompt:hallClimbPrompt}=useWorldY(30,[],px,keys);
+  const HALL_CLIMB_ZONES=[
+    {id:'hall_stair_up',  xMin:401, xMax:500, yMin:0,  yMax:28, type:'stair'},
+    {id:'hall_stair_top', xMin:500, xMax:553, yMin:28, yMax:28, type:'stair'},
+    {id:'hall_stair_dn',  xMin:553, xMax:599, yMin:28, yMax:0,  type:'stair'},
+  ];
+  const {charBottom:hallCharBottom,climbPrompt:hallClimbPrompt}=useWorldY(30,HALL_CLIMB_ZONES,px,keys);
   const near=HALL_OBJ.find(o=>Math.abs(o.wx-px)<70&&o.prompt);
 
   useEffect(()=>{
@@ -2201,7 +2208,11 @@ function LobbyScene({onExit,spawnX=191,currentOutfit,debug,debugGo,stamina,onSta
   const raf=useRef(null);
   const lobbySPD=2.8;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(lobbySPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const {charBottom:lobbyCharBottom,climbPrompt:lobbyClimbPrompt}=useWorldY(92,[],px,keys);
+  const LOBBY_CLIMB_ZONES=[
+    {id:'lobby_stair_up',  xMin:680, xMax:756, yMin:0,  yMax:38, type:'stair'},
+    {id:'lobby_stair_top', xMin:756, xMax:840, yMin:38, yMax:38, type:'stair'},
+  ];
+  const {charBottom:lobbyCharBottom,climbPrompt:lobbyClimbPrompt}=useWorldY(92,LOBBY_CLIMB_ZONES,px,keys);
 
   const elevRange={xMin:560,xMax:840};
   const nearElev=px>=elevRange.xMin&&px<=elevRange.xMax?{id:'elevator'}:null;
@@ -2443,7 +2454,10 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
   const [walking,setWalking]=useState(false);
   const raf=useRef(null);
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD*0.55,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const {charBottom:elvHallCharBottom,climbPrompt:elvHallClimbPrompt}=useWorldY(30,[],px,keys);
+  const ELVHALL_CLIMB_ZONES=[
+    {id:'elvhall_stair', xMin:612, xMax:730, yMin:0, yMax:22, type:'stair'},
+  ];
+  const {charBottom:elvHallCharBottom,climbPrompt:elvHallClimbPrompt}=useWorldY(30,ELVHALL_CLIMB_ZONES,px,keys);
   const nearStairwell=px>=612&&px<=732;
   const nearElevator=px>=138&&px<=302;
   const atReturn=px>=951&&px<=1121;
@@ -2567,7 +2581,11 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
   const raf=useRef(null);
   const strSPD=SPD*0.1024;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(strSPD,stamina,onStaminaChange,currentOutfit,hudOpen,0.35);
-  const {charBottom:strCharBottom,climbPrompt:strClimbPrompt}=useWorldY(25,[],worldX,keys);
+  const STR_CLIMB_ZONES=[
+    {id:'str_lobby_steps', xMin:1200, xMax:1275, yMin:0, yMax:14, type:'stair'},
+    {id:'str_rest_step',   xMin:1490, xMax:1540, yMin:0, yMax:8,  type:'stair'},
+  ];
+  const {charBottom:strCharBottom,climbPrompt:strClimbPrompt}=useWorldY(25,STR_CLIMB_ZONES,worldX,keys);
   // Camera: follows worldX but stops at image edges — never shows black
   const cam=clamp(worldX-VW/2,0,STR_CAM_MAX);
   const nearNpc=STR_NPCS.find(n=>Math.abs(n.wx-worldX)<85);
@@ -4172,7 +4190,10 @@ function RestaurantHoodieScene({heart,mono,onLeave,money,onSpendMoney,onAddItems
   const [conv,setConv]=useState(null);
   const raf=useRef(null);
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(SPD,stamina,onStaminaChange,currentOutfit,hudOpen);
-  const {charBottom:restCharBottom,climbPrompt:restClimbPrompt}=useWorldY(95,[],px,keys);
+  const REST_CLIMB_ZONES=[
+    {id:'rest_kitchen', xMin:300, xMax:420, yMin:0, yMax:15, type:'stair'},
+  ];
+  const {charBottom:restCharBottom,climbPrompt:restClimbPrompt}=useWorldY(95,REST_CLIMB_ZONES,px,keys);
   const nearOwner=Math.abs(px-821)<100&&!conv;
   const nearChef=Math.abs(px-384)<80&&!conv;
   const atExit=px>=1054;

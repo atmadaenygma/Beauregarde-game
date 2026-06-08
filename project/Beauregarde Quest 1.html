@@ -1520,6 +1520,15 @@ const APT_POPUPS={
   window:{title:'WINDOW',body:'That building across the street\'s signage is really annoying. Flashing the red like that into the window. On. Off. On. Off. It\'s giving her a headache.'},
 };
 
+// Clue hotspots for apartment investigation mode (screen-space coords, 1280×720)
+// x matches APT_OBJ worldX; y estimated from visual layout (floor≈660, desk≈520, wall≈330)
+const APT_INVESTIGATE_CLUES=[
+  {id:'clue_note',    x:505, y:515, radius:28, label:'DOCUMENT',   body:"A hand-drawn floor plan. The exit marked with a circle. Someone planned a route."},
+  {id:'clue_cabinet', x:935, y:490, radius:26, label:'IMPRESSION', body:"Clean rectangle in the dust. Something was stored here — removed recently. Careful."},
+  {id:'clue_fridge',  x:1065,y:555, radius:24, label:'PHOTOGRAPH', body:"Tucked behind the freezer tray. A face. She doesn't recognize it. But it was kept deliberately."},
+  {id:'clue_window',  x:1200,y:315, radius:32, label:'MARKINGS',   body:"Scratch marks on the glass. Fifteen marks. Someone was counting days."},
+];
+
 // ── BATHROOM + HALLWAY DATA ──────────────────────────────────
 // Scene 1 — The Shower
 const SHOWER_SEQ=[
@@ -1695,6 +1704,8 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
   const [popupAction,setPopupAction]=useState(null);
   const [inputMethod,setInputMethod]=useState('keyboard');
   const [bedOptionIdx,setBedOptionIdx]=useState(0); // 0=REST, 1=SLEEP
+  const [investigating,setInvestigating]=useState(false);
+  const [foundClues,setFoundClues]=useState([]);
   const raf=useRef(null);
   const aptSPD=SPD*0.42;
   const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,setBark,updateMovement}=useSceneMovement(aptSPD,stamina,onStaminaChange,currentOutfit,hudOpen);
@@ -1741,7 +1752,8 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
     const kd=e=>{
       keys.current[e.code]=true;
       setInputMethod(e.isTrusted?'keyboard':'controller');
-      if(e.code==='Escape'){setPopup(null);setBedOptionIdx(0);return;}
+      if(e.code==='Escape'){setPopup(null);setBedOptionIdx(0);setInvestigating(false);return;}
+      if(e.code==='KeyL'&&!popup){setInvestigating(v=>!v);return;}
       // Bed options navigation — left/right or up/down to switch between REST, SLEEP, and LEAVE
       if(popupAction==='bedrest'){
         if(e.code==='ArrowLeft'){setBedOptionIdx(i=>i===0?2:i-1);return;}
@@ -1765,7 +1777,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
 
   useEffect(()=>{
     const loop=()=>{
-      if(!popup){
+      if(!popup&&!investigating){
         const left =keys.current['ArrowLeft'] ||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const isMoving=left||right;
@@ -1781,7 +1793,7 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
     };
     raf.current=requestAnimationFrame(loop);
     return()=>{cancelAnimationFrame(raf.current);};
-  },[popup]); // do NOT include updateMovement — it causes dependency cycles with stamina updates
+  },[popup,investigating]); // do NOT include updateMovement — it causes dependency cycles with stamina updates
 
   const flOff=-(px*.7)%80;
   const aptVidRef=useRef(null);
@@ -1821,8 +1833,18 @@ function AptScene({heart,mono,onLeave,onRest,onRestBed,money,onPickupMoney,inven
       {aptClimbPrompt&&<div style={{position:'absolute',bottom:aptCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${aptClimbPrompt}`}/></div>}
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charHeight={297} charBottom={aptCharBottom} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="OAKWOOD ARMS — 4C"/>
-      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['← →','MOVE'],['E','INTERACT'],['SHIFT','CROUCH'],['SPACE','JUMP'],['L','EXAMINE'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={px} scene="apartment" onSceneChange={debugGo}/>}
+      {investigating&&(
+        <InvestigationLens
+          clues={APT_INVESTIGATE_CLUES}
+          onClue={c=>{
+            setFoundClues(prev=>prev.some(f=>f.id===c.id)?prev:[...prev,c]);
+            setBark(`// ${c.label}`);
+            setTimeout(()=>setBark(null),3500);
+          }}
+          onExit={()=>setInvestigating(false)}/>
+      )}
     </div>
   );
 }
@@ -5085,6 +5107,180 @@ function useWorldY(groundBase, climbZones=[], worldX, keys){
   const climbPrompt=activeZone?`↑↓ ${activeZone.type==='ladder'?'CLIMB':'STAIRS'}`:null;
 
   return {worldY,charBottom,inClimbZone:activeZone,climbPrompt};
+}
+
+// ── INVESTIGATION LENS ────────────────────────────────────────
+// Detective "examine the scene" overlay — clone of PointC/KRWgOK rebuilt in React.
+// Renders as an absolute-positioned SVG over the current scene (no images needed;
+// the scene background shows through as the "sketch" layer).
+//
+// Props:
+//   clues   [{id, x, y, radius, label, body}] — hotspot positions in game-space (0-1280 × 0-720)
+//   onClue  (clue) => void  — fires once per clue when the lens overlaps it
+//   onExit  () => void      — fires on ESC or L key
+//
+// Controls: move mouse to sweep the lens; hold left-button to expand it.
+function InvestigationLens({clues=[],onClue,onExit}){
+  const maskerRef=useRef(null);  // lensMask circle
+  const fogHoleRef=useRef(null); // fogMask circle (inverted gradient — fog everywhere except lens)
+  const ringRef=useRef(null);    // lagged crimson ring
+  const dotRef=useRef(null);     // instant-snap crimson dot
+  const progressRingRef=useRef(null);
+  const counterRef=useRef(null);
+  const curRef=useRef({x:640,y:360});   // eased lens centre
+  const targRef=useRef({x:640,y:360});  // raw mouse position
+  const progressRef=useRef(0);          // 0=contracted, 1=fully expanded
+  const holdingRef=useRef(false);
+  const discoveredRef=useRef(new Set());
+  const [discovered,setDiscovered]=useState(new Set());
+
+  const R_MIN=130, R_MAX=2200, EXPAND_MS=2000, FOLLOW=0.10;
+  const RING_CIRC=2*Math.PI*40;
+  const easeIn=t=>t*t;
+
+  // RAF loop — all lens animation via direct DOM manipulation (zero React re-renders per frame)
+  useEffect(()=>{
+    let rafId,last=performance.now();
+    const loop=now=>{
+      const dt=Math.min(64,now-last); last=now;
+      curRef.current.x+=(targRef.current.x-curRef.current.x)*FOLLOW;
+      curRef.current.y+=(targRef.current.y-curRef.current.y)*FOLLOW;
+      progressRef.current=Math.max(0,Math.min(1,
+        progressRef.current+(holdingRef.current?dt/EXPAND_MS:-dt/EXPAND_MS)));
+      const r=R_MIN+(R_MAX-R_MIN)*easeIn(progressRef.current);
+      const cx=curRef.current.x, cy=curRef.current.y;
+      if(maskerRef.current){maskerRef.current.setAttribute('r',r);maskerRef.current.setAttribute('cx',cx);maskerRef.current.setAttribute('cy',cy);}
+      if(fogHoleRef.current){fogHoleRef.current.setAttribute('r',r);fogHoleRef.current.setAttribute('cx',cx);fogHoleRef.current.setAttribute('cy',cy);}
+      if(ringRef.current){ringRef.current.setAttribute('cx',cx);ringRef.current.setAttribute('cy',cy);}
+      if(progressRingRef.current){
+        progressRingRef.current.style.strokeDashoffset=RING_CIRC*(1-progressRef.current);
+        if(counterRef.current)counterRef.current.textContent=Math.round(progressRef.current*100);
+      }
+      // clue detection — lens edge + small factor so you have to be on-target
+      if(progressRef.current>0.02){
+        clues.forEach(c=>{
+          if(!discoveredRef.current.has(c.id)){
+            const dx=cx-c.x, dy=cy-c.y;
+            if(Math.sqrt(dx*dx+dy*dy)<c.radius+r*0.07){
+              discoveredRef.current.add(c.id);
+              setDiscovered(new Set(discoveredRef.current));
+              onClue?.(c);
+            }
+          }
+        });
+      }
+      rafId=requestAnimationFrame(loop);
+    };
+    rafId=requestAnimationFrame(loop);
+    return()=>cancelAnimationFrame(rafId);
+  },[clues,onClue]);
+
+  // Input: mouse → game-space coords via scale-wrap; keyboard exit
+  useEffect(()=>{
+    const toGame=e=>{
+      const sw=document.getElementById('scale-wrap');
+      const r=sw?sw.getBoundingClientRect():{left:0,top:0,width:VW,height:VH};
+      return{x:(e.clientX-r.left)*(VW/r.width),y:(e.clientY-r.top)*(VH/r.height)};
+    };
+    const onMove=e=>{const p=toGame(e);targRef.current=p;dotRef.current?.setAttribute('cx',p.x);dotRef.current?.setAttribute('cy',p.y);};
+    const onDown=()=>{holdingRef.current=true;};
+    const onUp=()=>{holdingRef.current=false;};
+    const onKey=e=>{if(e.code==='KeyL'||e.code==='Escape')onExit?.();};
+    window.addEventListener('mousemove',onMove);
+    window.addEventListener('mousedown',onDown);
+    window.addEventListener('mouseup',onUp);
+    window.addEventListener('keydown',onKey);
+    return()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('mousedown',onDown);window.removeEventListener('mouseup',onUp);window.removeEventListener('keydown',onKey);};
+  },[onExit]);
+
+  return(
+    <div style={{position:'absolute',inset:0,zIndex:900,cursor:'none'}}>
+      <style>{`@keyframes lensGlitch{0%{transform:translateX(0)}25%{transform:translateX(-3px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}100%{transform:translateX(3px)}}`}</style>
+      <svg xmlns="http://www.w3.org/2000/svg" width={VW} height={VH} viewBox={`0 0 ${VW} ${VH}`}
+        style={{position:'absolute',inset:0,width:'100%',height:'100%',display:'block'}}>
+        <defs>
+          {/* lens gradient: white centre → black edge = reveals contents at centre */}
+          <radialGradient id="lensGrad">
+            <stop offset="50%" stopColor="#fff"/><stop offset="100%" stopColor="#000"/>
+          </radialGradient>
+          {/* fog-hole gradient: black centre → white edge = fog everywhere EXCEPT lens */}
+          <radialGradient id="fogHoleGrad">
+            <stop offset="50%" stopColor="#000"/><stop offset="100%" stopColor="#fff"/>
+          </radialGradient>
+          {/* lens mask — white at centre = shows reveal layer */}
+          <mask id="invLensMask">
+            <circle ref={maskerRef} r={R_MIN} cx={640} cy={360} fill="url(#lensGrad)"/>
+          </mask>
+          {/* fog mask — white everywhere, punched out by fog-hole at lens position */}
+          <mask id="fogMask">
+            <rect width={VW} height={VH} fill="white"/>
+            <circle ref={fogHoleRef} r={R_MIN} cx={640} cy={360} fill="url(#fogHoleGrad)"/>
+          </mask>
+        </defs>
+
+        {/* 1. Observation fog — dark veil outside the lens */}
+        <rect width={VW} height={VH} fill="rgba(7,5,3,0.65)" mask="url(#fogMask)"/>
+
+        {/* 2. Lens reveal layer — warm tint + clue markers, only visible through lens */}
+        <g mask="url(#invLensMask)">
+          <rect width={VW} height={VH} fill="rgba(255,210,70,0.06)"/>
+          {clues.map(c=>(
+            <g key={c.id}>
+              <circle cx={c.x} cy={c.y} r={c.radius} fill="none"
+                stroke={discovered.has(c.id)?'#ffd700':'#dc143c'}
+                strokeWidth={discovered.has(c.id)?2.5:1.5}
+                strokeDasharray="5 3" opacity="0.92"/>
+              {discovered.has(c.id)&&(
+                <text x={c.x} y={c.y-c.radius-10} textAnchor="middle"
+                  fill="#ffd700" fontSize="12" fontFamily="'TheMurk',monospace" letterSpacing="2">
+                  {c.label.toUpperCase()}
+                </text>
+              )}
+            </g>
+          ))}
+        </g>
+
+        {/* 3. Reticle — dot snaps immediately, ring follows with lag */}
+        <circle ref={ringRef} cx={640} cy={360} r="20" fill="none" stroke="#dc143c" strokeWidth="2"/>
+        <circle ref={dotRef}  cx={640} cy={360} r="4"  fill="#dc143c"/>
+      </svg>
+
+      {/* Progress dial — bottom left */}
+      <div style={{position:'absolute',bottom:20,left:20,pointerEvents:'none',fontFamily:"'TheMurk',monospace"}}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 100 100">
+          <circle r="40" fill="none" stroke="#2a1c0a" cx="50" cy="50" strokeWidth="2"/>
+          <circle ref={progressRingRef} r="40" fill="none" stroke="#dc143c" cx="50" cy="50" strokeWidth="6"
+            transform="rotate(-90 50 50)" style={{strokeDasharray:RING_CIRC,strokeDashoffset:RING_CIRC}}/>
+          <text ref={counterRef} x="50" y="56" textAnchor="middle" fontSize="20" fill={C.gold} fontFamily="monospace">0</text>
+        </svg>
+        <div style={{color:'#6a5038',fontSize:8,letterSpacing:1,textAlign:'center',marginTop:2}}>SCAN</div>
+      </div>
+
+      {/* Controls + clues found — bottom right */}
+      <div style={{position:'absolute',bottom:20,right:20,pointerEvents:'none',fontFamily:"'TheMurk',monospace",textAlign:'right'}}>
+        <div style={{color:'#3a2c14',fontSize:8,letterSpacing:1,marginBottom:3}}>HOLD — EXPAND LENS</div>
+        <div style={{color:'#3a2c14',fontSize:8,letterSpacing:1,marginBottom:8}}>[ L ] / [ ESC ] — EXIT</div>
+        {discovered.size>0&&(
+          <div style={{color:'#ffd700',fontSize:10,letterSpacing:2}}>FOUND {discovered.size}/{clues.length}</div>
+        )}
+      </div>
+
+      {/* Clue detail popup when a new clue is first discovered */}
+      {[...discovered].map(id=>{
+        const c=clues.find(x=>x.id===id);
+        return c&&(
+          <div key={id} style={{position:'absolute',top:40,left:'50%',transform:'translateX(-50%)',
+            zIndex:10,background:C.panel,border:`1px solid ${C.border}`,padding:'10px 18px',
+            fontFamily:"'TheMurk',monospace",maxWidth:380,textAlign:'left',pointerEvents:'none'}}>
+            <div style={{color:C.red,fontSize:7,letterSpacing:3,marginBottom:6}}>// {c.label}</div>
+            <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{c.body}</div>
+          </div>
+        );
+      }).slice(-1) /* only show the most recently found clue */}
+
+      <HudSuppressor/>
+    </div>
+  );
 }
 
 // ── KICK HIT DETECTION ────────────────────────────────────────

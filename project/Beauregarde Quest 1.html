@@ -2043,7 +2043,7 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
     {id:'hall_stair_top', xMin:500, xMax:553, yMin:28, yMax:28, type:'stair'},
     {id:'hall_stair_dn',  xMin:553, xMax:599, yMin:28, yMax:0,  type:'stair'},
   ];
-  const {charBottom:hallCharBottom,climbPrompt:hallClimbPrompt}=useWorldY(30,HALL_CLIMB_ZONES,px,keys);
+  const {charBottom:hallCharBottom,climbPrompt:hallClimbPrompt,entryPrompt:hallEntryPrompt}=useWorldY(30,HALL_CLIMB_ZONES,px,keys,true);
   const near=HALL_OBJ.find(o=>Math.abs(o.wx-px)<70&&o.prompt);
 
   useEffect(()=>{
@@ -2131,6 +2131,7 @@ function HallwayScene({heart,mono,mode,onRoom,onExit,inventory,heartNum,onUseIte
         <div style={{color:C.text,fontSize:8,lineHeight:1.75}}>{popup.body}</div>
         <div onClick={()=>setPopup(null)} style={{color:C.dim,fontSize:8,marginTop:10,cursor:'pointer',letterSpacing:2}}>[ E ] CLOSE</div>
       </div>}
+      {hallEntryPrompt&&<div style={{position:'absolute',bottom:hallCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={hallEntryPrompt}/></div>}
       {hallClimbPrompt&&<div style={{position:'absolute',bottom:hallCharBottom+30,left:px,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${hallClimbPrompt}`}/></div>}
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={px} charBottom={hallCharBottom} charHeight={308} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label="4TH FLOOR — OAKWOOD ARMS"/>
@@ -5119,50 +5120,89 @@ function useSceneMovement(baseSpeed,stamina,onStaminaChange,currentOutfit,paused
 }
 
 // ── Y-AXIS / CLIMB SYSTEM ─────────────────────────────────────
-// Adds a worldY coordinate to any walkable scene, making charBottom dynamic
-// instead of a per-scene constant. Scenes with no climbZones behave identically
-// to before (worldY stays 0, charBottom === groundBase).
+// Adds a worldY coordinate to any walkable scene, making charBottom dynamic.
 //
-// climbZone shape:
-//   { id, xMin, xMax, yMin, yMax,
-//     type: 'stair'|'ladder'
-//     dir?: 'up'|'down'  (stair only — which direction the y increases as x increases) }
+// climbZone shape:  { id, xMin, xMax, yMin, yMax, type: 'stair'|'ladder' }
 //
-// STAIR: Y is derived automatically from the character's X position within the zone.
-//   As you walk left/right through a stair zone, charBottom interpolates smoothly.
-// LADDER: Y is updated by ArrowUp/Down when the character is inside the X range.
-//   ArrowLeft/Right still work for entering/leaving but Y only changes while in zone.
+// STAIR (gated=false): Y interpolates automatically from worldX. Good for environmental
+//   steps (lobby, elevator hall) where transition is subtle and always-on.
+//
+// STAIR (gated=true): "drop-down" entry mechanic — the full classic side-scroller pattern:
+//   1. Character walks on flat ground up to the stair zone.
+//   2. When they step INTO the zone, prompt "↓ USE STAIRS" appears; Y stays flat.
+//   3. Player presses ↓ → 'entering' phase: charBottom dips 13px (visual step-down).
+//   4. After 280ms → 'stair' phase: Y follows X lerp normally.
+//   5. When leaving the far end → 'exiting' phase: charBottom lifts 8px (visual step-up).
+//   6. After 220ms → 'floor': Y resets to 0.
+//
+// LADDER: ArrowUp/Down drives Y while in zone x-range.
 //
 // Returns:
-//   worldY          — current vertical offset (0 = ground)
-//   charBottom      — groundBase + worldY  (pass directly to <Char charBottom={charBottom}/>)
-//   inClimbZone     — the active zone object, or null
-//   climbPrompt     — hint string to show on screen ('↑↓ CLIMB' | '↑↓ STAIRS' | null)
+//   worldY       — current vertical offset (0 = ground)
+//   charBottom   — groundBase + worldY + animOffset
+//   inClimbZone  — active zone object or null
+//   climbPrompt  — '↑↓ CLIMB' | '↑↓ STAIRS' | null (shown while actively on stairs)
+//   entryPrompt  — '↓  USE STAIRS' (shown only in gated prompt phase)
+//   stairPhase   — 'floor'|'prompt'|'entering'|'stair'|'exiting'
 
-function useWorldY(groundBase, climbZones=[], worldX, keys){
+function useWorldY(groundBase, climbZones=[], worldX, keys, gated=false){
   const [worldY,setWorldY]=useState(0);
+  const [stairPhase,setStairPhase]=useState('floor');
   const worldYRef=useRef(0);
+  const phaseRef=useRef('floor');  // stable ref so keydown handler never sees stale phase
   const rafRef=useRef(null);
 
-  // Derive which zone is active
-  const activeZone=climbZones.find(z=>worldX>=z.xMin&&worldX<=z.xMax)||null;
+  // Zone the character is physically inside (regardless of gate state)
+  const rawZone=climbZones.find(z=>worldX>=z.xMin&&worldX<=z.xMax)||null;
 
-  // STAIR: update Y from worldX whenever it changes
+  // For gated zones: only activate Y logic once player has pressed ↓ to enter
+  const activeZone=gated?(phaseRef.current==='stair'||phaseRef.current==='entering'?rawZone:null):rawZone;
+
+  // GATED phase transitions — fire when rawZone changes
   useEffect(()=>{
-    if(!activeZone||activeZone.type!=='stair'){return;}
+    if(!gated)return;
+    const cur=phaseRef.current;
+    if(rawZone&&(cur==='floor'||cur==='exiting')){
+      // Character stepped into zone — show entry prompt, keep Y flat
+      phaseRef.current='prompt';setStairPhase('prompt');
+      worldYRef.current=0;setWorldY(0);
+    }else if(!rawZone&&cur==='prompt'){
+      // Walked through without pressing ↓ — back to floor
+      phaseRef.current='floor';setStairPhase('floor');
+    }else if(!rawZone&&(cur==='stair'||cur==='entering')){
+      // Left stair zone from the far end — brief rise then floor
+      phaseRef.current='exiting';setStairPhase('exiting');
+      setTimeout(()=>{phaseRef.current='floor';setStairPhase('floor');worldYRef.current=0;setWorldY(0);},220);
+    }
+  },[rawZone?.id,gated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // GATED entry: press ↓ while in prompt phase → drop animation → stair mode
+  useEffect(()=>{
+    if(!gated)return;
+    const kd=e=>{
+      if(phaseRef.current!=='prompt')return;
+      if(e.code==='ArrowDown'||e.code==='KeyS'){
+        phaseRef.current='entering';setStairPhase('entering');
+        setTimeout(()=>{phaseRef.current='stair';setStairPhase('stair');},280);
+      }
+    };
+    window.addEventListener('keydown',kd);
+    return()=>window.removeEventListener('keydown',kd);
+  },[gated]);
+
+  // STAIR: Y follows X lerp when activeZone is set
+  useEffect(()=>{
+    if(!activeZone||activeZone.type!=='stair')return;
     const t=Math.max(0,Math.min(1,(worldX-activeZone.xMin)/(activeZone.xMax-activeZone.xMin)));
     const y=Math.round(activeZone.yMin+t*(activeZone.yMax-activeZone.yMin));
-    worldYRef.current=y;
-    setWorldY(y);
+    worldYRef.current=y;setWorldY(y);
   },[worldX,activeZone?.id]);
 
-  // Reset to ground when leaving all zones
+  // Non-gated: reset Y on leaving all zones
   useEffect(()=>{
-    if(!activeZone){
-      worldYRef.current=0;
-      setWorldY(0);
-    }
-  },[activeZone?.id]);
+    if(gated)return;
+    if(!activeZone){worldYRef.current=0;setWorldY(0);}
+  },[activeZone?.id,gated]);
 
   // LADDER: ArrowUp/Down drives Y while in zone
   useEffect(()=>{
@@ -5171,25 +5211,21 @@ function useWorldY(groundBase, climbZones=[], worldX, keys){
     const loop=()=>{
       const up=keys?.current?.['ArrowUp'];
       const down=keys?.current?.['ArrowDown'];
-      if(up){
-        const next=Math.min(activeZone.yMax,worldYRef.current+LADDER_SPD);
-        worldYRef.current=next;
-        setWorldY(Math.round(next));
-      }else if(down){
-        const next=Math.max(activeZone.yMin,worldYRef.current-LADDER_SPD);
-        worldYRef.current=next;
-        setWorldY(Math.round(next));
-      }
+      if(up){const next=Math.min(activeZone.yMax,worldYRef.current+LADDER_SPD);worldYRef.current=next;setWorldY(Math.round(next));}
+      else if(down){const next=Math.max(activeZone.yMin,worldYRef.current-LADDER_SPD);worldYRef.current=next;setWorldY(Math.round(next));}
       rafRef.current=requestAnimationFrame(loop);
     };
     rafRef.current=requestAnimationFrame(loop);
     return()=>cancelAnimationFrame(rafRef.current);
   },[activeZone?.id]);
 
-  const charBottom=groundBase+worldY;
-  const climbPrompt=activeZone?`↑↓ ${activeZone.type==='ladder'?'CLIMB':'STAIRS'}`:null;
+  // Animated drop (entering) and rise (exiting) offsets
+  const animOffset=stairPhase==='entering'?13:stairPhase==='exiting'?8:0;
+  const charBottom=groundBase+worldY+animOffset;
+  const climbPrompt=(activeZone&&(stairPhase==='stair'||stairPhase==='entering'))?`↑↓ ${activeZone.type==='ladder'?'CLIMB':'STAIRS'}`:null;
+  const entryPrompt=(gated&&stairPhase==='prompt')?'↓  USE STAIRS':null;
 
-  return {worldY,charBottom,inClimbZone:activeZone,climbPrompt};
+  return {worldY,charBottom,inClimbZone:activeZone,climbPrompt,entryPrompt,stairPhase};
 }
 
 // ── INVESTIGATION LENS ────────────────────────────────────────

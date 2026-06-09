@@ -2641,7 +2641,7 @@ function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,currentOutfit,
   const t=worldY/STAIR_TOTAL;
   const imgTop=-Math.round(STAIR_SCROLL*(1-t));
   const charScale=1.0-t*0.48;                            // 1.0 at bottom → 0.52 at top (perspective)
-  const scaledCharH=Math.round(308*0.70*charScale);      // 30% smaller base size
+  const scaledCharH=Math.round(280*charScale);            // base 280px (30% bigger than previous 216)
   const atBottom=worldY<=10;
   const atTop=worldY>=STAIR_TOTAL-10;
 

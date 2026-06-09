@@ -1,0 +1,11 @@
+[     711ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://cdpn.io/PointC/fullpage/KRWgOK:251
+[     711ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://cdpn.io/PointC/fullpage/KRWgOK:251
+[     712ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0
+[    1493ms] [ERROR] Failed to load resource: net::ERR_NETWORK_CHANGED @ https://s3-us-west-2.amazonaws.com/s.cdpn.io/314556/roomColor.jpg:0
+[    2799ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://cdpn.io/PointC/fullpage/KRWgOK:0
+[    2799ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://cdpn.io/PointC/fullpage/KRWgOK:0
+[   16270ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://cdpn.io/PointC/fullpage/KRWgOK:251
+[   16270ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://cdpn.io/PointC/fullpage/KRWgOK:251
+[   16273ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0
+[   17792ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://cdpn.io/PointC/fullpage/KRWgOK:0
+[   17792ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://cdpn.io/PointC/fullpage/KRWgOK:0

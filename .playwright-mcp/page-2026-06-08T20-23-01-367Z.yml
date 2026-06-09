@@ -1,0 +1,8 @@
+- generic [active] [ref=e1]:
+  - img [ref=e2]
+  - generic [ref=e8]:
+    - img [ref=e9]:
+      - generic [ref=e13]: "%"
+      - generic [ref=e14]: "0"
+    - paragraph [ref=e15]: Move the cursor to sweep the lens.
+    - paragraph [ref=e16]: Hold & release the mouse button to expand & contract it.

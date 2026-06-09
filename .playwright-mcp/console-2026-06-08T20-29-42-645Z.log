@@ -1,0 +1,5 @@
+[     790ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ https://unpkg.com/react-dom@18/umd/react-dom.development.js:29904
+[     887ms] [WARNING] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/ @ https://unpkg.com/@babel/standalone/babel.min.js:2
+[    2404ms] [INFO] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: http://localhost:8732/graphics/assets/fonts/TheMurk-GrungeMatrix.otf @ :11108
+[    2445ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8732/graphics/assets/fonts/TheMurk-GrungeMatrix.otf:0
+[    2459ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8732/favicon.ico:0

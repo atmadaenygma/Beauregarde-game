@@ -2640,8 +2640,8 @@ function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,currentOutfit,
 
   const t=worldY/STAIR_TOTAL;
   const imgTop=-Math.round(STAIR_SCROLL*(1-t));
-  const charScale=1.0-t*0.48;                            // 1.0 at bottom → 0.52 at top (perspective)
-  const scaledCharH=Math.round(280*charScale);            // base 280px (30% bigger than previous 216)
+  const charScale=1.0-t*0.35;                            // 1.0 at bottom → 0.65 at top (gentler 4-flight perspective)
+  const scaledCharH=Math.round(400*charScale);            // base 400px → 260px at 4th floor spawn, 400px at ground
   const atBottom=worldY<=10;
   const atTop=worldY>=STAIR_TOTAL-10;
 

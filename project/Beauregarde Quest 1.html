@@ -2537,14 +2537,15 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
 // Full vertical movement scene. Video is portrait (720×1280) scaled to VW wide and
 // scrolled vertically as worldY changes. Scale mask (same dims, white=stairs/green=flat)
 // is sampled each frame to report surface type. charHeight shrinks as you climb (perspective).
-function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
-  const [worldY,  setWorldY]  = useState(0);
-  const [px,      setPx]      = useState(STAIR_CHAR_X_BOT); // horizontal position
+// spawnY: STAIR_TOTAL-50 = entering from 4th floor (top), 50 = entering from ground floor (bottom)
+function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+  const [worldY,  setWorldY]  = useState(spawnY);
+  const [px,      setPx]      = useState(STAIR_CHAR_X_BOT);
   const [walking, setWalking] = useState(false);
   const [running, setRunning] = useState(false);
   const [facing,  setFacing]  = useState('left');
   const [surface, setSurface] = useState('flat');
-  const worldYRef  = useRef(0);
+  const worldYRef  = useRef(spawnY);
   const pxRef      = useRef(STAIR_CHAR_X_BOT);
   const keys       = useRef({});
   const raf        = useRef(null);
@@ -7134,6 +7135,7 @@ function QuestApp(){
   const [moveRep,setMoveRep]=useState(100);
   const [fourthFloorSpawnX,setFourthFloorSpawnX]=useState(1035);
   const [elevatorHallSpawnX,setElevatorHallSpawnX]=useState(1100);
+  const [stairwellSpawnY,setStairwellSpawnY]=useState(STAIR_TOTAL-50); // top=4th floor, bottom=50
   const [showDevice,setShowDevice]=useState(false);
   const [isClosingDevice,setIsClosingDevice]=useState(false);
   const [videoLibUnlocked,setVideoLibUnlocked]=useState(()=>{
@@ -7334,12 +7336,14 @@ function QuestApp(){
         currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
         hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='elevator_hallway'&&<ElevatorHallwayScene
-        onStairwell={()=>go('apt_stairwell')} onElevator={()=>go('elevator')} onReturn={()=>{setFourthFloorSpawnX(100);go('fourth_floor_hallway');}}
+        onStairwell={()=>{setStairwellSpawnY(STAIR_TOTAL-50);go('apt_stairwell');}} onElevator={()=>go('elevator')} onReturn={()=>{setFourthFloorSpawnX(100);go('fourth_floor_hallway');}}
         spawnX={elevatorHallSpawnX}
         currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
         hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='apt_stairwell'&&<AptStairwellScene
-        onReturn={()=>{setElevatorHallSpawnX(663);go('elevator_hallway');}} onDown={()=>{setLobbySpawnX(191);go('lobby');}}
+        onReturn={()=>{setElevatorHallSpawnX(663);go('elevator_hallway');}}
+        onDown={()=>{setStairwellSpawnY(50);setLobbySpawnX(191);go('lobby');}}
+        spawnY={stairwellSpawnY}
         currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
         hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='lobby'&&<LobbyScene spawnX={lobbySpawnX} onExit={()=>{setStreetSpawnX(1245);go('street');}} currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}

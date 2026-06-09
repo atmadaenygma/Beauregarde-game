@@ -2538,11 +2538,14 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
 // scrolled vertically as worldY changes. Scale mask (same dims, white=stairs/green=flat)
 // is sampled each frame to report surface type. charHeight shrinks as you climb (perspective).
 function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
-  const [worldY,  setWorldY]  = useState(0);   // 0=ground exit, STAIR_TOTAL=upper exit
+  const [worldY,  setWorldY]  = useState(0);
+  const [px,      setPx]      = useState(STAIR_CHAR_X_BOT); // horizontal position
   const [walking, setWalking] = useState(false);
   const [running, setRunning] = useState(false);
-  const [surface, setSurface] = useState('flat'); // 'stair' | 'flat'
+  const [facing,  setFacing]  = useState('left');
+  const [surface, setSurface] = useState('flat');
   const worldYRef  = useRef(0);
+  const pxRef      = useRef(STAIR_CHAR_X_BOT);
   const keys       = useRef({});
   const raf        = useRef(null);
   const maskCtxRef = useRef(null);
@@ -2567,7 +2570,7 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
     if(!ctx)return 'flat';
     const t=worldYRef.current/STAIR_TOTAL;
     const imgTop=-Math.round(STAIR_SCROLL*(1-t));
-    const charScreenX=Math.round(STAIR_CHAR_X_BOT+(STAIR_CHAR_X_TOP-STAIR_CHAR_X_BOT)*t);
+    const charScreenX=pxRef.current;
     const vy=VH-STAIR_CHAR_BOT;           // character feet in viewport coords (from top)
     const displayY=vy-imgTop;             // position in displayed video (from display top)
     const maskX=Math.round(charScreenX*720/VW);
@@ -2594,27 +2597,39 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
     return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
   },[onDown,onReturn]);
 
-  // RAF loop — vertical movement only (↑/W and ↓/S)
+  // RAF loop — vertical (↑↓) and horizontal (←→) movement
   useEffect(()=>{
     const loop=()=>{
       if(!hudOpen){
-        const up  =keys.current['ArrowUp']  ||keys.current['KeyW'];
-        const down=keys.current['ArrowDown']||keys.current['KeyS'];
+        const up   =keys.current['ArrowUp']   ||keys.current['KeyW'];
+        const down =keys.current['ArrowDown'] ||keys.current['KeyS'];
+        const left =keys.current['ArrowLeft'] ||keys.current['KeyA'];
+        const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const isRun=keys.current['ShiftRight']&&stamina>0;
         const spd=isRun?STAIR_SPD_BASE*1.9:STAIR_SPD_BASE;
+        const hSpd=spd*0.8; // horizontal speed slightly slower on stairs
+        let moved=false;
         if(up){
           worldYRef.current=Math.min(STAIR_TOTAL,worldYRef.current+spd);
           setWorldY(worldYRef.current);setWalking(true);setRunning(isRun);
           if(isRun)onStaminaChange?.(s=>Math.max(0,s-0.12));
-          setSurface(sampleSurface());
+          moved=true;
         }else if(down){
           worldYRef.current=Math.max(0,worldYRef.current-spd);
           setWorldY(worldYRef.current);setWalking(true);setRunning(false);
-          setSurface(sampleSurface());
-        }else{
-          setWalking(false);setRunning(false);
-          if(stamina<100)onStaminaChange?.(s=>Math.min(100,s+0.5));
+          moved=true;
         }
+        if(left){
+          pxRef.current=Math.max(60,pxRef.current-hSpd);
+          setPx(pxRef.current);setFacing('left');if(!up&&!down){setWalking(true);setRunning(false);}
+          moved=true;
+        }else if(right){
+          pxRef.current=Math.min(VW-60,pxRef.current+hSpd);
+          setPx(pxRef.current);setFacing('right');if(!up&&!down){setWalking(true);setRunning(false);}
+          moved=true;
+        }
+        if(!moved){setWalking(false);setRunning(false);if(stamina<100)onStaminaChange?.(s=>Math.min(100,s+0.5));}
+        if(moved)setSurface(sampleSurface());
       }else{setWalking(false);setRunning(false);}
       raf.current=requestAnimationFrame(loop);
     };
@@ -2623,10 +2638,9 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
   },[hudOpen,stamina,sampleSurface]);
 
   const t=worldY/STAIR_TOTAL;
-  const imgTop=-Math.round(STAIR_SCROLL*(1-t));          // video CSS top offset (px, negative)
-  const charScreenX=Math.round(STAIR_CHAR_X_BOT+(STAIR_CHAR_X_TOP-STAIR_CHAR_X_BOT)*t);
-  const charScale=1.0-t*0.48;                            // 1.0 at bottom → 0.52 at top
-  const scaledCharH=Math.round(308*charScale);
+  const imgTop=-Math.round(STAIR_SCROLL*(1-t));
+  const charScale=1.0-t*0.48;                            // 1.0 at bottom → 0.52 at top (perspective)
+  const scaledCharH=Math.round(308*0.70*charScale);      // 30% smaller base size
   const atBottom=worldY<=10;
   const atTop=worldY>=STAIR_TOTAL-10;
 
@@ -2645,13 +2659,12 @@ function AptStairwellScene({onReturn,onDown,currentOutfit,debug,debugGo,stamina,
         {surface.toUpperCase()}
       </div>
 
-      {/* Character — scale via charHeight, diagonal X shift via charX */}
-      <Char facing="left" walking={walking} running={running}
-        charX={charScreenX} charHeight={scaledCharH} charBottom={STAIR_CHAR_BOT}
+      <Char facing={facing} walking={walking} running={running}
+        charX={px} charHeight={scaledCharH} charBottom={STAIR_CHAR_BOT}
         currentOutfit={currentOutfit}/>
 
       <SceneLabel label="STAIRWELL — OAKWOOD ARMS"/>
-      <Controls hints={[['↑↓','CLIMB'],['SHIFT','RUN'],['E','EXIT'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      <Controls hints={[['↑↓','CLIMB'],['← →','MOVE'],['SHIFT','RUN'],['E','EXIT'],['I','INVENTORY'],['TAB','DEBUG']]}/>
       {debug&&<DebugOverlay px={Math.round(t*VW)} scene="apt_stairwell" onSceneChange={debugGo}/>}
     </div>
   );

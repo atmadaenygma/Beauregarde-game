@@ -56,7 +56,7 @@ Each sidebar section has a **?** badge that expands an inline tip.
 | GAME DIALOGUE | Override hardcoded game conversation keys (✓ = kit version exists). |
 | QUESTS | Quest metadata + step graph + world wiring. |
 | ITEMS | Item registry — every key item, referenced everywhere. |
-| **VARIABLES** | **The world's memory — flags, ints, enums, keywords. (see §6)** |
+| **VARIABLES** | **The world's memory — flags, ints, enums, keywords. (see §7)** |
 | TOOLS | SCENE, SPAWN_POINT, INVENTORY, TRIGGER, ITEM, LEVEL drag-out nodes. |
 | NODE LIBRARY | Every node placed across all graphs, re-draggable. |
 
@@ -80,7 +80,53 @@ flow `#7a7090`, item `#a06890`, trigger `#e05030`, exit `#e0a020`.
 
 ---
 
-## 5. MEDIA / FILE PATHS
+## 5. SCENE NODE — POPOVER TABS
+
+The SCENE node's popover (`ScenePopover`) shows up to four tabs depending on
+the scene's settings:
+
+- **INFO** — always shown. Scene ID (dropdown of `KNOWN_SCENES`),
+  atmosphere/fog text, Octavia spawn `worldX`, optional trigger `worldX`,
+  **SCENE TYPE** (neutral / store / combat / elevator — elevator adds a FLOOR
+  field), **MUSIC CUE** (pick from the audio registry), and **SCENE MODE**
+  (map / cinematic).
+- **CHARACTERS** — always shown. Per-character `worldX` spawn; alignment is
+  read-only, taken from the character's own profile.
+- **STORE** — shown only when SCENE TYPE = store. See below.
+- **VIDEO** — shown only when SCENE MODE = cinematic. See below.
+
+### STORE tab — SHOPPING MODE
+Pick how the player buys here (`storeMode`):
+- **POINT & CLICK** (`pointclick`) — items sit on screen at `x`/`y`; the
+  player hovers a shelf item → popover → add to cart (StoreBrowse).
+- **TALK TO CLERK** (`clerk`, default) — dialogue-driven purchase menu
+  (pharmacy-style). Each item has a `location`: `counter` (stealable) or
+  `clerk` (NPC-held), plus a `worldX`.
+- **BOTH** — both interaction styles; fill in all fields per item.
+
+Every store item also has a **PRICE** (`price`, integer).
+
+### VIDEO tab — cinematic scenes
+Shown when SCENE MODE = cinematic:
+- **VIDEO — REGULAR** (`cinematicClips.cyber_octavia`) and **VIDEO — HOODIE**
+  (`cinematicClips.hoodie`, falls back to the regular clip if blank) — one
+  video file per outfit.
+- **VIDEO CUES** (`cinematicCues[]`) — named time ranges `{name, from, to}` in
+  seconds (use DevTools: pause the video, read `video.currentTime`).
+  `from === to` holds on that frame.
+
+> ⚠ **Not yet wired to export.** `storeMode`, `sceneMode`, `cinematicClips`,
+> `cinematicCues`, and the per-scene `musicCue` are saved on the SCENE node
+> (and persist via `localStorage`/kit save) but **EXPORT TO GAME currently does
+> not copy them into `scenesOut`** — they don't reach `beauregarde_data.json`
+> yet. `storeItems[]` (with `price`/`location`/`worldX`/`x`/`y`) IS exported,
+> since it's passed through as-is. Until the export mapping is updated, the
+> game can't read SCENE MODE, cinematic clips/cues, shopping mode, or
+> per-scene music cues.
+
+---
+
+## 6. MEDIA / FILE PATHS
 
 Any media field (portraits, HUD icons, level backgrounds, masks, 360 videos) uses the
 **MediaPicker**. Paste a full Windows path, e.g.:
@@ -100,7 +146,7 @@ The **📁** button opens a picker for visual confirmation only — you still pa
 
 ---
 
-## 6. VARIABLES — THE CORE OF SCALE
+## 7. VARIABLES — THE CORE OF SCALE
 
 **This is the most important system.** It is what makes a large reactive narrative
 possible without the game growing new code for every story beat.
@@ -136,7 +182,7 @@ possible without the game growing new code for every story beat.
 
 ---
 
-## 7. CONDITION GRAMMAR
+## 8. CONDITION GRAMMAR
 
 Conditions live on a dialogue tree's PLAY CONDITIONS (per-tree for now; per-option is
 roadmap #2). Every condition is `{id, negate, type, ...}`:
@@ -157,7 +203,7 @@ internally, but the game looks up by the permanent snake_case key).
 
 ---
 
-## 8. QUESTS (three layers)
+## 9. QUESTS (three layers)
 
 1. **Metadata** (always exports): name, major/minor, category, status, progress (HUD
    status line), description (HUD info paragraph). Plus **item gates**: `requiredItems`
@@ -174,7 +220,7 @@ locked), and REWARDS.
 
 ---
 
-## 9. EXPORT — `beauregarde_data.json` SCHEMA
+## 10. EXPORT — `beauregarde_data.json` SCHEMA
 
 ```jsonc
 {
@@ -189,6 +235,10 @@ locked), and REWARDS.
                            nodes[], playCount, playLimit, conditions[] } },
   "scenes":  [{ id,name,atmosphere,sceneType,octaviaWorldX,elevatorFloor,
                 chars[], storeItems[], dialogueTrigger }],
+             //   storeItems[] entries: {name,price,location,worldX,x,y} per
+             //   the STORE tab's SHOPPING MODE (§5). storeMode, sceneMode,
+             //   cinematicClips, cinematicCues, and per-scene musicCue are
+             //   authored in the kit but NOT in this export yet (§5).
   "spawns":  [{ id, charId, worldX }],
   "levels":  { "<name>": { background, mapWidth, mapHeight, scale, sceneType,
                            atmosphere, musicCue, playerSpawn, npcSpawns[], exits[] } },
@@ -209,7 +259,7 @@ locked), and REWARDS.
 
 ---
 
-## 10. AI ASSISTANT (✦ AI)
+## 11. AI ASSISTANT (✦ AI)
 
 - Slide-in panel. Needs an Anthropic API key (stored in localStorage only).
 - **REFERENCES** tab: upload `.txt/.md/.csv` (excerpted into context) or `.pdf` (sent
@@ -218,7 +268,7 @@ locked), and REWARDS.
 
 ---
 
-## 11. CUTSCENE SYSTEM
+## 12. CUTSCENE SYSTEM
 
 Cutscenes are dialogue trees with `treeType:'cutscene'`. Create one by:
 1. Adding a Dialogue Tree in the sidebar and cycling its badge (type) to **C** (CUTSCENE).
@@ -277,12 +327,6 @@ Cutscenes export under `"cutscenes"` in `beauregarde_data.json`:
 The game reads this with a `CutscenePlayer` component (planned) that walks the node array
 using the same `next` pointer system as dialogue trees, using the existing typewriter,
 glitch, fade, and video rendering already built into the game.
-
----
-
-## 12. AI ASSISTANT (✦ AI)
-
-*(same as §10 above — renumbered)*
 
 ---
 

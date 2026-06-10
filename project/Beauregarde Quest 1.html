@@ -158,15 +158,22 @@ const EXTERIOR_IMG    = '../graphics/maps/the_veil/move_block/residential_zone/a
 const FOURTH_FLOOR_HALLWAY_VID = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/fourth_floor_hallway.mp4';
 const ELEVATOR_HALLWAY_VID     = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/elevator_hallway_.mp4';
 const APT_STAIRWELL_VID        = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/apt_stairwell.mp4';
-const APT_STAIRWELL_MASK       = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/apt_stairwell_with_walk_scale_mask.png';
+const APT_STAIRWELL_MASK       = '../graphics/maps/the_veil/move_block/residential_zone/apartment_building/hallway/01_apt_stairwell_with_walk_scale_mask.png';
 // Stairwell scroll constants (video is 720×1280 portrait; displayed at VW wide, scrolled vertically)
-const STAIR_TOTAL    = 1800;                             // worldY range: 0=ground floor, 1800=upper floor
-const STAIR_SPD_BASE = 2.8;                              // climb speed px/frame
-const STAIR_DISP_H   = Math.round(VW * 1280 / 720);     // displayed video height ≈ 2276px
-const STAIR_SCROLL   = STAIR_DISP_H - VH;               // total vertical scroll range ≈ 1556px
-const STAIR_CHAR_BOT = Math.round(VH * 0.22);           // feet position from screen bottom
-const STAIR_CHAR_X_BOT = Math.round(VW * 0.56);         // charX at ground (aligns with stair path)
-const STAIR_CHAR_X_TOP = Math.round(VW * 0.48);         // charX at top (slight left shift = diagonal)
+const STAIR_TOTAL    = 1800;                             // worldY range: 0=ground, 1800=top
+const STAIR_WORLD_W  = 1800;                             // worldX range (symmetric with Y)
+const STAIR_SPD_BASE = 2.8;
+const STAIR_BG_W     = Math.round(VW * 1.5);            // bg wider than viewport → allows H scroll ≈ 1920px
+const STAIR_BG_H     = Math.round(STAIR_BG_W * 1280/720); // keep aspect ratio ≈ 3413px
+const STAIR_SCROLL_X = STAIR_BG_W - VW;                 // max cam X offset ≈ 640px
+const STAIR_SCROLL_Y = STAIR_BG_H - VH;                 // max cam Y offset ≈ 2693px
+const STAIR_CHAR_BOT = Math.round(VH * 0.22);           // feet from screen bottom
+// Door positions in world coords — tune these once you see the video
+const STAIR_DOOR_TOP_X  = Math.round(STAIR_WORLD_W * 0.50); // 4th floor door (→ elevator hallway)
+const STAIR_DOOR_BOT_X  = Math.round(STAIR_WORLD_W * 0.50); // ground floor door (→ lobby)
+const STAIR_DOOR_RANGE  = 300;                               // X proximity window for exit trigger
+const STAIR_DROP_SPD    = 14;                                // fast fall speed (world-units/frame)
+const STAIR_LAND_MS     = 180;                               // landing pause before input resumes
 const DEVICE_HUD_IMG  = '../graphics/assets/ui/device_hud/device_frame.png';
 const DEVICE_MASK_IMG = '../graphics/assets/ui/device_hud/smartphone_mask_black_white.png';
 // In-game HUD (always-on bottom-left device). The mask's white region defines the
@@ -2538,15 +2545,17 @@ function ElevatorHallwayScene({onStairwell,onElevator,onReturn,spawnX=1100,curre
 // scrolled vertically as worldY changes. Scale mask (same dims, white=stairs/green=flat)
 // is sampled each frame to report surface type. charHeight shrinks as you climb (perspective).
 // spawnY: STAIR_TOTAL-50 = entering from 4th floor (top), 50 = entering from ground floor (bottom)
-function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,spawnX=STAIR_WORLD_W/2,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
   const [worldY,  setWorldY]  = useState(spawnY);
-  const [px,      setPx]      = useState(STAIR_CHAR_X_BOT);
-  const [walking, setWalking] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [facing,  setFacing]  = useState('left');
-  const [surface, setSurface] = useState('flat');
-  const worldYRef  = useRef(spawnY);
-  const pxRef      = useRef(STAIR_CHAR_X_BOT);
+  const [worldX,  setWorldX]  = useState(spawnX);
+  const [walking,   setWalking]   = useState(false);
+  const [running,   setRunning]   = useState(false);
+  const [facing,    setFacing]    = useState('left');
+  const [surface,   setSurface]   = useState('empty');
+  const [dropPhase, setDropPhase] = useState('none'); // 'none'|'falling'|'landing'
+  const worldYRef   = useRef(spawnY);
+  const worldXRef   = useRef(spawnX);
+  const dropPhaseRef= useRef('none');
   const keys       = useRef({});
   const raf        = useRef(null);
   const maskCtxRef = useRef(null);
@@ -2564,23 +2573,26 @@ function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,currentOutfit,
     img.src=APT_STAIRWELL_MASK;
   },[]);
 
-  // Sample mask at character screen position → 'stair' | 'flat'
-  // Video CSS top = imgTop (negative). Display Y of a viewport point vy = vy - imgTop.
+  // Sample mask at character world position → 'stair' | 'flat'
+  // Camera offsets: camX = tx*STAIR_SCROLL_X, camY = (1-t)*STAIR_SCROLL_Y
+  // Character feet in display-space: (camX + VW/2,  camY + VH - STAIR_CHAR_BOT)
   const sampleSurface=useCallback(()=>{
     const ctx=maskCtxRef.current;
     if(!ctx)return 'flat';
-    const t=worldYRef.current/STAIR_TOTAL;
-    const imgTop=-Math.round(STAIR_SCROLL*(1-t));
-    const charScreenX=pxRef.current;
-    const vy=VH-STAIR_CHAR_BOT;           // character feet in viewport coords (from top)
-    const displayY=vy-imgTop;             // position in displayed video (from display top)
-    const maskX=Math.round(charScreenX*720/VW);
-    const maskY=Math.round(displayY*1280/STAIR_DISP_H);
+    const t  = worldYRef.current / STAIR_TOTAL;
+    const tx = worldXRef.current / STAIR_WORLD_W;
+    const camX = tx * STAIR_SCROLL_X;
+    const camY = (1 - t) * STAIR_SCROLL_Y;
+    const dispX = camX + VW / 2;
+    const dispY = camY + VH - STAIR_CHAR_BOT;
+    const maskX = Math.round(dispX * 720  / STAIR_BG_W);
+    const maskY = Math.round(dispY * 1280 / STAIR_BG_H);
     if(maskX<0||maskX>=720||maskY<0||maskY>=1280)return 'flat';
     const [R,G,B]=ctx.getImageData(maskX,maskY,1,1).data;
-    if(R>200&&G>200&&B>200)return 'stair';
-    if(G>150&&R<100&&B<100)return 'flat';
-    return 'flat';
+    if(R>200&&G>200&&B>200) return 'stair';   // white  — stair flight
+    if(G>200&&R<50 &&B<50)  return 'flat';    // green  — flat landing (droppable)
+    if(B>150&&R<50 &&G<50)  return 'solid';   // blue   — ground floor (hard stop)
+    return 'empty';                            // black  — air / walls
   },[]);
 
   // Key handlers — E exits at boundaries
@@ -2598,17 +2610,42 @@ function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,currentOutfit,
     return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
   },[onDown,onReturn]);
 
-  // RAF loop — vertical (↑↓) and horizontal (←→) movement
+  // RAF loop — vertical (↑↓), horizontal (←→), and drop-down phases
   useEffect(()=>{
     const loop=()=>{
       if(!hudOpen){
+
+        // ── DROP FALLING phase ────────────────────────────────────
+        if(dropPhaseRef.current==='falling'){
+          worldYRef.current=Math.max(0,worldYRef.current-STAIR_DROP_SPD);
+          setWorldY(worldYRef.current);
+          setWalking(true);setRunning(false);
+          const surf=sampleSurface();
+          setSurface(surf);
+          if(surf!=='empty'||worldYRef.current<=0){
+            dropPhaseRef.current='landing';setDropPhase('landing');
+            setWalking(false);
+            setTimeout(()=>{dropPhaseRef.current='none';setDropPhase('none');},STAIR_LAND_MS);
+          }
+          raf.current=requestAnimationFrame(loop);
+          return;
+        }
+
+        // ── LANDING phase — block all input ──────────────────────
+        if(dropPhaseRef.current==='landing'){
+          setWalking(false);setRunning(false);
+          raf.current=requestAnimationFrame(loop);
+          return;
+        }
+
+        // ── NORMAL movement ───────────────────────────────────────
         const up   =keys.current['ArrowUp']   ||keys.current['KeyW'];
         const down =keys.current['ArrowDown'] ||keys.current['KeyS'];
         const left =keys.current['ArrowLeft'] ||keys.current['KeyA'];
         const right=keys.current['ArrowRight']||keys.current['KeyD'];
         const isRun=keys.current['ShiftRight']&&stamina>0;
         const spd=isRun?STAIR_SPD_BASE*1.9:STAIR_SPD_BASE;
-        const hSpd=spd*0.8; // horizontal speed slightly slower on stairs
+        const currentSurf=sampleSurface();  // sample once, reuse for down-key decision
         let moved=false;
         if(up){
           worldYRef.current=Math.min(STAIR_TOTAL,worldYRef.current+spd);
@@ -2616,21 +2653,30 @@ function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,currentOutfit,
           if(isRun)onStaminaChange?.(s=>Math.max(0,s-0.12));
           moved=true;
         }else if(down){
-          worldYRef.current=Math.max(0,worldYRef.current-spd);
-          setWorldY(worldYRef.current);setWalking(true);setRunning(false);
-          moved=true;
+          if(currentSurf==='flat'){
+            // Standing on a green landing → start drop
+            dropPhaseRef.current='falling';setDropPhase('falling');
+          }else if(currentSurf!=='solid'){
+            // On stairs or air → normal downward movement
+            worldYRef.current=Math.max(0,worldYRef.current-spd);
+            setWorldY(worldYRef.current);setWalking(true);setRunning(false);
+            moved=true;
+          }
+          // 'solid' (blue floor) → down blocked
         }
         if(left){
-          pxRef.current=Math.max(60,pxRef.current-hSpd);
-          setPx(pxRef.current);setFacing('left');if(!up&&!down){setWalking(true);setRunning(false);}
+          worldXRef.current=Math.max(0,worldXRef.current-spd);
+          setWorldX(worldXRef.current);setFacing('left');
+          if(!up&&!down){setWalking(true);setRunning(false);}
           moved=true;
         }else if(right){
-          pxRef.current=Math.min(VW-60,pxRef.current+hSpd);
-          setPx(pxRef.current);setFacing('right');if(!up&&!down){setWalking(true);setRunning(false);}
+          worldXRef.current=Math.min(STAIR_WORLD_W,worldXRef.current+spd);
+          setWorldX(worldXRef.current);setFacing('right');
+          if(!up&&!down){setWalking(true);setRunning(false);}
           moved=true;
         }
         if(!moved){setWalking(false);setRunning(false);if(stamina<100)onStaminaChange?.(s=>Math.min(100,s+0.5));}
-        if(moved)setSurface(sampleSurface());
+        setSurface(currentSurf);
       }else{setWalking(false);setRunning(false);}
       raf.current=requestAnimationFrame(loop);
     };
@@ -2638,35 +2684,48 @@ function AptStairwellScene({onReturn,onDown,spawnY=STAIR_TOTAL-50,currentOutfit,
     return()=>cancelAnimationFrame(raf.current);
   },[hudOpen,stamina,sampleSurface]);
 
-  const t=worldY/STAIR_TOTAL;
-  const imgTop=-Math.round(STAIR_SCROLL*(1-t));
-  const charScale=1.0-t*0.35;                            // 1.0 at bottom → 0.65 at top (gentler 4-flight perspective)
-  const scaledCharH=Math.round(400*charScale);            // base 400px → 260px at 4th floor spawn, 400px at ground
-  const atBottom=worldY<=10;
-  const atTop=worldY>=STAIR_TOTAL-10;
+  // 2D camera: both axes follow world position, background scrolls in both directions
+  const t   = worldY / STAIR_TOTAL;
+  const tx  = worldX / STAIR_WORLD_W;
+  const camX = Math.round(tx  * STAIR_SCROLL_X);          // 0 → STAIR_SCROLL_X as worldX increases
+  const camY = Math.round((1-t) * STAIR_SCROLL_Y);        // high worldY = cam up = smaller camY
+  const charScale  = 1.0 - t * 0.35;
+  const scaledCharH= Math.round(400 * charScale);
+  const atBottom   = worldY <= 10       && Math.abs(worldX - STAIR_DOOR_BOT_X) < STAIR_DOOR_RANGE;
+  const atTop      = worldY >= STAIR_TOTAL - 10 && Math.abs(worldX - STAIR_DOOR_TOP_X) < STAIR_DOOR_RANGE;
 
   return(
     <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:'#060708'}}>
-      {/* Portrait video scrolled vertically — fills viewport width, pans up as worldY increases */}
+      {/* Background scrolls on both axes: left=-camX, top=-camY */}
       <video src={APT_STAIRWELL_VID} autoPlay muted loop playsInline
-        style={{position:'absolute',left:0,top:`${imgTop}px`,width:`${VW}px`,height:`${STAIR_DISP_H}px`,objectFit:'fill',zIndex:0}}/>
+        style={{position:'absolute',left:`${-camX}px`,top:`${-camY}px`,width:`${STAIR_BG_W}px`,height:`${STAIR_BG_H}px`,objectFit:'fill',zIndex:0}}/>
 
       {/* Exit prompts */}
       {atBottom&&<div style={{position:'absolute',bottom:STAIR_CHAR_BOT+60,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] GROUND FLOOR"/></div>}
       {atTop&&<div style={{position:'absolute',bottom:STAIR_CHAR_BOT+60,left:'50%',transform:'translateX(-50%)',zIndex:300}}><Prompt text="[ E ] ELEVATOR HALL"/></div>}
 
-      {/* Surface type indicator */}
-      <div style={{position:'absolute',top:18,right:18,zIndex:200,fontFamily:"'TheMurk',monospace",fontSize:8,letterSpacing:2,color:surface==='stair'?C.gold:C.dim,opacity:0.65,pointerEvents:'none'}}>
+      {/* Surface type indicator — colour per surface type */}
+      <div style={{position:'absolute',top:18,right:18,zIndex:200,fontFamily:"'TheMurk',monospace",fontSize:8,letterSpacing:2,
+        color:surface==='stair'?C.gold:surface==='flat'?'#00ff44':surface==='solid'?'#4488ff':C.dim,
+        opacity:0.65,pointerEvents:'none'}}>
         {surface.toUpperCase()}
       </div>
 
+      {/* Drop prompt — shown on green landing only, not during drop or at solid floor */}
+      {surface==='flat'&&dropPhase==='none'&&(
+        <div style={{position:'absolute',bottom:STAIR_CHAR_BOT+50,left:'50%',transform:'translateX(-50%)',zIndex:300}}>
+          <Prompt text="↓  DROP"/>
+        </div>
+      )}
+
+      {/* Octavia always at screen center (camera hard-follows) */}
       <Char facing={facing} walking={walking} running={running}
-        charX={px} charHeight={scaledCharH} charBottom={STAIR_CHAR_BOT}
+        charX={Math.round(VW/2)} charHeight={scaledCharH} charBottom={STAIR_CHAR_BOT}
         currentOutfit={currentOutfit}/>
 
       <SceneLabel label="STAIRWELL — OAKWOOD ARMS"/>
-      <Controls hints={[['↑↓','CLIMB'],['← →','MOVE'],['SHIFT','RUN'],['E','EXIT'],['I','INVENTORY'],['TAB','DEBUG']]}/>
-      {debug&&<DebugOverlay px={Math.round(t*VW)} scene="apt_stairwell" onSceneChange={debugGo}/>}
+      <Controls hints={[['↑↓','CLIMB'],['← →','MOVE'],['↓ LAND','DROP'],['SHIFT','RUN'],['E','EXIT'],['I','INVENTORY'],['TAB','DEBUG']]}/>
+      {debug&&<DebugOverlay px={Math.round(tx*VW)} scene="apt_stairwell" onSceneChange={debugGo}/>}
     </div>
   );
 }
@@ -7135,7 +7194,8 @@ function QuestApp(){
   const [moveRep,setMoveRep]=useState(100);
   const [fourthFloorSpawnX,setFourthFloorSpawnX]=useState(1035);
   const [elevatorHallSpawnX,setElevatorHallSpawnX]=useState(1100);
-  const [stairwellSpawnY,setStairwellSpawnY]=useState(STAIR_TOTAL-50); // top=4th floor, bottom=50
+  const [stairwellSpawnY,setStairwellSpawnY]=useState(STAIR_TOTAL-50);
+  const [stairwellSpawnX,setStairwellSpawnX]=useState(STAIR_DOOR_TOP_X);
   const [showDevice,setShowDevice]=useState(false);
   const [isClosingDevice,setIsClosingDevice]=useState(false);
   const [videoLibUnlocked,setVideoLibUnlocked]=useState(()=>{
@@ -7336,14 +7396,14 @@ function QuestApp(){
         currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
         hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='elevator_hallway'&&<ElevatorHallwayScene
-        onStairwell={()=>{setStairwellSpawnY(STAIR_TOTAL-50);go('apt_stairwell');}} onElevator={()=>go('elevator')} onReturn={()=>{setFourthFloorSpawnX(100);go('fourth_floor_hallway');}}
+        onStairwell={()=>{setStairwellSpawnY(STAIR_TOTAL-50);setStairwellSpawnX(STAIR_DOOR_TOP_X);go('apt_stairwell');}} onElevator={()=>go('elevator')} onReturn={()=>{setFourthFloorSpawnX(100);go('fourth_floor_hallway');}}
         spawnX={elevatorHallSpawnX}
         currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
         hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='apt_stairwell'&&<AptStairwellScene
         onReturn={()=>{setElevatorHallSpawnX(663);go('elevator_hallway');}}
-        onDown={()=>{setStairwellSpawnY(50);setLobbySpawnX(191);go('lobby');}}
-        spawnY={stairwellSpawnY}
+        onDown={()=>{setStairwellSpawnX(STAIR_DOOR_BOT_X);setStairwellSpawnY(50);setLobbySpawnX(191);go('lobby');}}
+        spawnY={stairwellSpawnY} spawnX={stairwellSpawnX}
         currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
         hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='lobby'&&<LobbyScene spawnX={lobbySpawnX} onExit={()=>{setStreetSpawnX(1245);go('street');}} currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}

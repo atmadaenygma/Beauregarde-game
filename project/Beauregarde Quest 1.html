@@ -326,6 +326,15 @@ const CONV={
       {t:"(nod)",                         next:null,muted:true},
     ]},
   ],
+  playground_npc:[
+    {id:'p0',npc:"Test NPC online. Dialogue tree is working.",opts:[
+      {t:"Good to know.",                 next:'p1'},
+      {t:"(walk away)",                   next:null,muted:true},
+    ]},
+    {id:'p1',npc:"Try the SHOP, the STAIRS, or the EXAMINE marker next.",opts:[
+      {t:"Will do.",                      next:null},
+    ]},
+  ],
   guard_talk:[
     {id:'s0',npc:"Keep it moving.",opts:[
       {t:"Right. Sorry.",                 next:null},
@@ -1064,8 +1073,13 @@ function CineDialogBox({speaker,text,opts,sel,onSel,onConfirm}){
 function Fade({on}){return<div style={{position:'absolute',inset:0,zIndex:600,background:C.bg,opacity:on?1:0,transition:'opacity .65s ease',pointerEvents:'none'}}/>;}
 function SceneLabel({label}){return(<div style={{position:'absolute',top:14,left:'50%',transform:'translateX(-50%)',color:C.dim,fontSize:7,letterSpacing:4,zIndex:300,fontFamily:"'TheMurk',monospace"}}>{label}</div>);}
 function Controls({hints}){return(<div style={{position:'absolute',bottom:18,right:20,zIndex:300,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}}>{hints.map(([k,v])=>(<div key={k} style={{display:'flex',gap:8,alignItems:'center'}}><span style={{color:C.dim,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>{v}</span><span style={{color:C.text,fontSize:8,fontFamily:"'TheMurk',monospace",border:`1px solid ${C.border}`,padding:'1px 7px',background:C.panel}}>{k}</span></div>))}</div>);}
-function DebugOverlay({px,scene,onSceneChange}){
-  const SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store'];
+// Scenes that render weather overlays/audio and surface WEATHER debug controls
+const WEATHER_SCENES=new Set(['street']);
+const WEATHER_TYPES=['none','rain','snow','hail'];
+const WEATHER_AUDIO={rain:'../audio/sfx/ambient/rain/heavy_rain.mp3'};
+
+function DebugOverlay({px,scene,onSceneChange,weatherType,onWeatherTypeChange,weatherIntensity,onWeatherIntensityChange,lightningEnabled,onLightningToggle,weatherAudioEnabled,onWeatherAudioToggle,weatherAudioVolume,onWeatherAudioVolumeChange}){
+  const SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store','playground'];
   const linkStyle={color:'#00ff88',fontSize:8,letterSpacing:1,cursor:'pointer',textDecoration:'none',display:'block',lineHeight:2,opacity:.75};
   return(<div style={{position:'absolute',top:34,left:16,zIndex:700,fontFamily:"'TheMurk',monospace",fontSize:8,lineHeight:2,color:'#00ff88',background:'rgba(0,0,0,0.75)',padding:'4px 12px',letterSpacing:1,borderLeft:'2px solid #00ff8855'}}>
     <div>SCENE: <select value={scene} onChange={(e)=>onSceneChange?.(e.target.value)} style={{background:C.panel,color:'#00ff88',border:'1px solid #00ff88',fontFamily:"'TheMurk',monospace",fontSize:8,padding:'2px 4px',cursor:'pointer'}}>
@@ -1073,6 +1087,19 @@ function DebugOverlay({px,scene,onSceneChange}){
     </select></div>
     <div>WORLD X: {Math.round(px)}</div>
     <div>CHAR SCREEN: {VW/2} , {VH/2}</div>
+    {WEATHER_SCENES.has(scene)&&<div style={{borderTop:'1px solid #00ff8833',marginTop:2,paddingTop:2}}>
+      <div>WEATHER: <select value={weatherType} onChange={(e)=>onWeatherTypeChange?.(e.target.value)} style={{background:C.panel,color:'#00ff88',border:'1px solid #00ff88',fontFamily:"'TheMurk',monospace",fontSize:8,padding:'2px 4px',cursor:'pointer'}}>
+        {WEATHER_TYPES.map(t=><option key={t} value={t}>{t.toUpperCase()}</option>)}
+      </select></div>
+      {weatherType!=='none'&&<div>INTENSITY: {weatherIntensity}<br/><input type="range" min="0" max="100" value={weatherIntensity}
+        onChange={(e)=>onWeatherIntensityChange?.(Number(e.target.value))} style={{verticalAlign:'middle'}}/></div>}
+      {weatherType==='rain'&&<div><label style={{cursor:'pointer'}}><input type="checkbox" checked={lightningEnabled}
+        onChange={(e)=>onLightningToggle?.(e.target.checked)}/> LIGHTNING</label></div>}
+      {WEATHER_AUDIO[weatherType]&&<div><label style={{cursor:'pointer'}}><input type="checkbox" checked={weatherAudioEnabled}
+        onChange={(e)=>onWeatherAudioToggle?.(e.target.checked)}/> AMBIENT SOUND</label></div>}
+      {WEATHER_AUDIO[weatherType]&&weatherAudioEnabled&&<div>VOL: {weatherAudioVolume}<br/><input type="range" min="0" max="100" value={weatherAudioVolume}
+        onChange={(e)=>onWeatherAudioVolumeChange?.(Number(e.target.value))} style={{verticalAlign:'middle'}}/></div>}
+    </div>}
     <div style={{borderTop:'1px solid #00ff8833',marginTop:2,paddingTop:2}}>
       <a href="Beauregarde Quest Editor.html" target="_blank" rel="noopener" style={linkStyle}>↗ QUEST EDITOR</a>
       <a href="Beauregarde Threads.html"      target="_blank" rel="noopener" style={linkStyle}>↗ THREADS VIEWER</a>
@@ -2744,7 +2771,129 @@ const STR_LOCS=[
   {id:'restaurant',  xMin:1497, xMax:1529, label:'RESTAURANT'},
 ];
 
-function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant,onAlleyWay,inventory,onUseItem,heartNum,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false}){
+// Weather particle canvas overlay (rain/snow/hail). Particle count/speed/opacity scale with intensity (0-100).
+function WeatherOverlay({type,intensity}){
+  const canvasRef=useRef(null);
+  useEffect(()=>{
+    if(type==='none'||intensity<=0)return;
+    const canvas=canvasRef.current;
+    const ctx=canvas.getContext('2d');
+    let particles;
+    if(type==='snow'){
+      const count=Math.floor(intensity*1.5);
+      particles=Array.from({length:count},()=>({
+        x:Math.random()*VW,
+        y:Math.random()*VH,
+        r:1+Math.random()*3,
+        speed:0.5+Math.random()*1.5,
+        phase:Math.random()*1000,
+        opacity:0.4+Math.random()*0.5,
+      }));
+    }else if(type==='hail'){
+      const count=Math.floor(intensity*2);
+      particles=Array.from({length:count},()=>({
+        x:Math.random()*VW,
+        y:Math.random()*VH,
+        len:4+Math.random()*8,
+        speed:(14+Math.random()*10)*(0.5+intensity/100),
+        opacity:(0.2+Math.random()*0.4)*(intensity/100),
+      }));
+    }else{ // rain
+      const count=Math.floor(intensity*3);
+      particles=Array.from({length:count},()=>({
+        x:Math.random()*VW,
+        y:Math.random()*VH,
+        len:15+Math.random()*35,
+        speed:(8+Math.random()*14)*(0.5+intensity/100),
+        opacity:(0.15+Math.random()*0.45)*(intensity/100),
+      }));
+    }
+    let raf;
+    const draw=()=>{
+      ctx.clearRect(0,0,VW,VH);
+      if(type==='snow'){
+        ctx.fillStyle='rgba(255,255,255,1)';
+        particles.forEach(p=>{
+          ctx.globalAlpha=p.opacity;
+          ctx.beginPath();
+          ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+          ctx.fill();
+          p.y+=p.speed;
+          p.x+=Math.sin((p.y+p.phase)*0.02)*0.6;
+          if(p.y>VH){p.y=-p.r;p.x=Math.random()*VW;}
+          if(p.x<0)p.x=VW;else if(p.x>VW)p.x=0;
+        });
+      }else if(type==='hail'){
+        ctx.strokeStyle='rgba(220,225,230,1)';
+        ctx.lineWidth=1.5+intensity/100;
+        particles.forEach(p=>{
+          ctx.globalAlpha=p.opacity;
+          ctx.beginPath();
+          ctx.moveTo(p.x,p.y);
+          ctx.lineTo(p.x-1,p.y+p.len);
+          ctx.stroke();
+          p.y+=p.speed;
+          if(p.y>VH){p.y=-p.len;p.x=Math.random()*VW;}
+        });
+      }else{ // rain
+        ctx.strokeStyle='rgba(180,200,220,1)';
+        ctx.lineWidth=1+intensity/120;
+        particles.forEach(p=>{
+          ctx.globalAlpha=p.opacity;
+          ctx.beginPath();
+          ctx.moveTo(p.x,p.y);
+          ctx.lineTo(p.x-2,p.y+p.len);
+          ctx.stroke();
+          p.y+=p.speed;
+          p.x-=0.5+intensity/60;
+          if(p.y>VH){p.y=-p.len;p.x=Math.random()*VW;}
+          if(p.x<0)p.x=VW;
+        });
+      }
+      ctx.globalAlpha=1;
+      raf=requestAnimationFrame(draw);
+    };
+    raf=requestAnimationFrame(draw);
+    return()=>cancelAnimationFrame(raf);
+  },[type,intensity]);
+  if(type==='none'||intensity<=0)return null;
+  return <canvas ref={canvasRef} width={VW} height={VH} style={{position:'absolute',inset:0,zIndex:290,pointerEvents:'none'}}/>;
+}
+
+// Periodic full-scene brightness flash for storms.
+function LightningOverlay({enabled}){
+  const [flash,setFlash]=useState(0);
+  useEffect(()=>{
+    if(!enabled)return;
+    let to;
+    const schedule=()=>{
+      to=setTimeout(()=>{
+        setFlash(f=>f+1);
+        if(Math.random()<0.4)setTimeout(()=>setFlash(f=>f+1),100+Math.random()*120);
+        schedule();
+      },4000+Math.random()*9000);
+    };
+    schedule();
+    return()=>clearTimeout(to);
+  },[enabled]);
+  if(!enabled)return null;
+  return(<>
+    <style>{`@keyframes lightningFlash{0%{opacity:.9}50%{opacity:.15}100%{opacity:0}}`}</style>
+    {flash>0&&<div key={flash} style={{position:'absolute',inset:0,zIndex:295,background:'#dfe8ff',mixBlendMode:'screen',pointerEvents:'none',animation:'lightningFlash 0.3s ease-out forwards'}}/>}
+  </>);
+}
+
+function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant,onAlleyWay,inventory,onUseItem,heartNum,currentOutfit,debug,debugGo,stamina,onStaminaChange,hudOpen=false,weatherType='none',onWeatherTypeChange,weatherIntensity=0,onWeatherIntensityChange,lightningEnabled=false,onLightningToggle,weatherAudioEnabled=false,onWeatherAudioToggle,weatherAudioVolume=0,onWeatherAudioVolumeChange}){
+  const weatherAudioRef=useRef(null);
+  const weatherAudioSrc=WEATHER_AUDIO[weatherType]||'';
+  useEffect(()=>{
+    const a=weatherAudioRef.current;
+    if(!a)return;
+    a.volume=weatherAudioVolume/100;
+    if(weatherAudioSrc&&weatherAudioEnabled){a.muted=false;a.play().catch(()=>{});}
+    else{a.pause();}
+  },[weatherAudioSrc,weatherAudioEnabled,weatherAudioVolume]);
+  useEffect(()=>()=>{weatherAudioRef.current?.pause();},[]);
   // STR_IMG_W: rendered width of exterior.png at backgroundSize:'auto 120%'
   // Original image 3252×1280; rendered height=VH*1.2=864; width=3252*(864/1280)≈2195
   const STR_IMG_W=Math.floor(3252*(VH*1.2/1280));
@@ -2860,7 +3009,15 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
       <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={worldX-cam} charHeight={74} charBottom={strCharBottom} currentOutfit={currentOutfit}/><Mono text={bark||mono}/><Heart state={heart}/>
       <SceneLabel label={mode==='return'?'THE VEIL — RETURNING':'THE VEIL — MOVE BLOCK'}/>
       <Controls hints={[['← →','MOVE'],['E','TALK/ENTER'],['SHIFT','CROUCH'],['SPACE','JUMP'],['I','INVENTORY'],['TAB','DEBUG']]}/>
-      {debug&&<DebugOverlay px={worldX} scene="street" onSceneChange={debugGo}/>}
+      <WeatherOverlay type={weatherType} intensity={weatherIntensity}/>
+      {weatherType==='rain'&&<LightningOverlay enabled={lightningEnabled}/>}
+      {weatherAudioSrc&&<audio ref={weatherAudioRef} src={weatherAudioSrc} loop preload="auto"/>}
+      {debug&&<DebugOverlay px={worldX} scene="street" onSceneChange={debugGo}
+        weatherType={weatherType} onWeatherTypeChange={onWeatherTypeChange}
+        weatherIntensity={weatherIntensity} onWeatherIntensityChange={onWeatherIntensityChange}
+        lightningEnabled={lightningEnabled} onLightningToggle={onLightningToggle}
+        weatherAudioEnabled={weatherAudioEnabled} onWeatherAudioToggle={onWeatherAudioToggle}
+        weatherAudioVolume={weatherAudioVolume} onWeatherAudioVolumeChange={onWeatherAudioVolumeChange}/>}
       {conv&&<ChatBox convKey={conv.key} npcName={conv.name} npcImg={''} total={0}
         onAct={act=>{if(act==='end'||!act)setConv(null);}}/>}
       {streetTexts.map(st=>(
@@ -2868,6 +3025,173 @@ function StrScene({heart,mono,mode,spawnX,onStore,onHome,onPharmacy,onRestaurant
           "{st.txt}"
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── PLAYGROUND SCENE ──────────────────────────────────────────
+// Dummy test level: full worldX/cam movement, a climb zone, an NPC
+// dialogue trigger, the cursor-based store browse, and the
+// investigation lens — everything wired up for feature testing.
+const PG_WORLD_W=2000;
+const PG_CLIMB_ZONES=[
+  {id:'pg_stairs', xMin:700, xMax:900, yMin:0, yMax:100, type:'stair'},
+];
+const PG_MARKERS=[
+  {id:'exit',    worldX:50,   type:'exit',    label:'EXIT',    col:'#d04030'},
+  {id:'npc',     worldX:350,  type:'npc',     label:'NPC',     col:'#2fd4e6'},
+  {id:'shop',    worldX:1150, type:'shop',    label:'SHOP',    col:'#d4a020'},
+  {id:'examine', worldX:1600, type:'examine', label:'EXAMINE', col:'#9060d0'},
+];
+const PG_CLUES=[
+  {id:'pg_c1',x:300,y:420,radius:60,label:'STRANGE MARK', body:'A scuff mark on the wall. Recent.'},
+  {id:'pg_c2',x:950,y:340,radius:55,label:'DROPPED ITEM',  body:'Something small, half-buried in the dust.'},
+];
+// Swappable backgrounds — 'grid' needs no assets. For 'image'/'video', drop a
+// file path into src (image is tiled at PG_WORLD_W×VH and pans with the camera;
+// video plays full-bleed/cover, independent of the camera). Cycle with [B].
+const PLAYGROUND_BACKGROUNDS=[
+  {id:'grid',  label:'DEBUG GRID', type:'grid',  src:''},
+  {id:'image', label:'IMAGE TEST', type:'image', src:''},
+  {id:'video', label:'VIDEO TEST', type:'video', src:''},
+];
+
+function PlaygroundScene({onExit,currentOutfit,stamina,onStaminaChange,money,onAddItems,debug,debugGo,hudOpen=false}){
+  const [worldX,setWorldX]=useState(150);
+  const [facing,setFacing]=useState('right');
+  const [walking,setWalking]=useState(false);
+  const [conv,setConv]=useState(null);
+  const [showBrowse,setShowBrowse]=useState(false);
+  const [showLens,setShowLens]=useState(false);
+  const [pgBasket,setPgBasket]=useState([]);
+  const [clueLog,setClueLog]=useState([]);
+  const [bgIndex,setBgIndex]=useState(0);
+  const raf=useRef(null);
+  const pgSPD=SPD*0.3;
+  const {keys,running,isCrouching,kicking,sweepKicking,roundhouseKicking,doubleKicking,blocking,rolling,jumpPhase,vertOffset,bark,updateMovement}=useSceneMovement(pgSPD,stamina,onStaminaChange,currentOutfit,hudOpen,0.35);
+  const {charBottom:pgCharBottom,climbPrompt:pgClimbPrompt}=useWorldY(50,PG_CLIMB_ZONES,worldX,keys);
+  const cam=clamp(worldX-VW/2,0,PG_WORLD_W-VW);
+  const busy=!!(conv||showBrowse||showLens);
+  const nearMarker=PG_MARKERS.find(m=>Math.abs(m.worldX-worldX)<85);
+  const bg=PLAYGROUND_BACKGROUNDS[bgIndex];
+  const showGrid=bg.type==='grid'||!bg.src;
+
+  useEffect(()=>{
+    const kd=e=>{
+      keys.current[e.code]=true;
+      if(e.code==='KeyB'&&!busy){setBgIndex(i=>(i+1)%PLAYGROUND_BACKGROUNDS.length);}
+      if(e.code==='KeyE'){
+        if(busy)return;
+        if(nearMarker?.type==='npc')setConv({key:'playground_npc',name:'TEST NPC'});
+        else if(nearMarker?.type==='shop')setShowBrowse(true);
+        else if(nearMarker?.type==='examine')setShowLens(true);
+        else if(nearMarker?.type==='exit'){debugGo?debugGo('street'):onExit?.();}
+      }
+      if(e.code==='Escape'&&conv)setConv(null);
+    };
+    const ku=e=>{delete keys.current[e.code];};
+    window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);
+    return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);};
+  },[nearMarker,conv,busy,debugGo,onExit]);
+
+  useEffect(()=>{
+    const loop=()=>{
+      if(!busy){
+        const left=keys.current['ArrowLeft']||keys.current['KeyA'];
+        const right=keys.current['ArrowRight']||keys.current['KeyD'];
+        const isMoving=left||right;
+        const {currentSpeed,isKicking}=updateMovement(isMoving);
+        if(!isKicking&&left){setWorldX(x=>Math.max(0,x-currentSpeed));setFacing('left');setWalking(true);}
+        else if(!isKicking&&right){setWorldX(x=>Math.min(PG_WORLD_W,x+currentSpeed));setFacing('right');setWalking(true);}
+        else setWalking(false);
+      }else setWalking(false);
+      raf.current=requestAnimationFrame(loop);
+    };
+    raf.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf.current);
+  },[busy]); // do NOT include updateMovement — it causes dependency cycles with stamina updates
+
+  return(
+    <div style={{width:VW,height:VH,position:'relative',overflow:'hidden',background:C.bg}}>
+      {showGrid?(
+        <>
+          <div style={{position:'absolute',inset:0,zIndex:0,background:'#0a0a12'}}/>
+          <SceneGrid/>
+          {Array.from({length:Math.floor(PG_WORLD_W/100)+1},(_,i)=>{
+            const wx=i*100,sx=wx-cam;
+            if(sx<-40||sx>VW+40)return null;
+            return(
+              <div key={'pgrt'+i} style={{position:'absolute',left:sx,bottom:0,zIndex:2,pointerEvents:'none'}}>
+                <div style={{width:1,height:14,background:'rgba(255,215,0,0.5)'}}/>
+                <div style={{color:'rgba(255,215,0,0.8)',fontSize:8,fontFamily:'monospace',whiteSpace:'nowrap',transform:'translateX(2px)'}}>{wx}</div>
+              </div>
+            );
+          })}
+        </>
+      ):bg.type==='image'?(
+        <div style={{position:'absolute',inset:0,zIndex:0,backgroundImage:`url('${bg.src}')`,backgroundSize:`${PG_WORLD_W}px ${VH}px`,backgroundPosition:`${-cam}px 0px`,backgroundRepeat:'no-repeat',backgroundColor:'#0a0a12'}}/>
+      ):(
+        <video src={bg.src} autoPlay loop muted playsInline style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}}/>
+      )}
+
+      {PG_CLIMB_ZONES.map(z=>{
+        const sx=z.xMin-cam,w=z.xMax-z.xMin;
+        if(sx+w<0||sx>VW)return null;
+        return(
+          <div key={z.id} style={{position:'absolute',left:sx,bottom:0,width:w,height:50+z.yMax,zIndex:1,pointerEvents:'none',
+            background:'linear-gradient(to top right, rgba(212,160,32,0.10), rgba(212,160,32,0.32))',
+            borderLeft:'2px dashed rgba(212,160,32,0.7)',borderRight:'2px dashed rgba(212,160,32,0.7)',borderTop:'2px solid rgba(212,160,32,0.7)'}}>
+            <div style={{position:'absolute',top:4,left:6,color:'#d4a020',fontSize:7,letterSpacing:2,fontFamily:"'TheMurk',monospace"}}>CLIMB ZONE — STAIRS</div>
+          </div>
+        );
+      })}
+
+      {PG_MARKERS.map(m=>{
+        const sx=m.worldX-cam;
+        if(sx<-60||sx>VW+60)return null;
+        return(
+          <div key={m.id} style={{position:'absolute',left:sx-30,bottom:0,width:60,height:100,zIndex:2,pointerEvents:'none',
+            background:`${m.col}33`,border:`2px solid ${m.col}`}}>
+            <div style={{position:'absolute',bottom:'100%',left:'50%',transform:'translateX(-50%)',marginBottom:4,color:m.col,fontSize:8,letterSpacing:2,fontFamily:"'TheMurk',monospace",whiteSpace:'nowrap'}}>{m.label}</div>
+          </div>
+        );
+      })}
+
+      {nearMarker&&!busy&&(
+        <div style={{position:'absolute',bottom:120,left:nearMarker.worldX-cam,zIndex:9999}}>
+          <Prompt text={`[ E ] ${
+            nearMarker.type==='npc'?'TALK':
+            nearMarker.type==='shop'?'BROWSE':
+            nearMarker.type==='examine'?'EXAMINE':'EXIT'
+          }`}/>
+        </div>
+      )}
+      {pgClimbPrompt&&!busy&&<div style={{position:'absolute',bottom:pgCharBottom+30,left:worldX-cam,zIndex:300,transform:'translateX(-50%)'}}><Prompt text={`[ ↑↓ ] ${pgClimbPrompt}`}/></div>}
+
+      <Char facing={facing} walking={walking} running={running} crouching={isCrouching} kicking={kicking} sweepKicking={sweepKicking} roundhouseKicking={roundhouseKicking} doubleKicking={doubleKicking} blocking={blocking} rolling={rolling} jumpPhase={jumpPhase} vertOffset={vertOffset} charX={worldX-cam} charHeight={280} charBottom={pgCharBottom} currentOutfit={currentOutfit}/>
+      <Mono text={bark}/>
+
+      <SceneLabel label="PLAYGROUND — TEST LEVEL"/>
+      <Controls hints={[['← →','MOVE'],['↑ ↓','CLIMB'],['E','INTERACT'],['B','BACKGROUND'],['ESC','CLOSE']]}/>
+
+      <div style={{position:'absolute',top:14,right:16,zIndex:300,fontFamily:"'TheMurk',monospace",fontSize:8,letterSpacing:1,color:C.dim,textAlign:'right',lineHeight:1.8}}>
+        <div>BG: {bg.label}{bg.type!=='grid'&&!bg.src?' (no src — grid fallback)':''}</div>
+        {clueLog.length>0&&<div>CLUES: {clueLog.join(', ')}</div>}
+      </div>
+
+      {debug&&<DebugOverlay px={worldX} scene="playground" onSceneChange={debugGo}/>}
+
+      {conv&&<ChatBox convKey={conv.key} npcName={conv.name} npcImg={''} total={0}
+        onAct={act=>{if(act==='end'||!act)setConv(null);}}/>}
+
+      {showBrowse&&<StoreBrowse basket={pgBasket} money={money} debug={debug}
+        onAddItem={id=>setPgBasket(b=>b.includes(id)?b:[...b,id])}
+        onRemoveItem={id=>setPgBasket(b=>b.filter(x=>x!==id))}
+        onBack={()=>setShowBrowse(false)}
+        onSteal={()=>{if(pgBasket.length)onAddItems?.(pgBasket);setPgBasket([]);setShowBrowse(false);}}/>}
+
+      {showLens&&<InvestigationLens clues={PG_CLUES}
+        onClue={clue=>setClueLog(l=>l.includes(clue.label)?l:[...l,clue.label])}
+        onExit={()=>setShowLens(false)}/>}
     </div>
   );
 }
@@ -5377,13 +5701,43 @@ function InvestigationLens({clues=[],onClue,onExit}){
     const onMove=e=>{const p=toGame(e);targRef.current=p;dotRef.current?.setAttribute('cx',p.x);dotRef.current?.setAttribute('cy',p.y);};
     const onDown=()=>{holdingRef.current=true;};
     const onUp=()=>{holdingRef.current=false;};
-    const onKey=e=>{if(e.code==='KeyL'||e.code==='Escape')onExit?.();};
+    const onKey=e=>{if(e.code==='KeyL'||e.code==='Escape'||e.code==='KeyY')onExit?.();}; // KeyY = controller B/Triangle "back"
     window.addEventListener('mousemove',onMove);
     window.addEventListener('mousedown',onDown);
     window.addEventListener('mouseup',onUp);
     window.addEventListener('keydown',onKey);
     return()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('mousedown',onDown);window.removeEventListener('mouseup',onUp);window.removeEventListener('keydown',onKey);};
   },[onExit]);
+
+  // Controller cursor: poll left stick to pan the lens, RT (button 7) to expand —
+  // mirrors StoreBrowse's controller-cursor pattern but drives targRef directly
+  // since the lens reads raw game-space coords rather than DOM hover targets.
+  const inputSrc=useInputSource();
+  useEffect(()=>{
+    if(inputSrc!=='controller')return;
+    let rafId;
+    const DEAD=0.15, CUR_SPD=12;
+    const loop=()=>{
+      const pads=navigator.getGamepads?navigator.getGamepads():[];
+      for(const gp of pads){
+        if(!gp)continue;
+        const ax=gp.axes[0]??0, ay=gp.axes[1]??0;
+        if(Math.abs(ax)>DEAD||Math.abs(ay)>DEAD){
+          const p={
+            x:Math.max(0,Math.min(VW,targRef.current.x+ax*CUR_SPD)),
+            y:Math.max(0,Math.min(VH,targRef.current.y+ay*CUR_SPD)),
+          };
+          targRef.current=p;
+          dotRef.current?.setAttribute('cx',p.x);
+          dotRef.current?.setAttribute('cy',p.y);
+        }
+        holdingRef.current=!!gp.buttons[7]?.pressed; // RT — hold to expand
+      }
+      rafId=requestAnimationFrame(loop);
+    };
+    rafId=requestAnimationFrame(loop);
+    return()=>cancelAnimationFrame(rafId);
+  },[inputSrc]);
 
   return(
     <div style={{position:'absolute',inset:0,zIndex:900,cursor:'none'}}>
@@ -5450,8 +5804,8 @@ function InvestigationLens({clues=[],onClue,onExit}){
 
       {/* Controls + clues found — bottom right */}
       <div style={{position:'absolute',bottom:20,right:20,pointerEvents:'none',fontFamily:"'TheMurk',monospace",textAlign:'right'}}>
-        <div style={{color:'#3a2c14',fontSize:8,letterSpacing:1,marginBottom:3}}>HOLD — EXPAND LENS</div>
-        <div style={{color:'#3a2c14',fontSize:8,letterSpacing:1,marginBottom:8}}>[ L ] / [ ESC ] — EXIT</div>
+        <div style={{color:'#3a2c14',fontSize:8,letterSpacing:1,marginBottom:3}}>{inputSrc==='controller'?'HOLD [ RT ] — EXPAND LENS':'HOLD — EXPAND LENS'}</div>
+        <div style={{color:'#3a2c14',fontSize:8,letterSpacing:1,marginBottom:8}}>{inputSrc==='controller'?'[ Y ] — EXIT':'[ L ] / [ ESC ] — EXIT'}</div>
         {discovered.size>0&&(
           <div style={{color:'#ffd700',fontSize:10,letterSpacing:2}}>FOUND {discovered.size}/{clues.length}</div>
         )}
@@ -7233,6 +7587,11 @@ function QuestApp(){
     setTimeout(()=>{setIsClosingDevice(false);setShowDevice(false);},450);
   },[]);
   const [debug,setDebug]=useState(true);
+  const [weatherType,setWeatherType]=useState('rain');
+  const [weatherIntensity,setWeatherIntensity]=useState(75);
+  const [lightningEnabled,setLightningEnabled]=useState(true);
+  const [weatherAudioEnabled,setWeatherAudioEnabled]=useState(true);
+  const [weatherAudioVolume,setWeatherAudioVolume]=useState(50);
   const [showerStat,setNewShowerStat]=useState(null);
   const [padConnected,setPadConnected]=useState(false);
   const [bathroomSpawnPos,setBathroomSpawnPos]=useState(350);
@@ -7365,7 +7724,12 @@ function QuestApp(){
           inventory={inventory} heartNum={heartNum} onUseItem={useItem}
           onStore={()=>go('store')} onHome={()=>{setLobbySpawnX(191);go('lobby');}}
           onPharmacy={()=>go('pharmacy')} onRestaurant={()=>go('restaurant')} onAlleyWay={()=>go('alley_video_store')}
-          currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
+          currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}
+          weatherType={weatherType} onWeatherTypeChange={setWeatherType}
+          weatherIntensity={weatherIntensity} onWeatherIntensityChange={setWeatherIntensity}
+          lightningEnabled={lightningEnabled} onLightningToggle={setLightningEnabled}
+          weatherAudioEnabled={weatherAudioEnabled} onWeatherAudioToggle={setWeatherAudioEnabled}
+          weatherAudioVolume={weatherAudioVolume} onWeatherAudioVolumeChange={setWeatherAudioVolume}/>}
       {scene==='store'&&
         <StoreScene heart={heart} mono={moState.text} money={money}
           basket={storeCart} setBasket={setStoreCart}
@@ -7407,6 +7771,11 @@ function QuestApp(){
         currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
         hudOpen={showDevice} debug={debug} debugGo={go}/>}
       {scene==='lobby'&&<LobbyScene spawnX={lobbySpawnX} onExit={()=>{setStreetSpawnX(1245);go('street');}} currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina} hudOpen={showDevice} debug={debug} debugGo={go}/>}
+      {scene==='playground'&&<PlaygroundScene
+        money={money} onAddItems={addItems}
+        onExit={()=>go('street')}
+        currentOutfit={currentOutfit} stamina={stamina} onStaminaChange={setStamina}
+        hudOpen={showDevice} debug={debug} debugGo={go}/>}
       <Fade on={fading}/>
       {/* Always-on in-game HUD (bottom-left) — it's Octavia's phone, shown once found.
           In the store it shows the cart; otherwise status (portraits/health/stamina/mood/pages). */}

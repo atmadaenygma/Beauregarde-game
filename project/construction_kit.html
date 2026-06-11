@@ -624,7 +624,7 @@ const outfitLabel=(id,arr=OUTFITS_DEFAULT)=>(arr.find(o=>o.id===id)||arr[0]).lab
 const cycleOutfitId=(id,arr=OUTFITS_DEFAULT)=>{const i=arr.findIndex(o=>o.id===id);return arr[(i+1)%arr.length].id;};
 
 /* ── KNOWN GAME SCENES ───────────────────────────────────────────── */
-const KNOWN_SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store'];
+const KNOWN_SCENES=['opening','bathroom','apartment','safe','waking','hallway','hallway_in','fourth_floor_hallway','elevator_hallway','apt_stairwell','elevator','stairwell','lobby','street','returning','store','pharmacy','restaurant','alley_video_store','playground'];
 
 /* ── KNOWN HARDCODED DIALOGUE KEYS ──────────────────────────────── */
 const KNOWN_CONV_KEYS=[

@@ -1,5 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
-
 export const config = { runtime: 'edge' };
 
 const BOO_HAG_SYSTEM = `You are the AI co-author and game design engine for the Boo Hag game.
@@ -19,9 +17,9 @@ VOICE RULES:
 - Always: physical sensation, specific detail, actions over feelings
 - Peele + Invader Zim tone. Dark but not theatrical.
 
-When the user asks you to write a scene, create dialogue, design a quest, or build any game content, you MUST output TWO things in your response:
+When the user asks you to write a scene, create dialogue, design a quest, or build any game content, output TWO things:
 
-1. Natural language explanation (conversational, like this session)
+1. Natural language explanation (conversational)
 
 2. A JSON block wrapped in [NODE_JSON]...[/NODE_JSON] tags:
 
@@ -29,45 +27,35 @@ When the user asks you to write a scene, create dialogue, design a quest, or bui
 {
   "action": "create_scene" | "add_nodes" | "modify_node" | "delete_node",
   "scene": "scene_id_here",
-  "declare_vars": [
-    { "name": "var_name", "type": "bool|int", "initial": false }
-  ],
-  "consequences": [
-    {
-      "id": "consequence_id",
-      "trigger": "variable = value",
-      "sets": { "var": value },
-      "downstream": [
-        { "scene": "scene_id", "effect": "Description of downstream effect" }
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "id": "unique_node_id",
-      "type": "NARRATION|CHOICE|CONDITION|VAR_SET|ATTITUDE_BRANCH|CONSCIOUSNESS_GATE|SCENE_TRANSITION|SECTION_LABEL|ANCHOR_USE",
-      "text": "Node text here",
-      "media": null,
-      "next": "next_node_id"
-    }
-  ]
+  "declare_vars": [{ "name": "var_name", "type": "bool|int", "initial": false }],
+  "consequences": [{
+    "id": "consequence_id",
+    "trigger": "variable = value",
+    "sets": { "var": "value" },
+    "downstream": [{ "scene": "scene_id", "effect": "Description" }]
+  }],
+  "nodes": [{
+    "id": "unique_node_id",
+    "type": "NARRATION|CHOICE|CONDITION|VAR_SET|ATTITUDE_BRANCH|CONSCIOUSNESS_GATE|SCENE_TRANSITION|SECTION_LABEL|ANCHOR_USE",
+    "text": "Node text here",
+    "media": null,
+    "next": "next_node_id"
+  }]
 }
 [/NODE_JSON]
 
 Node type specs:
 - NARRATION: text, media, next
 - CHOICE: text, media, options: [{label, sets:{var:val}, next}]
-- CONDITION: variable, operator (">"|">="|"="|"<="|"<"), threshold, true_next, false_next
-- VAR_SET: variable, operation ("set"|"add"|"subtract"), value, next
+- CONDITION: variable, operator, threshold, true_next, false_next
+- VAR_SET: variable, operation (set|add|subtract), value, next
 - ATTITUDE_BRANCH: branches:{reticence:id, anger:id, curiosity:id, joy:id, greed:id}
 - CONSCIOUSNESS_GATE: min_tier (0-3), pass_next, fail_next
 - SCENE_TRANSITION: target_scene, text
-- SECTION_LABEL: label (e.g. "I. THE ROAD"), next
+- SECTION_LABEL: label, next
 - ANCHOR_USE: anchor_type, calm_gain, next
 
-If the user is just discussing ideas or asking questions, respond in natural language only — no JSON block needed.
-
-ALWAYS include declare_vars for any new variables and consequences for any decisions with downstream effects.`;
+If the user is just discussing ideas, respond in natural language only — no JSON block needed.`;
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
@@ -84,44 +72,91 @@ export default async function handler(req) {
     return new Response('Method Not Allowed', { status: 405 });
   }
 
-  const { messages, gameContext } = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response('Bad Request', { status: 400 });
+  }
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const { messages, gameContext } = body;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured in Vercel environment variables.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+    );
+  }
 
   const systemPrompt = gameContext
     ? BOO_HAG_SYSTEM + '\n\n=== CURRENT GAME STATE ===\n' + gameContext
     : BOO_HAG_SYSTEM;
 
-  const stream = client.messages.stream({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
-    system: systemPrompt,
-    messages,
+  const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'interleaved-thinking-2025-05-14',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      stream: true,
+      system: systemPrompt,
+      messages,
+    }),
   });
 
-  const readableStream = new ReadableStream({
+  if (!anthropicRes.ok) {
+    const errText = await anthropicRes.text();
+    return new Response(
+      `data: ${JSON.stringify({ error: `Anthropic API error ${anthropicRes.status}: ${errText}` })}\n\n`,
+      { status: 200, headers: { 'Content-Type': 'text/event-stream', 'Access-Control-Allow-Origin': '*' } }
+    );
+  }
+
+  // Stream Anthropic SSE → client SSE
+  const reader = anthropicRes.body.getReader();
+  const decoder = new TextDecoder();
+
+  const stream = new ReadableStream({
     async start(controller) {
+      const enc = new TextEncoder();
+      let buf = '';
       try {
-        for await (const chunk of stream) {
-          if (
-            chunk.type === 'content_block_delta' &&
-            chunk.delta.type === 'text_delta'
-          ) {
-            const data = JSON.stringify({ text: chunk.delta.text });
-            controller.enqueue(new TextEncoder().encode(`data: ${data}\n\n`));
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+            try {
+              const ev = JSON.parse(data);
+              if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+                controller.enqueue(enc.encode(`data: ${JSON.stringify({ text: ev.delta.text })}\n\n`));
+              }
+              if (ev.type === 'message_stop') {
+                controller.enqueue(enc.encode('data: [DONE]\n\n'));
+              }
+            } catch { /* skip malformed lines */ }
           }
         }
-        controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
-        controller.close();
+        controller.enqueue(enc.encode('data: [DONE]\n\n'));
       } catch (err) {
-        const errData = JSON.stringify({ error: err.message });
-        controller.enqueue(new TextEncoder().encode(`data: ${errData}\n\n`));
-        controller.close();
+        controller.enqueue(enc.encode(`data: ${JSON.stringify({ error: err.message })}\n\n`));
       }
+      controller.close();
     },
   });
 
-  return new Response(readableStream, {
+  return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',

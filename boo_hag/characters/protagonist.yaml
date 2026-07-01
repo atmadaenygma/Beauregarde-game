@@ -1,0 +1,169 @@
+# BOO HAG — PROTAGONIST CHARACTER BIBLE
+# Authoring reference only. Not loaded at runtime.
+
+# ── WHO SHE IS ───────────────────────────────────────────────────
+# The protagonist is TWO beings conjoined by cosmic alignment:
+#
+#   THE BOO HAG — ancient, pre-Bureau, purely instinctual. Centuries
+#   of riding, skinning, feeding. Captured by the Bureau, experimented
+#   on, escaped. The power. The body. The hunger.
+#
+#   THE GIRL — college student, visiting family, asleep in her home.
+#   Completely innocent. The boo hag found her in a feral state and
+#   began riding her. At 9:09 PM on July 25th the 3-7-9 alignment
+#   completed. The girl died. Her consciousness transferred inside
+#   the boo hag instead of dispersing.
+#
+# The player IS the girl. Waking inside something ancient.
+# The boo hag's instincts fire. The girl decides what to do with them.
+# ─────────────────────────────────────────────────────────────────
+
+name:
+  boo_hag: UNNAMED (ancient, pre-language)
+  the_girl: Arceneaux (family name; first name TBD or withheld)
+
+also_known_as:
+  - the hag (skinless form)
+  - the face (in the girl's form)
+  - "aren't you one of the Arceneaux girls?" (cop recognition)
+
+# ── THE CONJUNCTION ──────────────────────────────────────────────
+conjunction:
+  what_happened: >
+    The boo hag went feral escaping Bureau transport. Instinct led her
+    to the girl's home. The girl was asleep — innocent, random.
+    The 3-7-9 alignment was already in cosmic motion. Neither caused it.
+    The girl's body died. Her consciousness transferred inside the boo hag.
+    The boo hag thinks it was a normal skinning. She moves on.
+
+  guilt_engine: >
+    The boo hag's feral hunger brought them to the same room.
+    The conjunction was destined — but her hunger pulled the trigger.
+    The girl has no one to blame. The boo hag has no excuse.
+    The stars arranged it. Nobody asked.
+
+  family:
+    father: Heard something through paper-thin walls. Came in.
+            Slammed against the wall by the boo hag. Died.
+    mother: Came in after. Saw. Fainted. Alive. Witness.
+            (Do not develop further at this stage.)
+
+  numerology_3_7_9:
+    3: >
+      Born March 3, 2003. Month=3, Day=3, Year(2+0+0+3)=3.
+      Every unit of her birth = 3. The threshold number — between
+      worlds, neither living nor dead. Built for this before anyone
+      knew what this was.
+    7: >
+      They crossed July 25th. Month=7, Day(2+5)=7. Double seven.
+      Passage — spirit crossing without dying. She had been home
+      7 days. The boo hag had been in that county 7 nights.
+      The seven arranged them.
+    9: >
+      Completed at 9:09 PM. Nine folds back to itself from anything.
+      Nine minutes from first contact to done. The cycle running since
+      the boo hag's first breath closed when 9 met its mirror.
+
+# ── FORMS ────────────────────────────────────────────────────────
+forms:
+  skinless:
+    description: Black cracked skin, veins and heart-light showing through, no hair
+    dominant_voice: the boo hag — ancient instinct, centuries of hunger
+    movement: walk (skim ground) / SPACE to float (omni-directional)
+    notes: True form. Rides and skins from here. Vulnerable in daylight.
+
+  the_face:
+    description: The girl's own form — symbiotic, always present, never lost
+    dominant_voice: the girl — consciousness, questions, moral compass
+    movement: fully human-passing
+    symbiote_notes: >
+      Not a skin. Not worn. Biological and bound by the 3-7-9 conjunction.
+      Cannot be physically separated from her. SHED retracts it — it does
+      not leave. It is always inside her, waiting to be called forward.
+    resummon: >
+      CALM breeds control. The face comes forward when she is calm enough
+      to hold it. Fear breeds chaos — the face fails or sheds involuntarily
+      when panic spikes past threshold. Anchors (phone, keepsake, familiar
+      smells) restore calm. Understanding she is BOTH (not fighting the
+      conjunction) makes calm easier to reach.
+    involuntary_shed: >
+      If fear exceeds her calm threshold, the face retracts without her
+      choosing it. She appears in skinless form. To resummon: find calm.
+      This gets faster as consciousness tier rises.
+
+  masks:
+    description: Later skins taken deliberately — worn like clothes
+    storage: physical safe house
+    notes: Degrade with use. Empty — no consciousness inside. Not symbiotic.
+
+# ── CALM / FEAR MECHANIC (replaces "sanity") ─────────────────────
+calm_fear:
+  core_rule: Calm breeds control. Fear breeds chaos.
+
+  calm_rises_from:
+    - Feeding
+    - Safe space / rest
+    - Personal anchors (phone, favorite keepsake, familiar smells)
+    - Accepting she is both the girl and the boo hag — stops the fighting
+
+  calm_falls_from:
+    - Being hunted / cornered
+    - Involuntary riding
+    - Denying either half of herself
+    - Failed control
+    - Proximity threat with no exit
+
+  feral_state: >
+    Calm hits zero. No center left to hold. The boo hag's ancient
+    panic-hunger fills the space. Involuntary ride of nearest person.
+    Game time penalty. Calm must be rebuilt from scratch.
+
+  face_and_calm: >
+    The face responds to calm, not to identity. She does not resummon
+    the face by remembering she was a girl. She resummmons it by being
+    calm enough that the conjunction stops feeling like a war.
+    Anchors produce calm. Calm produces control. Control surfaces the face.
+
+# ── ATTITUDE SYSTEM ──────────────────────────────────────────────
+attitudes:
+  note: Not paths. Dimensions. Player navigates all simultaneously.
+        No meter shown. World responds to accumulation of choices.
+
+  available_at_diner_cold_open:
+    reticence: >
+      Holds onto the girl. Resists what she is. Mechanically harder —
+      denial increases fear, fear drops calm, calm drops face control.
+      Most human choices. Most vulnerable mechanically.
+    anger: >
+      She didn't choose this. Uses the power with the energy of a debt
+      being collected. Accepts what she is while furious about it.
+      Rage is still a form of claiming — calm holds.
+    curiosity: >
+      Cannot stop reading even the terrible books. Accepts through
+      understanding. Horrified and keeps going anyway.
+
+  unlocks_after_first_successful_power_use:
+    joy: >
+      Discovers the power feels like unlocking. Something tired of
+      being small finds this interesting. She hates that she likes it.
+
+  unlocks_after_joy_established:
+    greed: >
+      Stops riding to feed or understand. Rides to accumulate.
+      Wants the library to expand. Three hundred years isn't enough.
+
+# ── CONSCIOUSNESS TIERS ───────────────────────────────────────────
+consciousness:
+  feral:    No words. Instinct only. Boo hag dominant. Face inaccessible.
+  waking:   Girl surfacing. Groping for language. Wrong analogies.
+            Face accessible but slow to resummon.
+  clear:    Full sentences, still sparse. Girl can steer deliberately.
+            Face resummmons in seconds.
+  griotte:  Both voices fully integrated. Authoritative. Instant form shift.
+
+# ── OPENING STATE ─────────────────────────────────────────────────
+opening_state:
+  calm: 10 (very low — feral escape, conjunction, father's death)
+  consciousness: 0 → 1 (grades from feral to waking through cold open)
+  form: skinless at start; face comes online end of Section III
+  knowledge: near zero — the girl has just arrived inside something ancient

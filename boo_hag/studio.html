@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Boo Hag Studio</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #111010;
+  --surface:   #1a1918;
+  --surface2:  #221f1e;
+  --border:    #2e2a28;
+  --amber:     #c8880a;
+  --amber-dim: #7a5206;
+  --amber-glow:#e8a820;
+  --bone:      #e8e0d4;
+  --bone-dim:  #9a9088;
+  --teal:      #1a7870;
+  --red:       #8a1a10;
+  --purple:    #6a3a8a;
+  --green:     #4a7840;
+  --steel:     #3a5878;
+  --gold:      #a87820;
+  --text:      #d8d0c4;
+  --text-dim:  #786e66;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Space Mono', 'Courier New', monospace; font-size: 13px; }
+
+/* ── LAYOUT ─────────────────────────────────────────── */
+#root { display: flex; flex-direction: column; height: 100vh; }
+
+.topbar {
+  display: flex; align-items: center; gap: 0;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 12px; height: 44px; flex-shrink: 0;
+}
+.topbar-title { color: var(--amber); font-weight: bold; letter-spacing: 0.08em; font-size: 12px; margin-right: 24px; }
+.tab-btn {
+  background: none; border: none; color: var(--text-dim); font-family: inherit;
+  font-size: 12px; padding: 0 16px; height: 44px; cursor: pointer;
+  border-bottom: 2px solid transparent; letter-spacing: 0.06em;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+.topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.topbar-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--bone-dim);
+  font-family: inherit; font-size: 11px; padding: 4px 10px; cursor: pointer;
+  border-radius: 3px; transition: color 0.15s, border-color 0.15s;
+}
+.topbar-btn:hover { color: var(--amber); border-color: var(--amber-dim); }
+
+.view { flex: 1; overflow: hidden; display: flex; }
+
+/* ── CHAT VIEW ─────────────────────────────────────── */
+.chat-layout { display: flex; width: 100%; overflow: hidden; }
+
+.bible-sidebar {
+  width: 280px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden;
+}
+.bible-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.bible-tab {
+  flex: 1; background: none; border: none; color: var(--text-dim); font-family: inherit;
+  font-size: 9px; padding: 8px 0; cursor: pointer; letter-spacing: 0.04em;
+  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+}
+.bible-tab:hover { color: var(--text); }
+.bible-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.bible-content { flex: 1; overflow-y: auto; padding: 12px; }
+
+.bible-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin-bottom: 10px; }
+.bible-card-title { color: var(--amber); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.bible-card-body { color: var(--bone-dim); font-size: 11px; line-height: 1.6; }
+.bible-card-body strong { color: var(--bone); }
+
+/* variable rows */
+.var-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.var-label { color: var(--bone-dim); font-size: 11px; width: 110px; flex-shrink: 0; }
+.var-val { color: var(--amber); font-size: 11px; font-weight: bold; }
+.var-slider { flex: 1; accent-color: var(--amber); }
+.var-check { accent-color: var(--amber); width: 14px; height: 14px; cursor: pointer; }
+.var-int-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--bone-dim); font-family: inherit; font-size: 10px; padding: 1px 5px; cursor: pointer; border-radius: 2px; }
+.var-int-btn:hover { color: var(--amber); }
+
+.calm-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 2px; }
+.calm-fill { height: 100%; background: var(--amber); transition: width 0.3s; border-radius: 3px; }
+
+/* canon entries */
+.canon-entry { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; }
+.canon-entry-title { color: var(--bone); font-size: 11px; font-weight: bold; margin-bottom: 4px; }
+.canon-entry-body { color: var(--bone-dim); font-size: 11px; line-height: 1.5; }
+.canon-entry-date { color: var(--text-dim); font-size: 10px; margin-top: 4px; }
+.canon-delete { float: right; background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px; line-height: 1; }
+.canon-delete:hover { color: var(--red); }
+.add-btn {
+  width: 100%; background: none; border: 1px dashed var(--border); color: var(--text-dim);
+  font-family: inherit; font-size: 11px; padding: 7px; cursor: pointer; border-radius: 3px;
+  transition: color 0.15s, border-color 0.15s; margin-top: 4px;
+}
+.add-btn:hover { color: var(--amber); border-color: var(--amber-dim); }
+
+/* scenes list */
+.scene-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+  margin-bottom: 6px; cursor: pointer; transition: border-color 0.15s;
+}
+.scene-item:hover { border-color: var(--amber-dim); }
+.scene-item.active-scene { border-color: var(--amber); }
+.scene-name { color: var(--bone); font-size: 11px; font-weight: bold; }
+.scene-badge { font-size: 9px; padding: 2px 6px; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.badge-shared   { background: var(--amber-dim); color: var(--amber-glow); }
+.badge-shed     { background: #3a1a10; color: #c86040; }
+.badge-run      { background: #1a1a3a; color: #6080c8; }
+.badge-go       { background: var(--green); color: #a8d890; opacity: 0.8; }
+.badge-playable { background: #1a2a1a; color: var(--green); }
+.badge-draft    { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+.badge-canon    { background: #2a1a0a; color: var(--amber); }
+
+/* ── CHAT MAIN ─────────────────────────────────────── */
+.chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.chat-session-bar {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.session-label { color: var(--text-dim); font-size: 10px; }
+.session-name-btn {
+  background: none; border: 1px solid var(--border); color: var(--bone-dim); font-family: inherit;
+  font-size: 11px; padding: 3px 8px; cursor: pointer; border-radius: 3px;
+}
+.session-name-btn:hover { border-color: var(--amber-dim); color: var(--amber); }
+.session-new-btn {
+  background: none; border: none; color: var(--text-dim); font-family: inherit;
+  font-size: 11px; padding: 3px 6px; cursor: pointer;
+}
+.session-new-btn:hover { color: var(--amber); }
+
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
+
+.msg { max-width: 100%; }
+.msg-user { align-self: flex-end; max-width: 70%; }
+.msg-user .msg-bubble {
+  background: var(--amber-dim); color: var(--bone); border-radius: 6px 6px 2px 6px;
+  padding: 10px 14px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+}
+.msg-assistant .msg-bubble {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 2px 6px 6px 6px; padding: 10px 14px;
+  font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+}
+.msg-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.msg-action-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  font-family: inherit; font-size: 10px; padding: 3px 8px; cursor: pointer;
+  border-radius: 3px; transition: color 0.15s, border-color 0.15s;
+}
+.msg-action-btn:hover { color: var(--amber); border-color: var(--amber-dim); }
+.msg-action-btn.danger:hover { color: var(--red); border-color: var(--red); }
+
+.node-banner {
+  background: var(--surface2); border: 1px solid var(--amber-dim);
+  border-radius: 4px; padding: 8px 12px; font-size: 11px; color: var(--amber);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px;
+}
+.node-banner-btns { display: flex; gap: 6px; }
+.node-banner-btn {
+  background: none; border: 1px solid var(--amber-dim); color: var(--amber);
+  font-family: inherit; font-size: 10px; padding: 3px 8px; cursor: pointer; border-radius: 3px;
+}
+.node-banner-btn:hover { background: var(--amber-dim); }
+
+.typing-indicator { color: var(--amber); font-size: 12px; opacity: 0.7; }
+
+.chat-input-area {
+  padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; gap: 8px; flex-shrink: 0;
+}
+.chat-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-family: inherit; font-size: 12px;
+  padding: 10px 12px; border-radius: 4px; resize: none; outline: none;
+  transition: border-color 0.15s; min-height: 42px; max-height: 160px; line-height: 1.5;
+}
+.chat-input:focus { border-color: var(--amber-dim); }
+.send-btn {
+  background: var(--amber); border: none; color: var(--bg); font-family: inherit;
+  font-size: 11px; font-weight: bold; padding: 0 16px; cursor: pointer;
+  border-radius: 4px; letter-spacing: 0.05em; transition: background 0.15s; flex-shrink: 0;
+}
+.send-btn:hover { background: var(--amber-glow); }
+.send-btn:disabled { background: var(--amber-dim); cursor: not-allowed; opacity: 0.5; }
+
+/* ── STUB VIEWS ─────────────────────────────────────── */
+.stub-view {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; color: var(--text-dim);
+}
+.stub-view h2 { color: var(--amber); font-size: 14px; letter-spacing: 0.1em; }
+.stub-view p  { font-size: 11px; color: var(--text-dim); }
+
+/* ── TREE VIEW ──────────────────────────────────────── */
+.tree-layout { display: flex; flex: 1; overflow: hidden; position: relative; }
+.tree-canvas-wrap {
+  flex: 1; position: relative; overflow: hidden; background: var(--bg);
+  cursor: grab; -webkit-user-select: none; user-select: none;
+}
+.tree-canvas-wrap.panning { cursor: grabbing; }
+.tree-canvas-inner { position: absolute; transform-origin: 0 0; }
+.tree-svg { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.tree-node {
+  position: absolute; width: 220px;
+  border-radius: 4px; border: 1px solid var(--border);
+  background: var(--surface2); cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.tree-node:hover { border-color: var(--amber-dim); }
+.tree-node.selected { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(200,136,10,0.25); }
+.tree-node-header {
+  padding: 5px 9px; border-radius: 3px 3px 0 0;
+  display: flex; align-items: center; gap: 6px;
+}
+.tree-node-type { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; font-weight: bold; }
+.tree-node-body { padding: 7px 9px 8px; font-size: 10px; line-height: 1.5; color: var(--bone-dim);
+  word-break: break-word; max-height: 72px; overflow: hidden; }
+.tree-node-media { padding: 0 9px 7px; }
+.tree-node-media-thumb { width: 100%; height: 40px; object-fit: cover; border-radius: 2px; opacity: 0.7; }
+.tree-node-footer { padding: 4px 9px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 4px; flex-wrap: wrap; }
+.tree-node-option { font-size: 9px; color: var(--text-dim); background: var(--surface); border: 1px solid var(--border); padding: 1px 5px; border-radius: 2px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-node-ask { background: none; border: none; color: var(--text-dim); font-family: inherit; font-size: 9px; padding: 1px 5px; cursor: pointer; margin-left: auto; }
+.tree-node-ask:hover { color: var(--amber); }
+.tree-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-dim); pointer-events: none; }
+.tree-zoom-controls { position: absolute; bottom: 16px; right: 16px; display: flex; flex-direction: column; gap: 4px; }
+.tree-zoom-btn { background: var(--surface); border: 1px solid var(--border); color: var(--bone-dim); font-family: inherit; font-size: 14px; width: 28px; height: 28px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; justify-content: center; }
+.tree-zoom-btn:hover { color: var(--amber); border-color: var(--amber-dim); }
+.tree-minimap { position: absolute; bottom: 16px; left: 16px; width: 120px; height: 80px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; opacity: 0.7; overflow: hidden; }
+
+/* edit panel */
+.edit-panel {
+  width: 260px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.edit-panel-header { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.edit-panel-header h4 { color: var(--amber); font-size: 11px; letter-spacing: 0.08em; }
+.edit-panel-body { flex: 1; overflow-y: auto; padding: 12px; }
+.edit-field-label { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; margin-top: 10px; }
+.edit-field-label:first-child { margin-top: 0; }
+.edit-textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 11px; padding: 7px 8px; border-radius: 3px; outline: none; resize: vertical; min-height: 70px; line-height: 1.5; }
+.edit-textarea:focus { border-color: var(--amber-dim); }
+.edit-select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 11px; padding: 6px 8px; border-radius: 3px; outline: none; }
+.edit-select:focus { border-color: var(--amber-dim); }
+.edit-btn { width: 100%; background: var(--amber); border: none; color: var(--bg); font-family: inherit; font-size: 11px; font-weight: bold; padding: 7px; cursor: pointer; border-radius: 3px; margin-top: 8px; }
+.edit-btn:hover { background: var(--amber-glow); }
+.edit-btn-danger { background: #3a1a10; border: 1px solid var(--red); color: #c86060; }
+.edit-btn-danger:hover { background: var(--red); color: var(--bone); }
+.edit-consequence { font-size: 10px; color: var(--bone-dim); background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 6px 8px; margin-top: 6px; line-height: 1.5; }
+.edit-consequence strong { color: var(--amber); }
+
+/* ── STORY VIEW ─────────────────────────────────────── */
+.story-layout { display: flex; flex: 1; overflow: hidden; }
+.story-canvas { flex: 1; overflow: auto; padding: 16px 12px; }
+.story-lanes { display: flex; gap: 12px; min-width: max-content; align-items: flex-start; }
+.story-lane { width: 220px; flex-shrink: 0; }
+.story-lane-header { color: var(--amber); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+.story-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; }
+.story-card:hover { border-color: var(--amber-dim); }
+.story-card-name { color: var(--bone); font-size: 12px; font-weight: bold; margin-bottom: 6px; }
+.story-card-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.story-card-stats { color: var(--text-dim); font-size: 10px; }
+.story-card-play { float: right; background: none; border: 1px solid var(--border); color: var(--text-dim); font-family: inherit; font-size: 9px; padding: 2px 6px; cursor: pointer; border-radius: 2px; }
+.story-card-play:hover { color: var(--amber); border-color: var(--amber-dim); }
+.story-add-btn { width: 100%; background: none; border: 1px dashed var(--border); color: var(--text-dim); font-family: inherit; font-size: 11px; padding: 8px; cursor: pointer; border-radius: 3px; transition: color 0.15s, border-color 0.15s; }
+.story-add-btn:hover { color: var(--amber); border-color: var(--amber-dim); }
+
+/* ── DOCS TAB ────────────────────────────────────────── */
+.docs-upload-zone {
+  border: 1px dashed var(--border); border-radius: 4px; padding: 16px 10px;
+  text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 12px;
+}
+.docs-upload-zone:hover { border-color: var(--amber-dim); background: var(--surface2); }
+.docs-upload-zone.drag-over { border-color: var(--amber); background: rgba(200,136,10,0.06); }
+.docs-upload-label { color: var(--text-dim); font-size: 11px; line-height: 1.6; }
+.docs-upload-label strong { color: var(--amber); display: block; margin-bottom: 4px; font-size: 12px; }
+.docs-upload-label span { font-size: 10px; color: var(--text-dim); }
+.docs-file-input { display: none; }
+.doc-entry { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
+.doc-entry-header { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; }
+.doc-entry-header:hover { background: rgba(255,255,255,0.02); }
+.doc-toggle { width: 32px; height: 18px; background: var(--border); border-radius: 9px; position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; border: none; }
+.doc-toggle.on { background: var(--amber-dim); }
+.doc-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 6px; background: var(--bone-dim); transition: left 0.2s; }
+.doc-toggle.on::after { left: 17px; background: var(--amber-glow); }
+.doc-name { color: var(--bone); font-size: 11px; font-weight: bold; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-size { color: var(--text-dim); font-size: 10px; flex-shrink: 0; }
+.doc-delete { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; flex-shrink: 0; line-height: 1; padding: 0 2px; }
+.doc-delete:hover { color: var(--red); }
+.doc-preview { padding: 0 10px 8px; display: none; }
+.doc-preview.open { display: block; }
+.doc-preview-text { color: var(--text-dim); font-size: 10px; line-height: 1.5; max-height: 120px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; border-top: 1px solid var(--border); padding-top: 8px; }
+.doc-status-bar { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; font-size: 10px; color: var(--text-dim); padding: 5px 0; border-bottom: 1px solid var(--border); }
+.doc-status-active { color: var(--amber); font-weight: bold; }
+
+/* ── HISTORY PANEL ──────────────────────────────────── */
+.history-panel-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100;
+  display: flex; align-items: flex-start; justify-content: flex-end;
+}
+.history-panel {
+  width: 340px; height: 100vh; background: var(--surface);
+  border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden;
+}
+.history-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.history-header h3 { color: var(--amber); font-size: 12px; letter-spacing: 0.08em; }
+.close-btn { background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; line-height: 1; }
+.close-btn:hover { color: var(--bone); }
+.history-list { flex: 1; overflow-y: auto; padding: 8px; }
+.history-entry {
+  padding: 8px 10px; border-radius: 3px; margin-bottom: 4px; cursor: pointer;
+  border: 1px solid transparent; transition: border-color 0.15s;
+}
+.history-entry:hover { border-color: var(--border); background: var(--surface2); }
+.history-entry-label { color: var(--bone-dim); font-size: 11px; }
+.history-entry-time  { color: var(--text-dim); font-size: 10px; margin-top: 2px; }
+.history-restore-btn {
+  width: 100%; background: var(--amber-dim); border: none; color: var(--amber-glow);
+  font-family: inherit; font-size: 11px; padding: 8px; cursor: pointer; border-radius: 3px;
+  margin-top: 8px; letter-spacing: 0.05em;
+}
+.history-restore-btn:hover { background: var(--amber); color: var(--bg); }
+
+/* ── MODAL ──────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  padding: 20px; width: 380px; max-width: 90vw;
+}
+.modal h3 { color: var(--amber); font-size: 13px; margin-bottom: 12px; letter-spacing: 0.06em; }
+.modal-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-family: inherit; font-size: 12px; padding: 8px 10px;
+  border-radius: 3px; outline: none; margin-bottom: 8px;
+}
+.modal-input:focus { border-color: var(--amber-dim); }
+.modal-textarea {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-family: inherit; font-size: 12px; padding: 8px 10px;
+  border-radius: 3px; outline: none; resize: vertical; min-height: 80px;
+  margin-bottom: 12px; line-height: 1.5;
+}
+.modal-textarea:focus { border-color: var(--amber-dim); }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-btn-cancel {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  font-family: inherit; font-size: 11px; padding: 6px 14px; cursor: pointer; border-radius: 3px;
+}
+.modal-btn-cancel:hover { color: var(--text); }
+.modal-btn-ok {
+  background: var(--amber); border: none; color: var(--bg);
+  font-family: inherit; font-size: 11px; font-weight: bold; padding: 6px 14px;
+  cursor: pointer; border-radius: 3px;
+}
+.modal-btn-ok:hover { background: var(--amber-glow); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────
+const STORE_KEY   = 'boo_hag_studio_v1';
+const HISTORY_KEY = 'boo_hag_history_v1';
+const MAX_HISTORY = 50;
+
+const INITIAL_VARS = {
+  calm:           { type: 'int',  initial: 10,    range: [0, 100], value: 10 },
+  consciousness:  { type: 'int',  initial: 0,     range: [0, 3],   value: 0  },
+  face_worn:      { type: 'bool', initial: false,                   value: false },
+  face_stable:    { type: 'bool', initial: false,                   value: false },
+  att_reticence:  { type: 'bool', initial: false,                   value: false },
+  att_anger:      { type: 'bool', initial: false,                   value: false },
+  att_curiosity:  { type: 'bool', initial: false,                   value: false },
+  att_joy:        { type: 'bool', initial: false,                   value: false },
+  att_greed:      { type: 'bool', initial: false,                   value: false },
+  branch_shed:    { type: 'bool', initial: false,                   value: false },
+  branch_run:     { type: 'bool', initial: false,                   value: false },
+  branch_go:      { type: 'bool', initial: false,                   value: false },
+  diner_massacre: { type: 'bool', initial: false,                   value: false },
+  father_dead:    { type: 'bool', initial: true,                    value: true  },
+  mother_witness: { type: 'bool', initial: true,                    value: true  },
+  cop_knows_face: { type: 'bool', initial: false,                   value: false },
+  face_seen_count:{ type: 'int',  initial: 0,     range: [0, 99],  value: 0     },
+};
+
+const INITIAL_SCENES = [
+  { id: 'cold_open',    name: 'Cold Open',      branch: 'shared', type: 'playable', status: 'in_progress', nodes: [], wires: [] },
+  { id: 'scene_2_shed', name: 'Scene 2 — Shed', branch: 'shed',   type: 'playable', status: 'in_progress', nodes: [], wires: [] },
+];
+
+const DEFAULT_STORE = {
+  variables: JSON.parse(JSON.stringify(INITIAL_VARS)),
+  consequences: [],
+  scenes: INITIAL_SCENES,
+  canon: [],
+  importedDocs: [],
+  chatSessions: { default: { name: 'Main Session', messages: [] } },
+  activeScene: 'cold_open',
+  activeSession: 'default',
+};
+
+// ── STORAGE HELPERS ───────────────────────────────────────────────────
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STORE));
+    const stored = JSON.parse(raw);
+    // Merge missing variables
+    const vars = stored.variables || {};
+    Object.entries(INITIAL_VARS).forEach(([k, v]) => {
+      if (!vars[k]) vars[k] = JSON.parse(JSON.stringify(v));
+    });
+    stored.variables = vars;
+    if (!stored.chatSessions) stored.chatSessions = DEFAULT_STORE.chatSessions;
+    if (!stored.activeSession) stored.activeSession = 'default';
+    if (!stored.canon) stored.canon = [];
+    if (!stored.consequences) stored.consequences = [];
+    if (!stored.importedDocs) stored.importedDocs = [];
+    return stored;
+  } catch { return JSON.parse(JSON.stringify(DEFAULT_STORE)); }
+}
+
+function saveStore(store) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(store));
+}
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : { snapshots: [] };
+  } catch { return { snapshots: [] }; }
+}
+
+function saveHistory(h) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+}
+
+// ── NODE_JSON PARSER ──────────────────────────────────────────────────
+function extractNodeJson(text) {
+  const match = text.match(/\[NODE_JSON\]([\s\S]*?)\[\/NODE_JSON\]/);
+  if (!match) return null;
+  try { return JSON.parse(match[1].trim()); } catch { return null; }
+}
+
+function stripNodeJson(text) {
+  return text.replace(/\[NODE_JSON\][\s\S]*?\[\/NODE_JSON\]/g, '').trim();
+}
+
+function applyNodeJson(store, nj) {
+  if (!nj) return store;
+  const next = JSON.parse(JSON.stringify(store));
+
+  // Declare new vars
+  if (nj.declare_vars) {
+    nj.declare_vars.forEach(v => {
+      if (!next.variables[v.name]) {
+        next.variables[v.name] = {
+          type: v.type || 'bool',
+          initial: v.initial !== undefined ? v.initial : false,
+          value: v.initial !== undefined ? v.initial : false,
+          ...(v.range ? { range: v.range } : {}),
+        };
+      }
+    });
+  }
+
+  // Add consequences
+  if (nj.consequences) {
+    nj.consequences.forEach(c => {
+      const exists = next.consequences.find(x => x.id === c.id);
+      if (!exists) next.consequences.push(c);
+    });
+  }
+
+  // Nodes
+  if (nj.nodes && nj.scene) {
+    let scene = next.scenes.find(s => s.id === nj.scene);
+    if (!scene && nj.action === 'create_scene') {
+      scene = { id: nj.scene, name: nj.scene, branch: 'shared', type: 'playable', status: 'draft', nodes: [], wires: [] };
+      next.scenes.push(scene);
+    }
+    if (scene) {
+      if (nj.action === 'add_nodes' || nj.action === 'create_scene') {
+        nj.nodes.forEach(node => {
+          const existing = scene.nodes.findIndex(n => n.id === node.id);
+          if (existing >= 0) scene.nodes[existing] = node;
+          else scene.nodes.push(node);
+        });
+      } else if (nj.action === 'modify_node') {
+        nj.nodes.forEach(node => {
+          const idx = scene.nodes.findIndex(n => n.id === node.id);
+          if (idx >= 0) scene.nodes[idx] = { ...scene.nodes[idx], ...node };
+        });
+      } else if (nj.action === 'delete_node') {
+        nj.nodes.forEach(node => {
+          scene.nodes = scene.nodes.filter(n => n.id !== node.id);
+        });
+      }
+    }
+  }
+
+  return next;
+}
+
+// ── BUILD GAME CONTEXT ────────────────────────────────────────────────
+function buildGameContext(store) {
+  const v = store.variables;
+  const scene = store.scenes.find(s => s.id === store.activeScene);
+  const attitudes = ['att_reticence','att_anger','att_curiosity','att_joy','att_greed']
+    .filter(a => v[a] && v[a].value).map(a => a.replace('att_',''));
+  const tier = ['feral','waking','clear','griotte'][v.consciousness?.value || 0] || 'feral';
+  const canonText = store.canon.slice(0, 5).map(c => `• ${c.title}: ${c.body}`).join('\n').slice(0, 800);
+
+  const enabledDocs = (store.importedDocs || []).filter(d => d.enabled);
+  let docsText = '';
+  if (enabledDocs.length > 0) {
+    let budget = 3000;
+    docsText = '\nIMPORTED REFERENCE DOCS:\n' + enabledDocs.map(d => {
+      const snip = d.content.slice(0, Math.min(budget, 1200));
+      budget -= snip.length;
+      return `--- ${d.name} ---\n${snip}${d.content.length > snip.length ? '\n[truncated]' : ''}`;
+    }).join('\n\n');
+  }
+
+  return `Active Scene: ${scene ? scene.name : '(none)'} — ${scene?.type || ''} — ${scene?.status || ''}
+PROTAGONIST:
+• Forms: skinless (boo hag) / the face (girl, symbiotic — calm breeds control)
+• Consciousness: ${tier} | Calm: ${v.calm?.value ?? 10}/100
+• Active attitudes: ${attitudes.length ? attitudes.join(', ') : 'none yet'}
+VARIABLES: calm=${v.calm?.value ?? 10} consciousness=${v.consciousness?.value ?? 0} face_worn=${v.face_worn?.value ?? false} face_stable=${v.face_stable?.value ?? false} branch_shed=${v.branch_shed?.value ?? false} branch_run=${v.branch_run?.value ?? false} branch_go=${v.branch_go?.value ?? false} diner_massacre=${v.diner_massacre?.value ?? false}
+CANON DECISIONS:
+${canonText || '(none yet)'}${docsText}`;
+}
+
+// ── COMPONENTS ────────────────────────────────────────────────────────
+
+function HistoryPanel({ history, onRestore, onClose }) {
+  return (
+    <div className="history-panel-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="history-panel">
+        <div className="history-header">
+          <h3>⟳ HISTORY</h3>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="history-list">
+          {history.snapshots.length === 0 && (
+            <div style={{color:'var(--text-dim)',fontSize:'11px',padding:'12px',textAlign:'center'}}>No snapshots yet.</div>
+          )}
+          {[...history.snapshots].reverse().map((snap, i) => (
+            <div key={i} className="history-entry">
+              <div className="history-entry-label">{snap.label}</div>
+              <div className="history-entry-time">{new Date(snap.timestamp).toLocaleTimeString()}</div>
+              <button className="history-restore-btn" onClick={() => onRestore(snap)}>Restore this state</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CanonModal({ onSave, onClose, initial }) {
+  const [title, setTitle] = useState(initial?.title || '');
+  const [body, setBody]   = useState(initial?.body  || '');
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <h3>LOCK TO CANON</h3>
+        <input className="modal-input" placeholder="Title / decision" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
+        <textarea className="modal-textarea" placeholder="Body…" value={body} onChange={e => setBody(e.target.value)} />
+        <div className="modal-btns">
+          <button className="modal-btn-cancel" onClick={onClose}>Cancel</button>
+          <button className="modal-btn-ok" onClick={() => { if (title.trim()) onSave(title.trim(), body.trim()); }}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── VARIABLES TAB ─────────────────────────────────────────────────────
+function VariablesTab({ variables, onSet }) {
+  const intVars  = Object.entries(variables).filter(([,v]) => v.type === 'int');
+  const boolVars = Object.entries(variables).filter(([,v]) => v.type === 'bool');
+  return (
+    <div>
+      <div className="bible-card">
+        <div className="bible-card-title">Core</div>
+        {intVars.map(([name, v]) => (
+          <div key={name} className="var-row">
+            <span className="var-label">{name}</span>
+            {name === 'calm' ? (
+              <>
+                <span className="var-val">{v.value}</span>
+                <input type="range" className="var-slider" min={v.range[0]} max={v.range[1]} value={v.value}
+                  onChange={e => onSet(name, Number(e.target.value))} />
+              </>
+            ) : (
+              <>
+                <button className="var-int-btn" onClick={() => onSet(name, Math.max(v.range[0], v.value - 1))}>−</button>
+                <span className="var-val" style={{minWidth:20,textAlign:'center'}}>{v.value}</span>
+                <button className="var-int-btn" onClick={() => onSet(name, Math.min(v.range[1], v.value + 1))}>+</button>
+                <span style={{color:'var(--text-dim)',fontSize:'10px',marginLeft:4}}>
+                  {name === 'consciousness' ? ['feral','waking','clear','griotte'][v.value] || '' : ''}
+                </span>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="calm-bar" style={{marginBottom:12}}>
+        <div className="calm-fill" style={{width: `${variables.calm?.value ?? 0}%`}} />
+      </div>
+      <div className="bible-card">
+        <div className="bible-card-title">Flags</div>
+        {boolVars.map(([name, v]) => (
+          <div key={name} className="var-row">
+            <span className="var-label">{name}</span>
+            <input type="checkbox" className="var-check" checked={!!v.value}
+              onChange={e => onSet(name, e.target.checked)} />
+            <span style={{color: v.value ? 'var(--amber)' : 'var(--text-dim)', fontSize:'10px'}}>
+              {v.value ? 'true' : 'false'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── DOCS TAB COMPONENT ────────────────────────────────────────────────
+function DocsTab({ store, onStoreChange }) {
+  const [dragOver, setDragOver] = useState(false);
+  const [expanded, setExpanded] = useState({});
+  const fileInputRef = useRef(null);
+
+  const docs = store.importedDocs || [];
+  const enabledCount = docs.filter(d => d.enabled).length;
+
+  const readFiles = useCallback((files) => {
+    Array.from(files).forEach(file => {
+      if (!file.name.match(/\.(md|yaml|yml|ink|txt)$/i)) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
+        const next = JSON.parse(JSON.stringify(store));
+        const existing = next.importedDocs.findIndex(d => d.name === file.name);
+        const doc = { id: `doc_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, name: file.name, content, enabled: true, importedAt: Date.now(), size: content.length };
+        if (existing >= 0) next.importedDocs[existing] = doc;
+        else next.importedDocs.push(doc);
+        onStoreChange(next, `Imported doc: ${file.name}`);
+      };
+      reader.readAsText(file);
+    });
+  }, [store, onStoreChange]);
+
+  const toggleDoc = useCallback((id) => {
+    const next = JSON.parse(JSON.stringify(store));
+    const doc = next.importedDocs.find(d => d.id === id);
+    if (doc) doc.enabled = !doc.enabled;
+    onStoreChange(next, null);
+  }, [store, onStoreChange]);
+
+  const deleteDoc = useCallback((id) => {
+    const next = JSON.parse(JSON.stringify(store));
+    const doc = next.importedDocs.find(d => d.id === id);
+    if (!confirm(`Remove "${doc?.name}"?`)) return;
+    next.importedDocs = next.importedDocs.filter(d => d.id !== id);
+    onStoreChange(next, `Removed doc: ${doc?.name}`);
+  }, [store, onStoreChange]);
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault(); setDragOver(false);
+    readFiles(e.dataTransfer.files);
+  }, [readFiles]);
+
+  const fmt = (n) => n > 1024 ? `${(n/1024).toFixed(1)}k` : `${n}ch`;
+
+  return (
+    <div>
+      {docs.length > 0 && (
+        <div className="doc-status-bar">
+          <span className={enabledCount > 0 ? 'doc-status-active' : ''}>{enabledCount} active</span>
+          <span>·</span>
+          <span>{docs.length} total</span>
+          <span>·</span>
+          <span>Sent to Claude on every message</span>
+        </div>
+      )}
+
+      <div className={`docs-upload-zone${dragOver ? ' drag-over' : ''}`}
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+      >
+        <div className="docs-upload-label">
+          <strong>↑ Import Files</strong>
+          Drop or click to upload<br/>
+          <span>.md · .yaml · .yml · .ink · .txt</span>
+        </div>
+      </div>
+      <input ref={fileInputRef} type="file" className="docs-file-input"
+        accept=".md,.yaml,.yml,.ink,.txt" multiple
+        onChange={e => { readFiles(e.target.files); e.target.value = ''; }} />
+
+      {docs.length === 0 && (
+        <div style={{color:'var(--text-dim)',fontSize:'11px',textAlign:'center',marginTop:8}}>
+          Import your existing .md files to give Claude full context without re-typing.
+        </div>
+      )}
+
+      {docs.map(doc => (
+        <div key={doc.id} className="doc-entry">
+          <div className="doc-entry-header" onClick={() => setExpanded(x => ({ ...x, [doc.id]: !x[doc.id] }))}>
+            <button className={`doc-toggle${doc.enabled ? ' on' : ''}`}
+              onClick={e => { e.stopPropagation(); toggleDoc(doc.id); }}
+              title={doc.enabled ? 'Active — Claude reads this' : 'Inactive — click to enable'}
+            />
+            <span className="doc-name" title={doc.name}>{doc.name}</span>
+            <span className="doc-size">{fmt(doc.size)}</span>
+            <button className="doc-delete" onClick={e => { e.stopPropagation(); deleteDoc(doc.id); }}>✕</button>
+          </div>
+          <div className={`doc-preview${expanded[doc.id] ? ' open' : ''}`}>
+            <div className="doc-preview-text">{doc.content.slice(0, 600)}{doc.content.length > 600 ? '\n…' : ''}</div>
+          </div>
+        </div>
+      ))}
+
+      {docs.length > 0 && (
+        <button className="add-btn" style={{marginTop:8}} onClick={() => {
+          const next = JSON.parse(JSON.stringify(store));
+          next.importedDocs = next.importedDocs.map(d => ({ ...d, enabled: true }));
+          onStoreChange(next, 'Enabled all docs');
+        }}>Enable All</button>
+      )}
+    </div>
+  );
+}
+
+// ── GAME BIBLE SIDEBAR ─────────────────────────────────────────────────
+function GameBibleSidebar({ store, onStoreChange, onAddCanon }) {
+  const [tab, setTab] = useState('SCENES');
+
+  const setVar = useCallback((name, value) => {
+    const next = JSON.parse(JSON.stringify(store));
+    next.variables[name] = { ...next.variables[name], value };
+    onStoreChange(next, `Edited variable: ${name}=${value}`);
+  }, [store, onStoreChange]);
+
+  const deleteCanon = useCallback((id) => {
+    const next = JSON.parse(JSON.stringify(store));
+    next.canon = next.canon.filter(c => c.id !== id);
+    onStoreChange(next, 'Deleted canon entry');
+  }, [store, onStoreChange]);
+
+  const setActiveScene = useCallback((id) => {
+    const next = JSON.parse(JSON.stringify(store));
+    next.activeScene = id;
+    onStoreChange(next, null);
+  }, [store, onStoreChange]);
+
+  return (
+    <div className="bible-sidebar">
+      <div className="bible-tabs">
+        {['SCENES','VARS','CANON','DOCS','CHAR'].map(t => (
+          <button key={t} className={`bible-tab${tab===t?' active':''}`} onClick={() => setTab(t)}>{t}</button>
+        ))}
+      </div>
+      <div className="bible-content">
+        {tab === 'SCENES' && (
+          <>
+            {store.scenes.map(s => (
+              <div key={s.id} className={`scene-item${s.id===store.activeScene?' active-scene':''}`}
+                onClick={() => setActiveScene(s.id)}>
+                <div style={{flex:1}}>
+                  <div className="scene-name">{s.name}</div>
+                  <div style={{display:'flex',gap:4,marginTop:4,flexWrap:'wrap'}}>
+                    <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>
+                    <span className={`scene-badge badge-${s.type}`}>{s.type}</span>
+                    <span className={`scene-badge badge-${s.status}`}>{s.status}</span>
+                    <span style={{color:'var(--text-dim)',fontSize:'10px',marginLeft:'auto'}}>
+                      {s.nodes.length} nodes
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+        {tab === 'VARS' && (
+          <VariablesTab variables={store.variables} onSet={setVar} />
+        )}
+        {tab === 'CANON' && (
+          <>
+            {store.canon.length === 0 && (
+              <div style={{color:'var(--text-dim)',fontSize:'11px',marginBottom:12}}>No canon decisions yet. Use "Lock to Canon" on any Claude response.</div>
+            )}
+            {store.canon.map(c => (
+              <div key={c.id} className="canon-entry">
+                <button className="canon-delete" onClick={() => deleteCanon(c.id)}>✕</button>
+                <div className="canon-entry-title">{c.title}</div>
+                <div className="canon-entry-body">{c.body}</div>
+                <div className="canon-entry-date">{new Date(c.createdAt).toLocaleDateString()}</div>
+              </div>
+            ))}
+            <button className="add-btn" onClick={onAddCanon}>+ Add Canon Note</button>
+          </>
+        )}
+        {tab === 'DOCS' && (
+          <DocsTab store={store} onStoreChange={onStoreChange} />
+        )}
+        {tab === 'CHAR' && (
+          <>
+            <div className="bible-card">
+              <div className="bible-card-title">The Protagonist</div>
+              <div className="bible-card-body">
+                <strong>TWO beings conjoined</strong> by 3-7-9 alignment.<br/><br/>
+                <strong>BOO HAG</strong> — ancient, pre-Bureau, feral. Power. Body. Hunger.<br/><br/>
+                <strong>THE GIRL</strong> — Arceneaux family. College student. Died March 3, 2003. Consciousness transferred inside instead of dispersing.<br/><br/>
+                <strong>Conjunction:</strong> July 25, 9:09 PM. Father killed. Mother witnessed. Girl became player.
+              </div>
+            </div>
+            <div className="bible-card">
+              <div className="bible-card-title">The Face</div>
+              <div className="bible-card-body">
+                Symbiotic. Always present. Cannot be lost.<br/>SHED retracts it — it stays inside.<br/><br/>
+                <strong>CALM breeds control.</strong> FEAR breeds chaos.<br/>Anchors: phone, keepsake, familiar smells.
+              </div>
+            </div>
+            <div className="bible-card">
+              <div className="bible-card-title">Attitudes</div>
+              <div className="bible-card-body">
+                <strong>RETICENCE</strong> — denial, mechanically hardest<br/>
+                <strong>ANGER</strong> — claiming while furious<br/>
+                <strong>CURIOSITY</strong> — accepts to understand<br/>
+                <strong>JOY</strong> — unlocks after first power use<br/>
+                <strong>GREED</strong> — unlocks after joy
+              </div>
+            </div>
+            <div className="bible-card">
+              <div className="bible-card-title">Consciousness</div>
+              <div className="bible-card-body">
+                0 · FERAL — no words, instinct only<br/>
+                1 · WAKING — groping for language<br/>
+                2 · CLEAR — full sentences, sparse<br/>
+                3 · GRIOTTE — both integrated, authoritative
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── CHAT VIEW ─────────────────────────────────────────────────────────
+function ChatView({ store, onStoreChange, onSnapshot, history }) {
+  const [input, setInput] = useState('');
+  const [streaming, setStreaming] = useState(false);
+  const [canonModal, setCanonModal] = useState(null);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const session = store.chatSessions[store.activeSession] || { name: 'Session', messages: [] };
+  const messages = session.messages;
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => { scrollToBottom(); }, [messages.length, streaming]);
+
+  const updateMessages = useCallback((newMessages, snapshotLabel) => {
+    const next = JSON.parse(JSON.stringify(store));
+    if (!next.chatSessions[next.activeSession]) {
+      next.chatSessions[next.activeSession] = { name: 'Session', messages: [] };
+    }
+    next.chatSessions[next.activeSession].messages = newMessages;
+    onStoreChange(next, snapshotLabel);
+  }, [store, onStoreChange]);
+
+  const send = useCallback(async () => {
+    const text = input.trim();
+    if (!text || streaming) return;
+    setInput('');
+
+    const userMsg = { role: 'user', content: text, id: Date.now() };
+    const newMessages = [...messages, userMsg];
+    updateMessages(newMessages, null);
+    setStreaming(true);
+
+    try {
+      const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
+      const gameContext = buildGameContext(store);
+
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages, gameContext }),
+      });
+
+      if (!res.ok) throw new Error(`API ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+      const assistantId = Date.now() + 1;
+
+      const streamMessages = [...newMessages, { role: 'assistant', content: '', id: assistantId, streaming: true }];
+      updateMessages(streamMessages, null);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const lines = decoder.decode(value).split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.text) {
+              accumulated += parsed.text;
+              const updatedMsgs = [...newMessages, { role: 'assistant', content: accumulated, id: assistantId, streaming: true }];
+              updateMessages(updatedMsgs, null);
+            }
+            if (parsed.error) throw new Error(parsed.error);
+          } catch {}
+        }
+      }
+
+      // Parse NODE_JSON from final response
+      const nj = extractNodeJson(accumulated);
+      let finalStore = JSON.parse(JSON.stringify(store));
+      finalStore.chatSessions[finalStore.activeSession].messages = [
+        ...newMessages,
+        { role: 'assistant', content: accumulated, id: assistantId, nodeJson: nj }
+      ];
+      if (nj) finalStore = applyNodeJson(finalStore, nj);
+      onStoreChange(finalStore, `Claude: ${nj ? `added ${nj.nodes?.length||0} nodes to ${nj.scene}` : 'response'}`);
+
+    } catch (err) {
+      const errMessages = [...newMessages, {
+        role: 'assistant', content: `Error: ${err.message}\n\nCheck your API connection and that /api/claude is deployed.`,
+        id: Date.now() + 1, isError: true
+      }];
+      updateMessages(errMessages, null);
+    } finally {
+      setStreaming(false);
+    }
+  }, [input, streaming, messages, store, updateMessages, onStoreChange]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  }, [send]);
+
+  const lockToCanon = useCallback((msg, prefill) => {
+    setCanonModal({ msg, prefill });
+  }, []);
+
+  const saveCanon = useCallback((title, body) => {
+    const next = JSON.parse(JSON.stringify(store));
+    next.canon.unshift({ id: Date.now().toString(), title, body, createdAt: Date.now() });
+    onStoreChange(next, `Locked to canon: ${title}`);
+    setCanonModal(null);
+  }, [store, onStoreChange]);
+
+  const undoLastNodes = useCallback((msgId) => {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg?.nodeJson) return;
+    // Restore previous snapshot from history
+    const snaps = history.snapshots;
+    if (snaps.length > 1) {
+      const prev = snaps[snaps.length - 2];
+      onStoreChange(prev.state, null);
+    }
+  }, [messages, history, onStoreChange]);
+
+  return (
+    <div className="chat-layout">
+      <GameBibleSidebar
+        store={store}
+        onStoreChange={onStoreChange}
+        onAddCanon={() => setCanonModal({ msg: null, prefill: '' })}
+      />
+
+      <div className="chat-main">
+        <div className="chat-session-bar">
+          <span className="session-label">SESSION</span>
+          <button className="session-name-btn">{session.name}</button>
+          <span style={{color:'var(--text-dim)',fontSize:'10px',margin:'0 4px'}}>
+            Scene: {store.scenes.find(s=>s.id===store.activeScene)?.name || '—'}
+          </span>
+        </div>
+
+        <div className="chat-messages">
+          {messages.length === 0 && (
+            <div style={{color:'var(--text-dim)',fontSize:'12px',textAlign:'center',marginTop:40}}>
+              <div style={{color:'var(--amber)',marginBottom:8,letterSpacing:'0.08em'}}>BOO HAG STUDIO</div>
+              <div>Ask Claude to write a scene, create dialogue, design a quest.</div>
+              <div style={{marginTop:8,fontSize:'11px'}}>Example: "write the waitress scene in the diner"</div>
+            </div>
+          )}
+          {messages.map(msg => (
+            <div key={msg.id} className={`msg msg-${msg.role}`}>
+              <div className="msg-bubble" style={msg.isError ? {borderColor:'var(--red)',color:'#c86060'} : {}}>
+                {msg.role === 'assistant' ? stripNodeJson(msg.content) : msg.content}
+                {msg.streaming && <span className="typing-indicator"> ▋</span>}
+              </div>
+              {msg.role === 'assistant' && !msg.streaming && (
+                <>
+                  <div className="msg-actions">
+                    <button className="msg-action-btn"
+                      onClick={() => lockToCanon(msg, msg.content.slice(0, 200))}>
+                      Lock to Canon
+                    </button>
+                    {!msg.nodeJson && (
+                      <button className="msg-action-btn" onClick={() => {
+                        // Add response as a NARRATION node
+                        const nj = {
+                          action: 'add_nodes', scene: store.activeScene,
+                          nodes: [{ id: `narration_${Date.now()}`, type: 'NARRATION', text: stripNodeJson(msg.content).slice(0,400), media: null, next: null }]
+                        };
+                        const next = applyNodeJson(JSON.parse(JSON.stringify(store)), nj);
+                        onStoreChange(next, 'Manually added narration node');
+                      }}>Add to Tree</button>
+                    )}
+                    {msg.nodeJson && (
+                      <button className="msg-action-btn danger" onClick={() => undoLastNodes(msg.id)}>
+                        Undo Last Nodes
+                      </button>
+                    )}
+                  </div>
+                  {msg.nodeJson && (
+                    <div className="node-banner">
+                      <span>✓ Claude added {msg.nodeJson.nodes?.length || 0} nodes to {msg.nodeJson.scene}</span>
+                      <div className="node-banner-btns">
+                        <button className="node-banner-btn" onClick={() => undoLastNodes(msg.id)}>Undo</button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="chat-input-area">
+          <textarea
+            ref={inputRef}
+            className="chat-input"
+            placeholder="Ask Claude to write a scene, expand dialogue, design a quest…  (Enter to send, Shift+Enter for newline)"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={2}
+          />
+          <button className="send-btn" onClick={send} disabled={streaming || !input.trim()}>
+            {streaming ? '…' : 'SEND'}
+          </button>
+        </div>
+      </div>
+
+      {canonModal && (
+        <CanonModal
+          initial={{ title: '', body: canonModal.prefill || '' }}
+          onSave={saveCanon}
+          onClose={() => setCanonModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── NODE CONSTANTS ─────────────────────────────────────────────────────
+const NODE_COLORS = {
+  NARRATION:          { bg: '#2a2820', border: '#4a4438', header: '#3a3628', text: '#e8e0d4' },
+  CHOICE:             { bg: '#2a1e08', border: '#7a5206', header: '#3a2808', text: '#e8a820' },
+  CONDITION:          { bg: '#0e1e1c', border: '#1a7870', header: '#122420', text: '#40c8b8' },
+  VAR_SET:            { bg: '#121e10', border: '#4a7840', header: '#182818', text: '#90c870' },
+  ATTITUDE_BRANCH:    { bg: '#1a0e22', border: '#6a3a8a', header: '#220e2e', text: '#c080e0' },
+  CONSCIOUSNESS_GATE: { bg: '#0e1822', border: '#3a5878', header: '#121e2c', text: '#70a8d8' },
+  SCENE_TRANSITION:   { bg: '#1e0a08', border: '#8a1a10', header: '#280e0a', text: '#e06050' },
+  SECTION_LABEL:      { bg: '#161210', border: '#3a3028', header: '#1e1814', text: '#786e66' },
+  ANCHOR_USE:         { bg: '#221a06', border: '#a87820', header: '#2c2208', text: '#d8a830' },
+};
+
+const NODE_W = 220;
+const NODE_H = 90;
+const V_GAP  = 60;
+const H_GAP  = 40;
+
+// ── TREE LAYOUT ───────────────────────────────────────────────────────
+function computeLayout(nodes) {
+  if (!nodes || nodes.length === 0) return {};
+  const inDegree = {};
+  nodes.forEach(n => { inDegree[n.id] = 0; });
+  nodes.forEach(n => {
+    const nexts = getNextIds(n);
+    nexts.forEach(id => { if (inDegree[id] !== undefined) inDegree[id]++; });
+  });
+  const roots = nodes.filter(n => inDegree[n.id] === 0);
+  const startId = roots.length ? roots[0].id : nodes[0].id;
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  // BFS to assign levels
+  const levels = {};
+  const queue = [{ id: startId, level: 0 }];
+  const visited = new Set();
+  while (queue.length) {
+    const { id, level } = queue.shift();
+    if (visited.has(id)) continue;
+    visited.add(id);
+    if (!levels[level]) levels[level] = [];
+    levels[level].push(id);
+    const node = nodeMap[id];
+    if (node) getNextIds(node).forEach(nid => { if (!visited.has(nid)) queue.push({ id: nid, level: level + 1 }); });
+  }
+  // Add any unvisited nodes
+  nodes.forEach(n => { if (!visited.has(n.id)) { const l = Object.keys(levels).length; if (!levels[l]) levels[l] = []; levels[l].push(n.id); } });
+
+  const positions = {};
+  Object.entries(levels).forEach(([lvl, ids]) => {
+    const totalW = ids.length * NODE_W + (ids.length - 1) * H_GAP;
+    const startX = -totalW / 2 + NODE_W / 2;
+    ids.forEach((id, i) => {
+      positions[id] = { x: startX + i * (NODE_W + H_GAP), y: Number(lvl) * (NODE_H + V_GAP) };
+    });
+  });
+  return positions;
+}
+
+function getNextIds(node) {
+  if (!node) return [];
+  const ids = [];
+  if (node.next && node.next !== 'END') ids.push(node.next);
+  if (node.options) node.options.forEach(o => { if (o.next && o.next !== 'END') ids.push(o.next); });
+  if (node.true_next)  ids.push(node.true_next);
+  if (node.false_next) ids.push(node.false_next);
+  if (node.branches) Object.values(node.branches).forEach(id => { if (id && id !== 'END') ids.push(id); });
+  if (node.pass_next) ids.push(node.pass_next);
+  if (node.fail_next) ids.push(node.fail_next);
+  return [...new Set(ids)];
+}
+
+// ── EDIT PANEL ────────────────────────────────────────────────────────
+function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
+  const [text, setText]   = useState(node.text || '');
+  const [type, setType]   = useState(node.type || 'NARRATION');
+
+  const scene = store.scenes.find(s => s.id === store.activeScene);
+  const consequences = (store.consequences || []).filter(c => c.id && JSON.stringify(c).includes(node.id));
+
+  const save = () => {
+    const next = JSON.parse(JSON.stringify(store));
+    const sc = next.scenes.find(s => s.id === next.activeScene);
+    if (!sc) return;
+    const idx = sc.nodes.findIndex(n => n.id === node.id);
+    if (idx >= 0) sc.nodes[idx] = { ...sc.nodes[idx], text, type };
+    onStoreChange(next, `Edited node: ${node.id}`);
+  };
+
+  const deleteNode = () => {
+    if (!confirm(`Delete node "${node.id}"?`)) return;
+    const next = JSON.parse(JSON.stringify(store));
+    const sc = next.scenes.find(s => s.id === next.activeScene);
+    if (!sc) return;
+    sc.nodes = sc.nodes.filter(n => n.id !== node.id);
+    onStoreChange(next, `Deleted node: ${node.id}`);
+    onClose();
+  };
+
+  return (
+    <div className="edit-panel">
+      <div className="edit-panel-header">
+        <h4>EDIT NODE</h4>
+        <button className="close-btn" onClick={onClose}>✕</button>
+      </div>
+      <div className="edit-panel-body">
+        <div className="edit-field-label">ID</div>
+        <div style={{color:'var(--text-dim)',fontSize:'10px',fontFamily:'monospace',wordBreak:'break-all'}}>{node.id}</div>
+
+        <div className="edit-field-label">Type</div>
+        <select className="edit-select" value={type} onChange={e => setType(e.target.value)}>
+          {Object.keys(NODE_COLORS).map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+
+        <div className="edit-field-label">Text</div>
+        <textarea className="edit-textarea" value={text} onChange={e => setText(e.target.value)} rows={5} />
+
+        {node.options && (
+          <>
+            <div className="edit-field-label">Options ({node.options.length})</div>
+            {node.options.map((o,i) => (
+              <div key={i} style={{color:'var(--bone-dim)',fontSize:'10px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:3,padding:'5px 7px',marginBottom:4}}>
+                <strong style={{color:'var(--amber)'}}>{o.label}</strong>
+                {o.next && <span style={{color:'var(--text-dim)'}}> → {o.next}</span>}
+              </div>
+            ))}
+          </>
+        )}
+
+        {consequences.length > 0 && (
+          <>
+            <div className="edit-field-label">Consequences</div>
+            {consequences.map(c => (
+              <div key={c.id} className="edit-consequence">
+                <strong>{c.id}</strong><br/>
+                {c.downstream?.map(d => <div key={d.scene}>→ {d.scene}: {d.effect}</div>)}
+              </div>
+            ))}
+          </>
+        )}
+
+        <button className="edit-btn" onClick={save}>Save Changes</button>
+        <button className="edit-btn" style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',marginTop:4}}
+          onClick={() => onAskClaude(node)}>Ask Claude About This</button>
+        <button className="edit-btn edit-btn-danger" onClick={deleteNode}>Delete Node</button>
+      </div>
+    </div>
+  );
+}
+
+// ── TREE VIEW ─────────────────────────────────────────────────────────
+function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
+  const [offset, setOffset] = useState({ x: 80, y: 60 });
+  const [zoom, setZoom]     = useState(1);
+  const [panning, setPanning] = useState(false);
+  const [panStart, setPanStart] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [draggingNode, setDraggingNode] = useState(null);
+  const [manualPos, setManualPos] = useState({});
+  const wrapRef = useRef(null);
+
+  const scene = store.scenes.find(s => s.id === store.activeScene);
+  const nodes = scene?.nodes || [];
+  const autoPos = useMemo(() => computeLayout(nodes), [nodes]);
+
+  const getPos = id => manualPos[id] || autoPos[id] || { x: 0, y: 0 };
+
+  // Canvas bounds for SVG
+  const canvasW = 4000;
+  const canvasH = 4000;
+  const originX = canvasW / 2;
+  const originY = 40;
+
+  // Pan handlers
+  const onMouseDown = useCallback((e) => {
+    if (e.target.closest('.tree-node')) return;
+    setPanning(true);
+    setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+  }, [offset]);
+
+  const onMouseMove = useCallback((e) => {
+    if (panning && panStart) {
+      setOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+    }
+    if (draggingNode) {
+      const { id, startX, startY, startMX, startMY } = draggingNode;
+      const dx = (e.clientX - startMX) / zoom;
+      const dy = (e.clientY - startMY) / zoom;
+      setManualPos(p => ({ ...p, [id]: { x: startX + dx, y: startY + dy } }));
+    }
+  }, [panning, panStart, draggingNode, zoom]);
+
+  const onMouseUp = useCallback(() => {
+    setPanning(false);
+    setPanStart(null);
+    setDraggingNode(null);
+  }, []);
+
+  const onWheel = useCallback((e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setZoom(z => Math.min(2, Math.max(0.3, z * delta)));
+  }, []);
+
+  const startDragNode = useCallback((e, id) => {
+    e.stopPropagation();
+    const pos = getPos(id);
+    setDraggingNode({ id, startX: pos.x, startY: pos.y, startMX: e.clientX, startMY: e.clientY });
+  }, [manualPos, autoPos]);
+
+  // Wire paths
+  const wires = useMemo(() => {
+    const paths = [];
+    nodes.forEach(node => {
+      const from = getPos(node.id);
+      const fx = from.x + originX + NODE_W / 2;
+      const fy = from.y + originY + NODE_H;
+      const nexts = getNextIds(node);
+      nexts.forEach(nid => {
+        const toNode = nodes.find(n => n.id === nid);
+        if (!toNode) return;
+        const to = getPos(nid);
+        const tx = to.x + originX + NODE_W / 2;
+        const ty = to.y + originY;
+        const cy = (fy + ty) / 2;
+        const col = NODE_COLORS[node.type]?.border || '#4a4438';
+        paths.push({ d: `M${fx},${fy} C${fx},${cy} ${tx},${cy} ${tx},${ty}`, col, key: `${node.id}-${nid}` });
+      });
+    });
+    return paths;
+  }, [nodes, manualPos, autoPos]);
+
+  return (
+    <div className="tree-layout">
+      <div
+        className={`tree-canvas-wrap${panning ? ' panning' : ''}`}
+        ref={wrapRef}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onWheel={onWheel}
+      >
+        <div className="tree-canvas-inner" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}>
+          {/* Wire SVG */}
+          <svg className="tree-svg" width={canvasW} height={canvasH} style={{position:'absolute',left:-canvasW/2,top:0}}>
+            {wires.map(w => (
+              <path key={w.key} d={w.d} fill="none" stroke={w.col} strokeWidth="1.5" opacity="0.6" />
+            ))}
+          </svg>
+
+          {/* Nodes */}
+          {nodes.length === 0 ? (
+            <div className="tree-empty" style={{position:'absolute',width:400,left:-200,top:100}}>
+              <div style={{color:'var(--amber)',fontSize:'12px',letterSpacing:'0.08em'}}>NO NODES YET</div>
+              <div style={{fontSize:'11px'}}>Use CHAT to ask Claude to write a scene.</div>
+            </div>
+          ) : nodes.map(node => {
+            const pos = getPos(node.id);
+            const col = NODE_COLORS[node.type] || NODE_COLORS.NARRATION;
+            const isSelected = selected === node.id;
+            return (
+              <div
+                key={node.id}
+                className={`tree-node${isSelected ? ' selected' : ''}`}
+                style={{ left: pos.x + originX, top: pos.y + originY, borderColor: isSelected ? 'var(--amber)' : col.border, background: col.bg }}
+                onClick={() => setSelected(isSelected ? null : node.id)}
+                onMouseDown={e => { if (!e.target.closest('.tree-node-ask') && !e.target.closest('button')) startDragNode(e, node.id); }}
+              >
+                <div className="tree-node-header" style={{ background: col.header }}>
+                  <span className="tree-node-type" style={{ color: col.text }}>{node.type}</span>
+                  <button className="tree-node-ask" onClick={e => { e.stopPropagation(); onNodeContext && onNodeContext(node); }}>Ask Claude</button>
+                </div>
+                <div className="tree-node-body">
+                  {node.text ? node.text.slice(0, 120) + (node.text.length > 120 ? '…' : '') : <em style={{color:'var(--text-dim)'}}>no text</em>}
+                </div>
+                {node.options && node.options.length > 0 && (
+                  <div className="tree-node-footer">
+                    {node.options.slice(0, 3).map((o, i) => (
+                      <span key={i} className="tree-node-option">{o.label}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Zoom controls */}
+        <div className="tree-zoom-controls">
+          <button className="tree-zoom-btn" onClick={() => setZoom(z => Math.min(2, z * 1.2))}>+</button>
+          <button className="tree-zoom-btn" onClick={() => setZoom(z => Math.max(0.3, z * 0.8))}>−</button>
+          <button className="tree-zoom-btn" style={{fontSize:'9px'}} onClick={() => { setZoom(1); setOffset({x:80,y:60}); }}>↺</button>
+        </div>
+
+        {/* Node count */}
+        <div style={{position:'absolute',top:8,left:12,color:'var(--text-dim)',fontSize:'10px',pointerEvents:'none'}}>
+          {scene?.name} · {nodes.length} nodes · zoom {Math.round(zoom*100)}%
+        </div>
+      </div>
+
+      {/* Edit panel */}
+      {selected && nodes.find(n => n.id === selected) && (
+        <EditPanel
+          node={nodes.find(n => n.id === selected)}
+          store={store}
+          onStoreChange={onStoreChange}
+          onClose={() => setSelected(null)}
+          onAskClaude={(node) => { onNodeContext && onNodeContext(node); setSelected(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── STORY VIEW ────────────────────────────────────────────────────────
+function StoryView({ store, onStoreChange, onSwitchTab }) {
+  const lanes = ['shared', 'shed', 'run', 'go'];
+  const laneLabels = { shared: '── SHARED ──', shed: '── SHED ──', run: '── RUN ──', go: '── GO ──' };
+
+  const addScene = (branch) => {
+    const name = prompt(`Scene name for ${branch} branch:`);
+    if (!name) return;
+    const id = name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const next = JSON.parse(JSON.stringify(store));
+    next.scenes.push({ id, name, branch, type: 'playable', status: 'draft', nodes: [], wires: [] });
+    onStoreChange(next, `Added scene: ${name}`);
+  };
+
+  return (
+    <div className="story-layout">
+      <div className="story-canvas">
+        <div style={{color:'var(--text-dim)',fontSize:'10px',marginBottom:16,letterSpacing:'0.06em'}}>
+          STORY MAP · {store.scenes.length} scenes · Click a scene to open in TREE
+        </div>
+        <div className="story-lanes">
+          {lanes.map(lane => {
+            const laneScenes = store.scenes.filter(s => s.branch === lane);
+            return (
+              <div key={lane} className="story-lane">
+                <div className="story-lane-header">{laneLabels[lane]}</div>
+                {laneScenes.map(s => (
+                  <div key={s.id} className="story-card"
+                    onClick={() => { const next = JSON.parse(JSON.stringify(store)); next.activeScene = s.id; onStoreChange(next, null); onSwitchTab && onSwitchTab('TREE'); }}>
+                    <button className="story-card-play" onClick={e => { e.stopPropagation(); onSwitchTab && onSwitchTab('PLAY'); }}>▶ Play</button>
+                    <div className="story-card-name">{s.name}</div>
+                    <div className="story-card-badges">
+                      <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>
+                      <span className={`scene-badge badge-${s.type}`}>{s.type}</span>
+                      <span className={`scene-badge badge-${s.status}`}>{s.status}</span>
+                    </div>
+                    <div className="story-card-stats">
+                      {s.nodes.length} nodes · {s.nodes.filter(n=>n.media).length} media
+                    </div>
+                  </div>
+                ))}
+                <button className="story-add-btn" onClick={() => addScene(lane)}>+ New Scene</button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PLAY VIEW (stub — next build) ─────────────────────────────────────
+function PlayView({ store }) {
+  const scene = store.scenes.find(s => s.id === store.activeScene);
+  const rootNode = scene?.nodes?.[0];
+  return (
+    <div className="stub-view">
+      <h2>PLAY VIEW</h2>
+      <p>Scene runner — up next.</p>
+      {scene && <p style={{fontSize:'10px',color:'var(--text-dim)'}}>
+        Active: {scene.name} ({scene.nodes.length} nodes)
+        {rootNode ? '' : ' — no nodes yet, generate in CHAT first'}
+      </p>}
+    </div>
+  );
+}
+
+// ── APP ROOT ──────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab]         = useState('CHAT');
+  const [store, setStoreRaw]  = useState(loadStore);
+  const [history, setHistory] = useState(loadHistory);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const onStoreChange = useCallback((newStore, snapshotLabel) => {
+    setStoreRaw(newStore);
+    saveStore(newStore);
+    if (snapshotLabel) {
+      setHistory(prev => {
+        const snaps = [...prev.snapshots, { timestamp: Date.now(), label: snapshotLabel, state: newStore }]
+          .slice(-MAX_HISTORY);
+        const h = { snapshots: snaps };
+        saveHistory(h);
+        return h;
+      });
+    }
+  }, []);
+
+  const onSnapshot = useCallback((label) => {
+    setHistory(prev => {
+      const snaps = [...prev.snapshots, { timestamp: Date.now(), label, state: store }].slice(-MAX_HISTORY);
+      const h = { snapshots: snaps };
+      saveHistory(h);
+      return h;
+    });
+  }, [store]);
+
+  // Ctrl+Z undo
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        const snaps = history.snapshots;
+        if (snaps.length > 1) {
+          const prev = snaps[snaps.length - 2];
+          setStoreRaw(prev.state);
+          saveStore(prev.state);
+          setHistory(h => ({ snapshots: h.snapshots.slice(0, -1) }));
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [history]);
+
+  const restoreSnapshot = useCallback((snap) => {
+    setStoreRaw(snap.state);
+    saveStore(snap.state);
+    setShowHistory(false);
+  }, []);
+
+  return (
+    <>
+      <div id="root-inner" style={{display:'flex',flexDirection:'column',height:'100vh'}}>
+        <div className="topbar">
+          <span className="topbar-title">BOO HAG ◆ STUDIO</span>
+          {['STORY','TREE','PLAY','CHAT'].map(t => (
+            <button key={t} className={`tab-btn${tab===t?' active':''}`} onClick={() => setTab(t)}>{t}</button>
+          ))}
+          <div className="topbar-right">
+            <button className="topbar-btn" onClick={() => setShowHistory(true)}>⟳ History ({history.snapshots.length})</button>
+            <button className="topbar-btn" style={{color:'var(--text-dim)',fontSize:'10px'}} title="Ctrl+Z to undo">Ctrl+Z Undo</button>
+          </div>
+        </div>
+
+        <div className="view">
+                  {tab === 'CHAT'  && <ChatView  store={store} onStoreChange={onStoreChange} onSnapshot={onSnapshot} history={history}
+                              onNodeContext={node => { /* jump to tree with node pre-selected */ setTab('TREE'); }} />}
+                                        {tab === 'TREE'  && <TreeView  store={store} onStoreChange={onStoreChange}
+                                                    onSwitchToChat={() => setTab('CHAT')}
+                                                                onNodeContext={node => {
+                                                                              // Pre-fill chat with node context
+                                                                                            const next = JSON.parse(JSON.stringify(store));
+                                                                                                          const session = next.chatSessions[next.activeSession] || { name:'Session', messages:[] };
+                                                                                                                        session.messages = [...session.messages, { role:'user', content:`[Asking about node: ${node.id} (${node.type})] ${node.text ? '"' + node.text.slice(0,120) + '"' : ''}`, id: Date.now() }];
+                                                                                                                                      next.chatSessions[next.activeSession] = session;
+                                                                                                                                                    onStoreChange(next, null);
+                                                                                                                                                                  setTab('CHAT');
+                                                                                                                                                                              }}
+                                                                                                                                                                                        />}
+                                                                                                                                                                                                  {tab === 'PLAY'  && <PlayView  store={store} />}
+                                                                                                                                                                                                            {tab === 'STORY' && <StoryView store={store} onStoreChange={onStoreChange} onSwitchTab={setTab} />}
+                                                                                                                                                                                                                    </div>
+      </div>
+
+      {showHistory && (
+        <HistoryPanel
+          history={history}
+          onRestore={restoreSnapshot}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

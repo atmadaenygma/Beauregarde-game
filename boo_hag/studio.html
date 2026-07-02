@@ -817,33 +817,142 @@ function CanonModal({ onSave, onClose, initial }) {
   );
 }
 
+// ── CONSEQUENCES TAB ──────────────────────────────────────────────────
+function ConsequencesTab({ consequences, store, onStoreChange }) {
+  const [expanded, setExpanded] = useState({});
+
+  const deleteConsequence = (id) => {
+    const next = JSON.parse(JSON.stringify(store));
+    next.consequences = next.consequences.filter(c => c.id !== id);
+    onStoreChange(next, `Deleted consequence: ${id}`);
+  };
+
+  if (!consequences.length) {
+    return (
+      <div style={{color:'var(--text-dim)',fontSize:'11px',lineHeight:1.6,padding:'4px 0'}}>
+        No consequences yet.<br/><br/>
+        When Claude creates scenes with cross-scene effects, they appear here.<br/><br/>
+        <span style={{fontSize:'10px',opacity:0.6}}>Example: "diner massacre → PI trio active in scene 3"</span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{color:'var(--text-dim)',fontSize:'10px',marginBottom:10,letterSpacing:'0.04em'}}>
+        {consequences.length} consequence{consequences.length !== 1 ? 's' : ''} tracked
+      </div>
+      {consequences.map(c => {
+        const open = expanded[c.id];
+        return (
+          <div key={c.id} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:5,marginBottom:8,overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',cursor:'pointer'}}
+              onClick={() => setExpanded(e => ({...e,[c.id]:!e[c.id]}))}>
+              <span style={{color:'var(--amber)',fontSize:'10px',fontWeight:'bold',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.id}</span>
+              <span style={{color:'var(--text-dim)',fontSize:'9px',flexShrink:0}}>{open ? '▲' : '▼'}</span>
+              <button onClick={e => { e.stopPropagation(); deleteConsequence(c.id); }}
+                style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'12px',cursor:'pointer',lineHeight:1,padding:'0 2px',flexShrink:0}}>✕</button>
+            </div>
+            {open && (
+              <div style={{padding:'0 10px 10px',fontSize:'10px',lineHeight:1.6}}>
+                {c.trigger && (
+                  <div style={{marginBottom:6}}>
+                    <span style={{color:'var(--text-dim)'}}>trigger: </span>
+                    <span style={{color:'var(--bone)',fontFamily:'monospace'}}>{c.trigger}</span>
+                  </div>
+                )}
+                {c.sets && Object.keys(c.sets).length > 0 && (
+                  <div style={{marginBottom:6}}>
+                    <span style={{color:'var(--text-dim)'}}>sets: </span>
+                    {Object.entries(c.sets).map(([k,v]) => (
+                      <span key={k} style={{color:'#90c870',fontFamily:'monospace',marginRight:6}}>{k}={String(v)}</span>
+                    ))}
+                  </div>
+                )}
+                {c.downstream?.length > 0 && (
+                  <div>
+                    <div style={{color:'var(--text-dim)',marginBottom:4}}>downstream effects:</div>
+                    {c.downstream.map((d,i) => (
+                      <div key={i} style={{padding:'4px 8px',background:'rgba(0,0,0,0.2)',borderRadius:3,marginBottom:3,color:'var(--bone-dim)'}}>
+                        <span style={{color:'var(--amber-dim)',marginRight:4}}>→ {d.scene}</span>
+                        {d.effect}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── VARIABLES TAB ─────────────────────────────────────────────────────
-function VariablesTab({ variables, onSet }) {
+function VariablesTab({ variables, scenes, onSet }) {
+  const [provenanceFor, setProvenanceFor] = useState(null);
   const intVars  = Object.entries(variables).filter(([,v]) => v.type === 'int');
   const boolVars = Object.entries(variables).filter(([,v]) => v.type === 'bool');
+
+  // Find which scene nodes reference a variable name
+  const getProvenance = (varName) => {
+    const hits = [];
+    (scenes || []).forEach(sc => {
+      (sc.nodes || []).forEach(n => {
+        const nodeStr = JSON.stringify(n);
+        if (nodeStr.includes(`"${varName}"`)) {
+          hits.push({ scene: sc.name, nodeId: n.id, type: n.type });
+        }
+      });
+    });
+    return hits;
+  };
+  const ProvenancePopup = ({ name }) => {
+    const hits = getProvenance(name);
+    if (!hits.length) return <span style={{color:'var(--text-dim)',fontSize:'9px',marginLeft:4}}>unused</span>;
+    return (
+      <div style={{marginTop:4,marginLeft:2,marginBottom:4,borderLeft:'2px solid var(--border)',paddingLeft:8}}>
+        {hits.slice(0,6).map((h,i) => (
+          <div key={i} style={{fontSize:'9px',color:'var(--text-dim)',lineHeight:1.7}}>
+            <span style={{color:'var(--amber-dim)'}}>{h.scene}</span>
+            {' · '}<span style={{fontFamily:'monospace',opacity:0.7}}>{h.nodeId}</span>
+            {' '}<span style={{fontSize:'8px',opacity:0.5}}>[{h.type}]</span>
+          </div>
+        ))}
+        {hits.length > 6 && <div style={{fontSize:'9px',color:'var(--text-dim)',opacity:0.5}}>+{hits.length-6} more</div>}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="bible-card">
         <div className="bible-card-title">Core</div>
         {intVars.map(([name, v]) => (
-          <div key={name} className="var-row">
-            <span className="var-label">{name}</span>
-            {name === 'calm' ? (
-              <>
-                <span className="var-val">{v.value}</span>
-                <input type="range" className="var-slider" min={v.range[0]} max={v.range[1]} value={v.value}
-                  onChange={e => onSet(name, Number(e.target.value))} />
-              </>
-            ) : (
-              <>
-                <button className="var-int-btn" onClick={() => onSet(name, Math.max(v.range[0], v.value - 1))}>−</button>
-                <span className="var-val" style={{minWidth:20,textAlign:'center'}}>{v.value}</span>
-                <button className="var-int-btn" onClick={() => onSet(name, Math.min(v.range[1], v.value + 1))}>+</button>
-                <span style={{color:'var(--text-dim)',fontSize:'10px',marginLeft:4}}>
-                  {name === 'consciousness' ? ['feral','waking','clear','griotte'][v.value] || '' : ''}
-                </span>
-              </>
-            )}
+          <div key={name}>
+            <div className="var-row">
+              <span className="var-label" style={{cursor:'pointer'}}
+                onClick={() => setProvenanceFor(provenanceFor === name ? null : name)}
+                title="Click to show node references">{name}</span>
+              {name === 'calm' ? (
+                <>
+                  <span className="var-val">{v.value}</span>
+                  <input type="range" className="var-slider" min={v.range[0]} max={v.range[1]} value={v.value}
+                    onChange={e => onSet(name, Number(e.target.value))} />
+                </>
+              ) : (
+                <>
+                  <button className="var-int-btn" onClick={() => onSet(name, Math.max(v.range[0], v.value - 1))}>−</button>
+                  <span className="var-val" style={{minWidth:20,textAlign:'center'}}>{v.value}</span>
+                  <button className="var-int-btn" onClick={() => onSet(name, Math.min(v.range[1], v.value + 1))}>+</button>
+                  <span style={{color:'var(--text-dim)',fontSize:'10px',marginLeft:4}}>
+                    {name === 'consciousness' ? ['feral','waking','clear','griotte'][v.value] || '' : ''}
+                  </span>
+                </>
+              )}
+            </div>
+            {provenanceFor === name && <ProvenancePopup name={name} />}
           </div>
         ))}
       </div>
@@ -853,13 +962,18 @@ function VariablesTab({ variables, onSet }) {
       <div className="bible-card">
         <div className="bible-card-title">Flags</div>
         {boolVars.map(([name, v]) => (
-          <div key={name} className="var-row">
-            <span className="var-label">{name}</span>
-            <input type="checkbox" className="var-check" checked={!!v.value}
-              onChange={e => onSet(name, e.target.checked)} />
-            <span style={{color: v.value ? 'var(--amber)' : 'var(--text-dim)', fontSize:'10px'}}>
-              {v.value ? 'true' : 'false'}
-            </span>
+          <div key={name}>
+            <div className="var-row">
+              <span className="var-label" style={{cursor:'pointer'}}
+                onClick={() => setProvenanceFor(provenanceFor === name ? null : name)}
+                title="Click to show node references">{name}</span>
+              <input type="checkbox" className="var-check" checked={!!v.value}
+                onChange={e => onSet(name, e.target.checked)} />
+              <span style={{color: v.value ? 'var(--amber)' : 'var(--text-dim)', fontSize:'10px'}}>
+                {v.value ? 'true' : 'false'}
+              </span>
+            </div>
+            {provenanceFor === name && <ProvenancePopup name={name} />}
           </div>
         ))}
       </div>
@@ -1002,7 +1116,7 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon }) {
   return (
     <div className="bible-sidebar">
       <div className="bible-tabs">
-        {['SCENES','VARS','CANON','DOCS','CHAR'].map(t => (
+        {['SCENES','VARS','FX','CANON','DOCS','CHAR'].map(t => (
           <button key={t} className={`bible-tab${tab===t?' active':''}`} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
@@ -1028,7 +1142,10 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon }) {
           </>
         )}
         {tab === 'VARS' && (
-          <VariablesTab variables={store.variables} onSet={setVar} />
+          <VariablesTab variables={store.variables} scenes={store.scenes} onSet={setVar} />
+        )}
+        {tab === 'FX' && (
+          <ConsequencesTab consequences={store.consequences || []} store={store} onStoreChange={onStoreChange} />
         )}
         {tab === 'CANON' && (
           <>
@@ -1550,6 +1667,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
   const [draggingNode, setDraggingNode] = useState(null);
   const [manualPos, setManualPos] = useState({});
   const [fontSize, setFontSize] = useState(11);
+  const [search, setSearch]     = useState('');
   const wrapRef = useRef(null);
 
   const scene = store.scenes.find(s => s.id === store.activeScene);
@@ -1678,6 +1796,31 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
         <button className="tree-ctrl-btn" onClick={() => setZoom(z => Math.max(0.1, z * 0.85))}>−</button>
         <button className="tree-ctrl-btn" onClick={centerCanvas} title="Reset view">↺</button>
         <span style={{color:'var(--text-dim)',fontSize:'10px',minWidth:36,letterSpacing:'0.02em'}}>{Math.round(zoom*100)}%</span>
+        <input
+          type="text" placeholder="find node…" value={search}
+          onChange={e => {
+            const q = e.target.value;
+            setSearch(q);
+            if (!q) return;
+            const hit = nodes.find(n =>
+              n.id.toLowerCase().includes(q.toLowerCase()) ||
+              (n.text || '').toLowerCase().includes(q.toLowerCase())
+            );
+            if (hit) {
+              const pos = getPos(hit.id);
+              const rect = wrapRef.current?.getBoundingClientRect();
+              if (rect) {
+                setOffset({ x: rect.width/2 - pos.x * zoom, y: rect.height/2 - pos.y * zoom - 40 });
+              }
+              setSelected(hit.id);
+            }
+          }}
+          style={{
+            background:'var(--surface2)', border:'1px solid var(--border)', color:'var(--text)',
+            fontFamily:'inherit', fontSize:'10px', padding:'3px 8px', borderRadius:4,
+            outline:'none', width:120,
+          }}
+        />
         <div className="font-slider-wrap" style={{marginLeft:'auto'}}>
           <span style={{color:'var(--text-dim)',fontSize:'9px'}}>Aa</span>
           <input type="range" className="font-slider" min={8} max={16} step={1}
@@ -1839,7 +1982,13 @@ function StoryView({ store, onStoreChange, onSwitchTab }) {
                 {laneScenes.map(s => (
                   <div key={s.id} className="story-card"
                     onClick={() => { const next = JSON.parse(JSON.stringify(store)); next.activeScene = s.id; onStoreChange(next, null); onSwitchTab && onSwitchTab('TREE'); }}>
-                    <button className="story-card-play" onClick={e => { e.stopPropagation(); onSwitchTab && onSwitchTab('PLAY'); }}>▶ Play</button>
+                    <button className="story-card-play" onClick={e => {
+                      e.stopPropagation();
+                      const next = JSON.parse(JSON.stringify(store));
+                      next.activeScene = s.id;
+                      onStoreChange(next, null);
+                      onSwitchTab && onSwitchTab('PLAY');
+                    }}>▶ Play</button>
                     <div className="story-card-name">{s.name}</div>
                     <div className="story-card-badges">
                       <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>

@@ -399,6 +399,98 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .story-add-btn { width: 100%; background: none; border: 1px dashed var(--border); color: var(--text-dim); font-family: inherit; font-size: 11px; padding: 8px; cursor: pointer; border-radius: 3px; transition: color 0.15s, border-color 0.15s; }
 .story-add-btn:hover { color: var(--amber); border-color: var(--amber-dim); }
 
+/* ── PLAY VIEW ──────────────────────────────────────── */
+.play-layout { display: flex; flex-direction: column; flex: 1; overflow: hidden; background: #0d0c0b; }
+.play-ctrl-bar {
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+.play-scene-title { color: var(--amber); font-size: 11px; letter-spacing: 0.06em; }
+.play-ctrl-btn {
+  background: var(--surface); border: 1px solid var(--border); color: var(--bone-dim);
+  font-family: inherit; font-size: 10px; padding: 3px 10px; cursor: pointer; border-radius: 4px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.play-ctrl-btn:hover:not(:disabled) { color: var(--amber); border-color: var(--amber-dim); }
+.play-ctrl-btn:disabled { opacity: 0.3; cursor: default; }
+.play-ctrl-btn.active { color: var(--amber); border-color: var(--amber-dim); }
+.play-body { display: flex; flex: 1; overflow: hidden; }
+.play-stage {
+  flex: 1; display: flex; flex-direction: column;
+  overflow-y: auto; padding: 28px 40px; gap: 0;
+}
+.play-empty {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim); font-size: 12px; text-align: center;
+}
+.play-flash {
+  background: rgba(200,136,10,0.1); border: 1px solid var(--amber-dim);
+  color: var(--amber); font-size: 10px; padding: 6px 14px; border-radius: 4px;
+  letter-spacing: 0.06em; margin-bottom: 16px; text-align: center;
+  animation: flashIn 0.2s ease;
+}
+@keyframes flashIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+.play-media { width: 100%; max-width: 560px; margin: 0 auto 20px; border-radius: 6px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+.play-media-el { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+.play-node-type {
+  font-size: 9px; letter-spacing: 0.1em; color: var(--text-dim); font-weight: bold;
+  border: 1px solid var(--border); border-radius: 10px; padding: 2px 10px;
+  display: inline-block; margin-bottom: 14px; align-self: flex-start;
+}
+.play-node-text {
+  font-size: 14px; line-height: 1.85; color: var(--bone); max-width: 540px;
+  margin: 0 auto 24px; white-space: pre-wrap; letter-spacing: 0.01em;
+}
+.play-section-label {
+  color: var(--text-dim); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; text-align: center; padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.play-continue-btn {
+  background: var(--amber); border: none; color: var(--bg);
+  font-family: inherit; font-size: 12px; font-weight: bold;
+  padding: 10px 28px; cursor: pointer; border-radius: 5px;
+  letter-spacing: 0.06em; align-self: flex-start;
+  box-shadow: 0 2px 8px rgba(200,136,10,0.3); transition: background 0.12s;
+}
+.play-continue-btn:hover:not(:disabled) { background: var(--amber-glow); }
+.play-continue-btn:disabled { opacity: 0.35; cursor: default; }
+.play-choices { display: flex; flex-direction: column; gap: 8px; max-width: 540px; margin: 0 auto; }
+.play-choice-btn {
+  background: var(--surface); border: 1px solid var(--border); color: var(--bone-dim);
+  font-family: inherit; font-size: 13px; padding: 13px 18px; cursor: pointer;
+  border-radius: 5px; text-align: left; line-height: 1.5;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.3);
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.play-choice-btn:hover { border-color: var(--amber); color: var(--amber); background: rgba(200,136,10,0.05); }
+.play-breadcrumb {
+  margin-top: 32px; font-size: 9px; color: var(--text-dim); letter-spacing: 0.04em;
+  border-top: 1px solid var(--border); padding-top: 10px; word-break: break-all;
+  opacity: 0.5;
+}
+.play-resolving { color: var(--text-dim); font-size: 10px; margin-top: 14px; text-align: center; letter-spacing: 0.08em; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+.play-vars-panel {
+  width: 190px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border);
+  overflow-y: auto; padding: 12px 10px;
+}
+.play-vars-title {
+  color: var(--text-dim); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.play-var-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; min-height: 18px; }
+.play-var-name { color: var(--text-dim); font-size: 9px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.play-var-val { color: var(--bone-dim); font-size: 10px; font-weight: bold; flex-shrink: 0; }
+.play-calm-bar { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; min-width: 30px; }
+.play-calm-fill { height: 100%; background: var(--amber); border-radius: 2px; transition: width 0.4s ease; }
+
+/* ── INK EXPORT MODAL ─────────────────────────────────── */
+.ink-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; }
+.ink-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; width: 680px; max-width: 96vw; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.ink-modal-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 10px; background: var(--surface2); border-radius: 8px 8px 0 0; }
+.ink-modal-header h3 { color: var(--amber); font-size: 12px; letter-spacing: 0.08em; flex: 1; }
+.ink-modal-pre { flex: 1; overflow: auto; margin: 0; padding: 16px; background: #0a0909; font-family: 'Space Mono', monospace; font-size: 11px; line-height: 1.7; color: var(--bone-dim); white-space: pre; }
+
 /* ── DOCS TAB ────────────────────────────────────────── */
 .docs-upload-zone {
   border: 1px dashed var(--border); border-radius: 4px; padding: 16px 10px;
@@ -1769,18 +1861,371 @@ function StoryView({ store, onStoreChange, onSwitchTab }) {
   );
 }
 
-// ── PLAY VIEW (stub — next build) ─────────────────────────────────────
-function PlayView({ store }) {
+// ── INK EXPORT ────────────────────────────────────────────────────────
+function exportToInk(scene) {
+  const nodes = scene.nodes;
+  if (!nodes.length) return '// No nodes in this scene.\n';
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  // Find root node (zero in-degree)
+  const inDeg = {};
+  nodes.forEach(n => { inDeg[n.id] = 0; });
+  nodes.forEach(n => getNextIds(n).forEach(id => { if (inDeg[id] !== undefined) inDeg[id]++; }));
+  const root = nodes.find(n => inDeg[n.id] === 0) || nodes[0];
+
+  const visited = new Set();
+  const chunks = [];
+
+  chunks.push(`// ═══════════════════════════════════════════════════════\n// ${scene.name}\n// ═══════════════════════════════════════════════════════\n`);
+  chunks.push(`INCLUDE variables.ink\n\n-> ${root.id}\n\n`);
+
+  const render = (id) => {
+    if (!id || id === 'END' || visited.has(id) || !nodeMap[id]) return;
+    visited.add(id);
+    const n = nodeMap[id];
+    let c = `=== ${id} ===\n`;
+
+    switch (n.type) {
+      case 'SECTION_LABEL':
+        c += `// ── ${n.text || n.label || ''} ──\n-> ${n.next || 'END'}\n`;
+        break;
+      case 'NARRATION':
+        c += `${n.text || ''}\n-> ${n.next || 'END'}\n`;
+        break;
+      case 'CHOICE':
+        if (n.text) c += `${n.text}\n`;
+        (n.options || []).forEach(o => {
+          c += `+ [${o.label || 'Choice'}]\n`;
+          if (o.sets) Object.entries(o.sets).forEach(([k,v]) => { c += `  ~ ${k} = ${JSON.stringify(v)}\n`; });
+          c += `  -> ${o.next || 'END'}\n`;
+        });
+        break;
+      case 'VAR_SET': {
+        const op = n.operation === 'add' ? '+=' : n.operation === 'subtract' ? '-=' : '=';
+        c += `~ ${n.variable} ${op} ${JSON.stringify(n.value ?? 0)}\n-> ${n.next || 'END'}\n`;
+        break;
+      }
+      case 'CONDITION': {
+        const op = n.operator || '>=';
+        c += `{ ${n.variable} ${op} ${n.threshold}: -> ${n.true_next || 'END'} - else: -> ${n.false_next || 'END'} }\n`;
+        break;
+      }
+      case 'ATTITUDE_BRANCH':
+        ['reticence','anger','curiosity','joy','greed'].forEach(a => {
+          const dest = n.branches?.[a];
+          if (dest) c += `{ att_${a}: -> ${dest} }\n`;
+        });
+        if (n.next) c += `-> ${n.next}\n`;
+        break;
+      case 'CONSCIOUSNESS_GATE':
+        c += `{ consciousness >= ${n.min_tier ?? 0}: -> ${n.pass_next || 'END'} - else: -> ${n.fail_next || 'END'} }\n`;
+        break;
+      case 'ANCHOR_USE':
+        c += `~ calm += ${n.calm_gain ?? 5}\n-> ${n.next || 'END'}\n`;
+        break;
+      case 'SCENE_TRANSITION':
+        c += `// → ${n.target_scene || n.text || 'next scene'}\n-> END\n`;
+        break;
+      default:
+        c += n.text ? `${n.text}\n` : '';
+        c += `-> ${n.next || 'END'}\n`;
+    }
+
+    chunks.push(c + '\n');
+
+    // Recurse
+    getNextIds(n).forEach(nid => render(nid));
+    if (n.options) n.options.forEach(o => render(o.next));
+    if (n.branches) Object.values(n.branches).forEach(v => render(v));
+  };
+
+  render(root.id);
+  // Render any orphaned nodes
+  nodes.forEach(n => render(n.id));
+
+  return chunks.join('');
+}
+
+function InkExportModal({ store, onClose }) {
   const scene = store.scenes.find(s => s.id === store.activeScene);
-  const rootNode = scene?.nodes?.[0];
+  const ink = useMemo(() => scene ? exportToInk(scene) : '// No active scene', [store.activeScene, scene]);
+
+  const download = () => {
+    const blob = new Blob([ink], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${scene?.id || 'scene'}.ink`;
+    a.click();
+  };
+
   return (
-    <div className="stub-view">
-      <h2>PLAY VIEW</h2>
-      <p>Scene runner — up next.</p>
-      {scene && <p style={{fontSize:'10px',color:'var(--text-dim)'}}>
-        Active: {scene.name} ({scene.nodes.length} nodes)
-        {rootNode ? '' : ' — no nodes yet, generate in CHAT first'}
-      </p>}
+    <div className="ink-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ink-modal">
+        <div className="ink-modal-header">
+          <h3>EXPORT — {scene?.name || 'Scene'}.ink</h3>
+          <button className="topbar-btn" onClick={download}>⬇ Download .ink</button>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+        <pre className="ink-modal-pre">{ink}</pre>
+      </div>
+    </div>
+  );
+}
+
+// ── PLAY VIEW ─────────────────────────────────────────────────────────
+const CONSCIOUSNESS_LABELS = ['FERAL', 'WAKING', 'CLEAR', 'GRIOTTE'];
+
+function PlayView({ store, onStoreChange }) {
+  const scene = store.scenes.find(s => s.id === store.activeScene);
+  const nodes = scene?.nodes || [];
+
+  const [currentId, setCurrentId] = useState(() => nodes[0]?.id || null);
+  const [vars, setVars] = useState(() => ({ ...store.variables }));
+  const [path, setPath] = useState([]);
+  const [flash, setFlash] = useState(null);
+  const [showVars, setShowVars] = useState(true);
+
+  // Reset when active scene changes
+  useEffect(() => {
+    const sc = store.scenes.find(s => s.id === store.activeScene);
+    setCurrentId(sc?.nodes?.[0]?.id || null);
+    setVars({ ...store.variables });
+    setPath([]);
+    setFlash(null);
+  }, [store.activeScene]);
+
+  const node = nodes.find(n => n.id === currentId);
+
+  const showFlash = (msg) => {
+    setFlash(msg);
+    setTimeout(() => setFlash(null), 2000);
+  };
+
+  const goto = useCallback((id, msg) => {
+    if (msg) showFlash(msg);
+    setPath(p => currentId ? [...p, currentId] : p);
+    setCurrentId(id || null);
+  }, [currentId]);
+
+  const applyVar = (variable, operation, value) => {
+    setVars(v => {
+      const cur = typeof v[variable] === 'number' ? v[variable] : 0;
+      const next = { ...v };
+      if (operation === 'set') next[variable] = value;
+      else if (operation === 'add') next[variable] = cur + Number(value);
+      else if (operation === 'subtract') next[variable] = cur - Number(value);
+      return next;
+    });
+  };
+
+  // Auto-resolve non-interactive nodes
+  useEffect(() => {
+    if (!node) return;
+    let timer;
+    const delay = (fn, ms) => { timer = setTimeout(fn, ms); };
+
+    if (node.type === 'SECTION_LABEL') {
+      delay(() => goto(node.next, null), 300);
+
+    } else if (node.type === 'VAR_SET') {
+      applyVar(node.variable, node.operation || 'set', node.value ?? 0);
+      const op = node.operation === 'add' ? '+=' : node.operation === 'subtract' ? '-=' : '=';
+      delay(() => goto(node.next, `${node.variable} ${op} ${node.value}`), 900);
+
+    } else if (node.type === 'CONDITION') {
+      const v = typeof vars[node.variable] === 'number' ? vars[node.variable] : (vars[node.variable] ? 1 : 0);
+      const t = Number(node.threshold ?? 0);
+      const op = node.operator || '>=';
+      let result;
+      if (op === '>=') result = v >= t;
+      else if (op === '<=') result = v <= t;
+      else if (op === '>') result = v > t;
+      else if (op === '<') result = v < t;
+      else if (op === '==' || op === '=') result = v == t;
+      else result = Boolean(v);
+      const branch = result ? node.true_next : node.false_next;
+      delay(() => goto(branch, `${node.variable}=${v} ${op} ${t} → ${result ? 'TRUE' : 'FALSE'}`), 1200);
+
+    } else if (node.type === 'ATTITUDE_BRANCH') {
+      const active = ['reticence','anger','curiosity','joy','greed'].find(a => vars[`att_${a}`]);
+      const branch = (active && node.branches?.[active]) || node.branches?.reticence || node.next;
+      delay(() => goto(branch, `attitude: ${active || 'none'}`), 1200);
+
+    } else if (node.type === 'CONSCIOUSNESS_GATE') {
+      const tier = vars.consciousness ?? 0;
+      const pass = tier >= (node.min_tier ?? 0);
+      delay(() => goto(pass ? node.pass_next : node.fail_next,
+        `consciousness ${CONSCIOUSNESS_LABELS[tier]} ${pass ? '≥' : '<'} tier ${node.min_tier} → ${pass ? 'PASS' : 'FAIL'}`
+      ), 1200);
+
+    } else if (node.type === 'ANCHOR_USE') {
+      applyVar('calm', 'add', node.calm_gain ?? 5);
+      delay(() => goto(node.next, `anchor — calm +${node.calm_gain ?? 5}`), 700);
+    }
+
+    return () => clearTimeout(timer);
+  }, [currentId]);
+
+  const back = () => {
+    if (!path.length) return;
+    setCurrentId(path[path.length - 1]);
+    setPath(p => p.slice(0, -1));
+    setFlash(null);
+  };
+
+  const reset = () => {
+    setCurrentId(nodes[0]?.id || null);
+    setVars({ ...store.variables });
+    setPath([]);
+    setFlash(null);
+  };
+
+  // No scene
+  if (!scene) {
+    return (
+      <div className="play-layout">
+        <div className="play-empty">Select a scene in the STORY tab.</div>
+      </div>
+    );
+  }
+
+  const col = node ? (NODE_COLORS[node.type] || NODE_COLORS.NARRATION) : NODE_COLORS.NARRATION;
+  const isAutoNode = node && ['SECTION_LABEL','VAR_SET','CONDITION','ATTITUDE_BRANCH','CONSCIOUSNESS_GATE','ANCHOR_USE'].includes(node.type);
+
+  return (
+    <div className="play-layout">
+      <div className="play-ctrl-bar">
+        <span className="play-scene-title">{scene.name}</span>
+        {path.length > 0 && <span style={{color:'var(--text-dim)',fontSize:'10px'}}>node {path.length + 1}</span>}
+        <button className="play-ctrl-btn" onClick={back} disabled={!path.length}>◀ Back</button>
+        <button className="play-ctrl-btn" onClick={reset}>↺ Reset</button>
+        <button className={`play-ctrl-btn${showVars ? ' active' : ''}`}
+          style={{marginLeft:'auto'}} onClick={() => setShowVars(v => !v)}>
+          Variables
+        </button>
+      </div>
+
+      <div className="play-body">
+        <div className="play-stage">
+          {flash && <div className="play-flash">{flash}</div>}
+
+          {node?.media && (
+            <div className="play-media">
+              {node.media.startsWith('data:video') ? (
+                <video src={node.media} className="play-media-el" autoPlay muted loop />
+              ) : (
+                <img src={node.media} className="play-media-el" alt="" />
+              )}
+            </div>
+          )}
+
+          {node ? (
+            <>
+              <div className="play-node-type" style={{color:col.text,borderColor:col.border}}>
+                {node.type}
+              </div>
+
+              {node.text && node.type !== 'SECTION_LABEL' && (
+                <div className="play-node-text">{node.text}</div>
+              )}
+
+              {node.type === 'SECTION_LABEL' && node.text && (
+                <div className="play-section-label">{node.text}</div>
+              )}
+
+              {node.type === 'NARRATION' && (
+                <button className="play-continue-btn"
+                  onClick={() => goto(node.next, null)}
+                  disabled={!node.next || node.next === 'END'}>
+                  {(!node.next || node.next === 'END') ? '[ END OF SCENE ]' : 'Continue ▶'}
+                </button>
+              )}
+
+              {node.type === 'CHOICE' && node.options && (
+                <div className="play-choices">
+                  {node.options.map((o, i) => (
+                    <button key={i} className="play-choice-btn" onClick={() => {
+                      if (o.sets) Object.entries(o.sets).forEach(([k,v]) =>
+                        setVars(vars => ({ ...vars, [k]: v })));
+                      goto(o.next, null);
+                    }}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {node.type === 'SCENE_TRANSITION' && (
+                <div style={{textAlign:'center',marginTop:20}}>
+                  <div style={{color:'var(--text-dim)',fontSize:'11px',marginBottom:14,letterSpacing:'0.06em'}}>
+                    → {node.target_scene || node.text || 'next scene'}
+                  </div>
+                  <button className="play-continue-btn" onClick={() => {
+                    const targetId = node.target_scene || node.next;
+                    const next = JSON.parse(JSON.stringify(store));
+                    if (next.scenes.find(s => s.id === targetId)) next.activeScene = targetId;
+                    onStoreChange(next, null);
+                    const newScene = next.scenes.find(s => s.id === targetId);
+                    setCurrentId(newScene?.nodes?.[0]?.id || null);
+                    setPath([]);
+                    setFlash(null);
+                  }}>
+                    Enter Scene ▶
+                  </button>
+                </div>
+              )}
+
+              {isAutoNode && !flash && (
+                <div className="play-resolving">resolving…</div>
+              )}
+            </>
+          ) : (
+            <div className="play-empty" style={{flex:'none',paddingTop:40}}>
+              {nodes.length === 0
+                ? 'No nodes yet — build this scene in CHAT first.'
+                : 'Scene complete.'}
+            </div>
+          )}
+
+          {path.length > 0 && (
+            <div className="play-breadcrumb">
+              {path.slice(-5).map((id, i) => (
+                <span key={id}>{i > 0 && ' › '}<span>{id}</span></span>
+              ))}
+              {' › '}<span style={{color:'var(--amber)'}}>{currentId}</span>
+            </div>
+          )}
+        </div>
+
+        {showVars && (
+          <div className="play-vars-panel">
+            <div className="play-vars-title">Variables</div>
+            <div className="play-var-row">
+              <span className="play-var-name">calm</span>
+              <div className="play-calm-bar">
+                <div className="play-calm-fill" style={{width:`${Math.min(100, Math.max(0, vars.calm ?? 10))}%`}} />
+              </div>
+              <span className="play-var-val">{vars.calm ?? 10}</span>
+            </div>
+            <div className="play-var-row">
+              <span className="play-var-name">consciousness</span>
+              <span className="play-var-val" style={{color:'var(--amber)',fontSize:'9px'}}>
+                {CONSCIOUSNESS_LABELS[vars.consciousness ?? 0]}
+              </span>
+            </div>
+            {['face_worn','face_stable','att_reticence','att_anger','att_curiosity','att_joy','att_greed',
+              'branch_shed','branch_run','branch_go','diner_massacre','cop_knows_face'].map(k => (
+              <div key={k} className="play-var-row">
+                <span className="play-var-name">{k.replace(/_/g,' ')}</span>
+                <span className="play-var-val" style={{color: vars[k] ? 'var(--amber)' : 'var(--text-dim)'}}>
+                  {vars[k] ? '✓' : '✗'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1791,6 +2236,7 @@ function App() {
   const [store, setStoreRaw]  = useState(loadStore);
   const [history, setHistory] = useState(loadHistory);
   const [showHistory, setShowHistory] = useState(false);
+  const [showExport, setShowExport]   = useState(false);
   const [leftWidth, setLeftWidth] = useState(() => {
     const s = localStorage.getItem('boo_hag_left_w');
     return s ? Number(s) : 520;
@@ -1891,6 +2337,7 @@ function App() {
           <span className="topbar-title">BOO HAG ◆ STUDIO</span>
           <div className="topbar-right">
             <button className="topbar-btn" onClick={() => setShowHistory(true)}>⟳ History ({history.snapshots.length})</button>
+            <button className="topbar-btn" onClick={() => setShowExport(true)}>⬇ Export .ink</button>
             <button className="topbar-btn" style={{color:'var(--text-dim)',fontSize:'10px'}} title="Ctrl+Z to undo">Ctrl+Z Undo</button>
           </div>
         </div>
@@ -1922,7 +2369,7 @@ function App() {
             </div>
             <div className="right-col-content">
               {tab === 'TREE'  && <TreeView  store={store} onStoreChange={onStoreChange} onNodeContext={injectNodeToChat} />}
-              {tab === 'PLAY'  && <PlayView  store={store} />}
+              {tab === 'PLAY'  && <PlayView  store={store} onStoreChange={onStoreChange} />}
               {tab === 'STORY' && <StoryView store={store} onStoreChange={onStoreChange} onSwitchTab={setTab} />}
             </div>
           </div>
@@ -1935,6 +2382,10 @@ function App() {
           onRestore={restoreSnapshot}
           onClose={() => setShowHistory(false)}
         />
+      )}
+
+      {showExport && (
+        <InkExportModal store={store} onClose={() => setShowExport(false)} />
       )}
     </>
   );

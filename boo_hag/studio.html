@@ -1113,6 +1113,37 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon }) {
     onStoreChange(next, null);
   }, [store, onStoreChange]);
 
+  const cycleStatus = useCallback((id, e) => {
+    e.stopPropagation();
+    const cycle = ['draft','in_progress','canon'];
+    const next = JSON.parse(JSON.stringify(store));
+    const sc = next.scenes.find(s => s.id === id);
+    if (!sc) return;
+    const idx = cycle.indexOf(sc.status);
+    sc.status = cycle[(idx + 1) % cycle.length];
+    onStoreChange(next, `Status: ${sc.name} → ${sc.status}`);
+  }, [store, onStoreChange]);
+
+  const renameScene = useCallback((id) => {
+    const sc = store.scenes.find(s => s.id === id);
+    const name = prompt('Rename scene:', sc?.name || '');
+    if (!name || !name.trim()) return;
+    const next = JSON.parse(JSON.stringify(store));
+    const s2 = next.scenes.find(s => s.id === id);
+    if (s2) s2.name = name.trim();
+    onStoreChange(next, `Renamed scene: ${name.trim()}`);
+  }, [store, onStoreChange]);
+
+  const deleteScene = useCallback((id, e) => {
+    e.stopPropagation();
+    const sc = store.scenes.find(s => s.id === id);
+    if (!confirm(`Delete scene "${sc?.name}"? This cannot be undone.`)) return;
+    const next = JSON.parse(JSON.stringify(store));
+    next.scenes = next.scenes.filter(s => s.id !== id);
+    if (next.activeScene === id) next.activeScene = next.scenes[0]?.id || null;
+    onStoreChange(next, `Deleted scene: ${sc?.name}`);
+  }, [store, onStoreChange]);
+
   return (
     <div className="bible-sidebar">
       <div className="bible-tabs">
@@ -1127,11 +1158,20 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon }) {
               <div key={s.id} className={`scene-item${s.id===store.activeScene?' active-scene':''}`}
                 onClick={() => setActiveScene(s.id)}>
                 <div style={{flex:1}}>
-                  <div className="scene-name">{s.name}</div>
-                  <div style={{display:'flex',gap:4,marginTop:4,flexWrap:'wrap'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:4}}>
+                    <div className="scene-name" style={{flex:1}}>{s.name}</div>
+                    <button onClick={e => { e.stopPropagation(); renameScene(s.id); }}
+                      title="Rename" style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'11px',cursor:'pointer',padding:'0 2px',lineHeight:1,opacity:0.6}}>✎</button>
+                    <button onClick={e => deleteScene(s.id, e)}
+                      title="Delete" style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'12px',cursor:'pointer',padding:'0 2px',lineHeight:1,opacity:0.6}}>✕</button>
+                  </div>
+                  <div style={{display:'flex',gap:4,marginTop:5,flexWrap:'wrap',alignItems:'center'}}>
                     <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>
                     <span className={`scene-badge badge-${s.type}`}>{s.type}</span>
-                    <span className={`scene-badge badge-${s.status}`}>{s.status}</span>
+                    <span className={`scene-badge badge-${s.status}`} style={{cursor:'pointer'}}
+                      onClick={e => cycleStatus(s.id, e)} title="Click to cycle status">
+                      {s.status}
+                    </span>
                     <span style={{color:'var(--text-dim)',fontSize:'10px',marginLeft:'auto'}}>
                       {s.nodes.length} nodes
                     </span>
@@ -1215,11 +1255,68 @@ function ChatView({ store, onStoreChange, onSnapshot, history }) {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [canonModal, setCanonModal] = useState(null);
+  const [showSessionMenu, setShowSessionMenu] = useState(false);
+  const [renamingSession, setRenamingSession] = useState(false);
+  const [renameVal, setRenameVal] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const sessionMenuRef = useRef(null);
 
   const session = store.chatSessions[store.activeSession] || { name: 'Session', messages: [] };
   const messages = session.messages;
+  const allSessions = Object.entries(store.chatSessions);
+
+  // Close session menu on outside click
+  useEffect(() => {
+    if (!showSessionMenu) return;
+    const handler = (e) => { if (!sessionMenuRef.current?.contains(e.target)) setShowSessionMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSessionMenu]);
+
+  const switchSession = (id) => {
+    const next = JSON.parse(JSON.stringify(store));
+    next.activeSession = id;
+    onStoreChange(next, null);
+    setShowSessionMenu(false);
+  };
+
+  const newSession = () => {
+    const id = `session_${Date.now()}`;
+    const name = `Session ${allSessions.length + 1}`;
+    const next = JSON.parse(JSON.stringify(store));
+    next.chatSessions[id] = { name, messages: [] };
+    next.activeSession = id;
+    onStoreChange(next, null);
+    setShowSessionMenu(false);
+  };
+
+  const deleteSession = (id) => {
+    if (Object.keys(store.chatSessions).length <= 1) return;
+    const next = JSON.parse(JSON.stringify(store));
+    delete next.chatSessions[id];
+    if (next.activeSession === id) {
+      next.activeSession = Object.keys(next.chatSessions)[0];
+    }
+    onStoreChange(next, null);
+    setShowSessionMenu(false);
+  };
+
+  const clearSession = () => {
+    const next = JSON.parse(JSON.stringify(store));
+    next.chatSessions[next.activeSession].messages = [];
+    onStoreChange(next, 'Cleared chat session');
+    setShowSessionMenu(false);
+  };
+
+  const renameSession = () => {
+    if (!renameVal.trim()) { setRenamingSession(false); return; }
+    const next = JSON.parse(JSON.stringify(store));
+    if (!next.chatSessions[next.activeSession]) return;
+    next.chatSessions[next.activeSession].name = renameVal.trim();
+    onStoreChange(next, null);
+    setRenamingSession(false);
+  };
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1342,12 +1439,54 @@ function ChatView({ store, onStoreChange, onSnapshot, history }) {
       />
 
       <div className="chat-main">
-        <div className="chat-session-bar">
+        <div className="chat-session-bar" style={{position:'relative'}}>
           <span className="session-label">SESSION</span>
-          <button className="session-name-btn">{session.name}</button>
-          <span style={{color:'var(--text-dim)',fontSize:'10px',margin:'0 4px'}}>
-            Scene: {store.scenes.find(s=>s.id===store.activeScene)?.name || '—'}
+          {renamingSession ? (
+            <input
+              autoFocus
+              value={renameVal}
+              onChange={e => setRenameVal(e.target.value)}
+              onBlur={renameSession}
+              onKeyDown={e => { if (e.key==='Enter') renameSession(); if (e.key==='Escape') setRenamingSession(false); }}
+              style={{background:'var(--surface2)',border:'1px solid var(--amber-dim)',color:'var(--text)',fontFamily:'inherit',fontSize:'11px',padding:'2px 6px',borderRadius:3,outline:'none',width:130}}
+            />
+          ) : (
+            <button className="session-name-btn" onClick={() => setShowSessionMenu(v => !v)}>
+              {session.name} ▾
+            </button>
+          )}
+          <span style={{color:'var(--text-dim)',fontSize:'10px',marginLeft:'auto'}}>
+            {store.scenes.find(s=>s.id===store.activeScene)?.name || '—'}
           </span>
+
+          {showSessionMenu && (
+            <div ref={sessionMenuRef} style={{
+              position:'absolute',top:'100%',left:0,zIndex:50,
+              background:'var(--surface)',border:'1px solid var(--border)',borderRadius:6,
+              boxShadow:'0 8px 24px rgba(0,0,0,0.5)',minWidth:220,padding:'4px 0',
+            }}>
+              {allSessions.map(([id, s]) => (
+                <div key={id} style={{display:'flex',alignItems:'center',gap:4,padding:'5px 12px',cursor:'pointer',
+                  background: id===store.activeSession ? 'rgba(200,136,10,0.08)' : 'none'}}
+                  onClick={() => switchSession(id)}>
+                  <span style={{flex:1,color:id===store.activeSession?'var(--amber)':'var(--bone-dim)',fontSize:'11px'}}>{s.name}</span>
+                  <span style={{color:'var(--text-dim)',fontSize:'9px'}}>{s.messages.length} msg</span>
+                  {allSessions.length > 1 && (
+                    <button onClick={e => { e.stopPropagation(); deleteSession(id); }}
+                      style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'12px',cursor:'pointer',lineHeight:1,padding:'0 2px'}}>✕</button>
+                  )}
+                </div>
+              ))}
+              <div style={{borderTop:'1px solid var(--border)',margin:'4px 0'}} />
+              <div style={{padding:'4px 8px',display:'flex',gap:4}}>
+                <button onClick={newSession} style={{flex:1,background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',fontFamily:'inherit',fontSize:'10px',padding:'4px',cursor:'pointer',borderRadius:3}}>+ New Session</button>
+                <button onClick={() => { setRenameVal(session.name); setRenamingSession(true); setShowSessionMenu(false); }}
+                  style={{flex:1,background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',fontFamily:'inherit',fontSize:'10px',padding:'4px',cursor:'pointer',borderRadius:3}}>Rename</button>
+                <button onClick={clearSession}
+                  style={{flex:1,background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',fontFamily:'inherit',fontSize:'10px',padding:'4px',cursor:'pointer',borderRadius:3}}>Clear</button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="chat-messages">
@@ -2125,7 +2264,7 @@ function InkExportModal({ store, onClose }) {
 // ── PLAY VIEW ─────────────────────────────────────────────────────────
 const CONSCIOUSNESS_LABELS = ['FERAL', 'WAKING', 'CLEAR', 'GRIOTTE'];
 
-function PlayView({ store, onStoreChange }) {
+function PlayView({ store, onStoreChange, onSnapshot }) {
   const scene = store.scenes.find(s => s.id === store.activeScene);
   const nodes = scene?.nodes || [];
 
@@ -2249,6 +2388,10 @@ function PlayView({ store, onStoreChange }) {
         {path.length > 0 && <span style={{color:'var(--text-dim)',fontSize:'10px'}}>node {path.length + 1}</span>}
         <button className="play-ctrl-btn" onClick={back} disabled={!path.length}>◀ Back</button>
         <button className="play-ctrl-btn" onClick={reset}>↺ Reset</button>
+        <button className="play-ctrl-btn" onClick={() => {
+          onSnapshot && onSnapshot(`Checkpoint: ${scene.name} @ ${currentId || 'start'}`);
+          showFlash('Checkpoint saved to History');
+        }} title="Save current playthrough position to History">📍 Checkpoint</button>
         <button className={`play-ctrl-btn${showVars ? ' active' : ''}`}
           style={{marginLeft:'auto'}} onClick={() => setShowVars(v => !v)}>
           Variables
@@ -2518,7 +2661,7 @@ function App() {
             </div>
             <div className="right-col-content">
               {tab === 'TREE'  && <TreeView  store={store} onStoreChange={onStoreChange} onNodeContext={injectNodeToChat} />}
-              {tab === 'PLAY'  && <PlayView  store={store} onStoreChange={onStoreChange} />}
+              {tab === 'PLAY'  && <PlayView  store={store} onStoreChange={onStoreChange} onSnapshot={onSnapshot} />}
               {tab === 'STORY' && <StoryView store={store} onStoreChange={onStoreChange} onSwitchTab={setTab} />}
             </div>
           </div>

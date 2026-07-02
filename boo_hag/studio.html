@@ -57,15 +57,16 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 /* ── TWO-COLUMN LAYOUT ──────────────────────────────── */
 .studio-body { display: flex; flex: 1; overflow: hidden; }
 .left-col {
-  width: 420px; flex-shrink: 0; display: flex; flex-direction: column;
-  border-right: 2px solid var(--border); overflow: hidden; position: relative;
+  flex-shrink: 0; display: flex; flex-direction: column;
+  overflow: hidden; min-width: 280px; max-width: 900px;
 }
-.left-col-resize {
-  position: absolute; right: -3px; top: 0; bottom: 0; width: 6px;
-  cursor: col-resize; z-index: 10;
+.resize-handle {
+  width: 5px; flex-shrink: 0; background: var(--border);
+  cursor: col-resize; position: relative; z-index: 20;
+  transition: background 0.15s;
 }
-.left-col-resize:hover { background: var(--amber-dim); opacity: 0.5; }
-.right-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.resize-handle:hover, .resize-handle.active { background: var(--amber); }
+.right-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 200px; }
 .right-tabs {
   display: flex; align-items: center; background: var(--surface);
   border-bottom: 1px solid var(--border); height: 36px; flex-shrink: 0; padding: 0 8px;
@@ -84,7 +85,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .chat-layout { display: flex; width: 100%; overflow: hidden; }
 
 .bible-sidebar {
-  width: 280px; flex-shrink: 0; background: var(--surface);
+  width: 200px; flex-shrink: 0; background: var(--surface);
   border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden;
 }
 .bible-tabs { display: flex; border-bottom: 1px solid var(--border); }
@@ -1285,7 +1286,7 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
 
 // ── TREE VIEW ─────────────────────────────────────────────────────────
 function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
-  const [offset, setOffset] = useState({ x: 80, y: 60 });
+  const [offset, setOffset] = useState({ x: 0, y: 60 });
   const [zoom, setZoom]     = useState(1);
   const [panning, setPanning] = useState(false);
   const [panStart, setPanStart] = useState(null);
@@ -1305,6 +1306,22 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
   const canvasH = 4000;
   const originX = canvasW / 2;
   const originY = 40;
+
+  // Center nodes in viewport on mount and panel resize
+  const centerCanvas = useCallback(() => {
+    if (!wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    setOffset({ x: rect.width / 2 - originX, y: 60 });
+  }, [originX]);
+
+  useEffect(() => { centerCanvas(); }, []);
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const ro = new ResizeObserver(centerCanvas);
+    ro.observe(wrapRef.current);
+    return () => ro.disconnect();
+  }, [centerCanvas]);
 
   // Pan handlers
   const onMouseDown = useCallback((e) => {
@@ -1425,7 +1442,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
         <div className="tree-zoom-controls">
           <button className="tree-zoom-btn" onClick={() => setZoom(z => Math.min(2, z * 1.2))}>+</button>
           <button className="tree-zoom-btn" onClick={() => setZoom(z => Math.max(0.3, z * 0.8))}>−</button>
-          <button className="tree-zoom-btn" style={{fontSize:'9px'}} onClick={() => { setZoom(1); setOffset({x:80,y:60}); }}>↺</button>
+          <button className="tree-zoom-btn" style={{fontSize:'9px'}} onClick={() => { setZoom(1); centerCanvas(); }}>↺</button>
         </div>
 
         {/* Node count */}
@@ -1521,6 +1538,40 @@ function App() {
   const [store, setStoreRaw]  = useState(loadStore);
   const [history, setHistory] = useState(loadHistory);
   const [showHistory, setShowHistory] = useState(false);
+  const [leftWidth, setLeftWidth] = useState(() => {
+    const s = localStorage.getItem('boo_hag_left_w');
+    return s ? Number(s) : 520;
+  });
+  const [resizing, setResizing] = useState(false);
+  const resizeRef = useRef({ active: false, startX: 0, startW: 0 });
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!resizeRef.current.active) return;
+      const dx = e.clientX - resizeRef.current.startX;
+      const w = Math.max(280, Math.min(900, resizeRef.current.startW + dx));
+      setLeftWidth(w);
+      localStorage.setItem('boo_hag_left_w', String(w));
+    };
+    const onUp = () => {
+      if (!resizeRef.current.active) return;
+      resizeRef.current.active = false;
+      setResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+
+  const startResize = useCallback((e) => {
+    e.preventDefault();
+    resizeRef.current = { active: true, startX: e.clientX, startW: leftWidth };
+    setResizing(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [leftWidth]);
 
   const onStoreChange = useCallback((newStore, snapshotLabel) => {
     setStoreRaw(newStore);
@@ -1591,9 +1642,9 @@ function App() {
           </div>
         </div>
 
-        <div className="studio-body">
+        <div className="studio-body" style={{cursor: resizing ? 'col-resize' : ''}}>
           {/* LEFT — chat always visible */}
-          <div className="left-col">
+          <div className="left-col" style={{width: leftWidth}}>
             <ChatView
               store={store}
               onStoreChange={onStoreChange}
@@ -1602,6 +1653,9 @@ function App() {
               onNodeContext={injectNodeToChat}
             />
           </div>
+
+          {/* DRAG HANDLE */}
+          <div className={`resize-handle${resizing ? ' active' : ''}`} onMouseDown={startResize} />
 
           {/* RIGHT — TREE / STORY / PLAY */}
           <div className="right-col">

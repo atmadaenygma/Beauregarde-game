@@ -248,6 +248,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   cursor: grab; -webkit-user-select: none; user-select: none;
 }
 .tree-canvas-wrap.panning { cursor: grabbing; }
+.tree-canvas-wrap.wiring { cursor: crosshair; }
 .tree-canvas-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .tree-svg-layer { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
 
@@ -324,6 +325,24 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   font-size: 9px; padding: 0 4px; cursor: pointer; margin-left: auto; line-height: 1;
 }
 .tree-node-ask:hover { color: var(--amber); }
+.node-conn-out {
+  position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
+  width: 13px; height: 13px; border-radius: 50%; z-index: 4;
+  background: var(--surface); border: 2px solid var(--border);
+  cursor: crosshair; transition: border-color 0.12s, background 0.12s;
+}
+.node-conn-out:hover { border-color: var(--amber); background: rgba(200,136,10,0.3); }
+.tree-ctx-menu {
+  position: absolute; z-index: 50;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.55); padding: 4px 0; min-width: 168px;
+}
+.tree-ctx-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  cursor: pointer; font-size: 11px; color: var(--bone-dim); transition: background 0.1s;
+}
+.tree-ctx-item:hover { background: rgba(255,255,255,0.04); color: var(--bone); }
+.tree-ctx-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .tree-controls {
   flex-shrink: 0; padding: 5px 12px;
   display: flex; flex-direction: row; align-items: center; gap: 5px;
@@ -1807,6 +1826,8 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
   const [manualPos, setManualPos] = useState({});
   const [fontSize, setFontSize] = useState(11);
   const [search, setSearch]     = useState('');
+  const [drawingWire, setDrawingWire] = useState(null); // { fromId, curX, curY } world coords
+  const [ctxMenu, setCtxMenu]   = useState(null);        // { px, py, wx, wy } screen+world
   const wrapRef = useRef(null);
 
   const scene = store.scenes.find(s => s.id === store.activeScene);
@@ -1854,8 +1875,23 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
     return () => el.removeEventListener('wheel', handler);
   }, []);
 
+  // Close context menu on outside click
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const h = () => setCtxMenu(null);
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [ctxMenu]);
+
+  const screenToWorld = useCallback((sx, sy) => {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return { wx: 0, wy: 0 };
+    return { wx: (sx - rect.left - offset.x) / zoom, wy: (sy - rect.top - offset.y) / zoom };
+  }, [offset, zoom]);
+
   const onMouseDown = useCallback((e) => {
     if (e.target.closest('.tree-node') || e.button !== 0) return;
+    setCtxMenu(null);
     setPanning(true);
     setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
   }, [offset]);
@@ -1870,13 +1906,56 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
       const dy = (e.clientY - startMY) / zoom;
       setManualPos(p => ({ ...p, [id]: { x: startX + dx, y: startY + dy } }));
     }
-  }, [panning, panStart, draggingNode, zoom]);
+    if (drawingWire) {
+      const { wx, wy } = screenToWorld(e.clientX, e.clientY);
+      setDrawingWire(w => w ? { ...w, curX: wx, curY: wy } : null);
+    }
+  }, [panning, panStart, draggingNode, zoom, drawingWire, screenToWorld]);
 
-  const onMouseUp = useCallback(() => {
+  const onMouseUp = useCallback((e) => {
+    if (drawingWire) {
+      const { wx, wy } = screenToWorld(e.clientX, e.clientY);
+      const target = nodes.find(n => {
+        const p = getPos(n.id);
+        return wx >= p.x && wx <= p.x + NODE_W && wy >= p.y && wy <= p.y + NODE_H;
+      });
+      if (target && target.id !== drawingWire.fromId) {
+        const next = JSON.parse(JSON.stringify(store));
+        const sc = next.scenes.find(s => s.id === next.activeScene);
+        const src = sc?.nodes.find(n => n.id === drawingWire.fromId);
+        if (src) src.next = target.id;
+        onStoreChange(next, `Connected: ${drawingWire.fromId} → ${target.id}`);
+      }
+      setDrawingWire(null);
+    }
     setPanning(false);
     setPanStart(null);
     setDraggingNode(null);
-  }, []);
+  }, [drawingWire, nodes, getPos, store, onStoreChange, screenToWorld]);
+
+  const onContextMenu = useCallback((e) => {
+    if (e.target.closest('.tree-node')) return;
+    e.preventDefault();
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const wx = (px - offset.x) / zoom;
+    const wy = (py - offset.y) / zoom;
+    setCtxMenu({ px, py, wx, wy });
+  }, [offset, zoom]);
+
+  const addNodeAt = useCallback((type, wx, wy) => {
+    const id = `${type.toLowerCase()}_${Date.now()}`;
+    const next = JSON.parse(JSON.stringify(store));
+    const sc = next.scenes.find(s => s.id === next.activeScene);
+    if (!sc) return;
+    sc.nodes.push({ id, type, text: '', media: null, next: null });
+    setManualPos(p => ({ ...p, [id]: { x: wx - NODE_W / 2, y: wy } }));
+    onStoreChange(next, `Added ${type} node`);
+    setCtxMenu(null);
+    setSelected(id);
+  }, [store, onStoreChange]);
 
   const startDragNode = useCallback((e, id) => {
     e.stopPropagation();
@@ -1969,12 +2048,13 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
       </div>
 
       <div
-        className={`tree-canvas-wrap${panning ? ' panning' : ''}`}
+        className={`tree-canvas-wrap${panning ? ' panning' : ''}${drawingWire ? ' wiring' : ''}`}
         ref={wrapRef}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
+        onContextMenu={onContextMenu}
       >
         {/* Info overlay */}
         <div style={{position:'absolute',top:8,left:12,color:'var(--text-dim)',fontSize:'10px',pointerEvents:'none',zIndex:2,letterSpacing:'0.04em'}}>
@@ -2005,6 +2085,19 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
                 )}
               </g>
             ))}
+
+            {/* In-progress wire while dragging from connector dot */}
+            {drawingWire && (() => {
+              const fp = getPos(drawingWire.fromId);
+              return (
+                <line
+                  x1={fp.x + NODE_W / 2} y1={fp.y + NODE_H + 7}
+                  x2={drawingWire.curX}   y2={drawingWire.curY}
+                  stroke="#c8880a" strokeWidth="2" strokeDasharray="6 4" opacity="0.85"
+                  markerEnd="url(#arrowhead)"
+                />
+              );
+            })()}
           </svg>
 
           {/* Nodes */}
@@ -2035,6 +2128,18 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
                 }}
               >
                 <div className="tree-node-seq">{seqIdx + 1}</div>
+
+                {/* Connector dot — drag to another node to set next */}
+                <div
+                  className="node-conn-out"
+                  onMouseDown={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const pos = getPos(node.id);
+                    setDrawingWire({ fromId: node.id, curX: pos.x + NODE_W / 2, curY: pos.y + NODE_H });
+                  }}
+                  title="Drag to connect → next node"
+                />
 
                 <div className="tree-node-header" style={{background:col.header}}>
                   <span className="tree-node-type" style={{color:col.text}}>{node.type}</span>
@@ -2077,6 +2182,22 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
             );
           })}
         </div>
+
+        {/* Right-click context menu */}
+        {ctxMenu && (
+          <div className="tree-ctx-menu" style={{left: ctxMenu.px, top: ctxMenu.py}}
+            onMouseDown={e => e.stopPropagation()}>
+            <div style={{padding:'3px 12px 5px',color:'var(--text-dim)',fontSize:'9px',letterSpacing:'0.1em',borderBottom:'1px solid var(--border)'}}>
+              ADD NODE
+            </div>
+            {['NARRATION','CHOICE','CONDITION','VAR_SET','SECTION_LABEL','SCENE_TRANSITION','ANCHOR_USE'].map(t => (
+              <div key={t} className="tree-ctx-item" onClick={() => addNodeAt(t, ctxMenu.wx, ctxMenu.wy)}>
+                <span className="tree-ctx-dot" style={{background: NODE_COLORS[t]?.border || '#4a4438'}} />
+                {t}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {selected && nodes.find(n => n.id === selected) && (
@@ -2265,23 +2386,41 @@ function InkExportModal({ store, onClose }) {
 const CONSCIOUSNESS_LABELS = ['FERAL', 'WAKING', 'CLEAR', 'GRIOTTE'];
 
 function PlayView({ store, onStoreChange, onSnapshot }) {
-  const scene = store.scenes.find(s => s.id === store.activeScene);
-  const nodes = scene?.nodes || [];
-
-  const [currentId, setCurrentId] = useState(() => nodes[0]?.id || null);
-  const [vars, setVars] = useState(() => ({ ...store.variables }));
+  // playSceneId is independent of store.activeScene so scene transitions
+  // during play don't reset vars (vars are local play state, not design state)
+  const [playSceneId, setPlaySceneId] = useState(store.activeScene);
+  const [currentId, setCurrentId] = useState(null);
+  const [vars, setVars] = useState(() => {
+    const v = {};
+    Object.entries(store.variables).forEach(([k, vv]) => { v[k] = vv.value !== undefined ? vv.value : vv; });
+    return v;
+  });
   const [path, setPath] = useState([]);
   const [flash, setFlash] = useState(null);
   const [showVars, setShowVars] = useState(true);
 
-  // Reset when active scene changes
+  const scene = store.scenes.find(s => s.id === playSceneId) || store.scenes.find(s => s.id === store.activeScene);
+  const nodes = scene?.nodes || [];
+
+  // When user navigates to a different scene externally (not via SCENE_TRANSITION),
+  // reset play state fully
   useEffect(() => {
+    setPlaySceneId(store.activeScene);
     const sc = store.scenes.find(s => s.id === store.activeScene);
     setCurrentId(sc?.nodes?.[0]?.id || null);
-    setVars({ ...store.variables });
+    const v = {};
+    Object.entries(store.variables).forEach(([k, vv]) => { v[k] = vv.value !== undefined ? vv.value : vv; });
+    setVars(v);
     setPath([]);
     setFlash(null);
   }, [store.activeScene]);
+
+  // Set initial node once scene is known
+  useEffect(() => {
+    if (currentId === null && nodes.length > 0) {
+      setCurrentId(nodes[0].id);
+    }
+  }, [nodes.length]);
 
   const node = nodes.find(n => n.id === currentId);
 
@@ -2363,8 +2502,12 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
   };
 
   const reset = () => {
-    setCurrentId(nodes[0]?.id || null);
-    setVars({ ...store.variables });
+    setPlaySceneId(store.activeScene);
+    const sc = store.scenes.find(s => s.id === store.activeScene);
+    setCurrentId(sc?.nodes?.[0]?.id || null);
+    const v = {};
+    Object.entries(store.variables).forEach(([k, vv]) => { v[k] = vv.value !== undefined ? vv.value : vv; });
+    setVars(v);
     setPath([]);
     setFlash(null);
   };
@@ -2455,13 +2598,14 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
                   </div>
                   <button className="play-continue-btn" onClick={() => {
                     const targetId = node.target_scene || node.next;
-                    const next = JSON.parse(JSON.stringify(store));
-                    if (next.scenes.find(s => s.id === targetId)) next.activeScene = targetId;
-                    onStoreChange(next, null);
-                    const newScene = next.scenes.find(s => s.id === targetId);
-                    setCurrentId(newScene?.nodes?.[0]?.id || null);
-                    setPath([]);
-                    setFlash(null);
+                    // Transition locally — vars carry forward, no store write
+                    const newScene = store.scenes.find(s => s.id === targetId);
+                    if (newScene) {
+                      setPlaySceneId(targetId);
+                      setCurrentId(newScene.nodes[0]?.id || null);
+                      setPath([]);
+                      setFlash(null);
+                    }
                   }}>
                     Enter Scene ▶
                   </button>

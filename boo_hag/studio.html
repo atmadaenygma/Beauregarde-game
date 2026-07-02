@@ -404,7 +404,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 /* ── STORY VIEW ─────────────────────────────────────── */
 .story-layout { display: flex; flex: 1; overflow: hidden; }
-.story-canvas { flex: 1; overflow: auto; padding: 16px 12px; }
+.story-canvas { flex: 1; overflow: auto; padding: 16px 12px; position: relative; }
+.story-arrows-svg { position: absolute; top: 0; left: 0; pointer-events: none; }
+.story-card-thumb { width: 100%; height: 40px; object-fit: cover; border-radius: 3px; margin-bottom: 6px; display: block; }
 .story-lanes { display: flex; gap: 12px; min-width: max-content; align-items: flex-start; }
 .story-lane { width: 220px; flex-shrink: 0; }
 .story-lane-header { color: var(--amber); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
@@ -653,6 +655,7 @@ const DEFAULT_STORE = {
   scenes: INITIAL_SCENES,
   canon: [],
   importedDocs: [],
+  checkpoints: [],
   chatSessions: { default: { name: 'Main Session', messages: [] } },
   activeScene: 'cold_open',
   activeSession: 'default',
@@ -675,12 +678,30 @@ function loadStore() {
     if (!stored.canon) stored.canon = [];
     if (!stored.consequences) stored.consequences = [];
     if (!stored.importedDocs) stored.importedDocs = [];
+    if (!stored.checkpoints) stored.checkpoints = [];
     return stored;
   } catch { return JSON.parse(JSON.stringify(DEFAULT_STORE)); }
 }
 
+let storageWarned = false;
+function warnStorageFull(context) {
+  if (storageWarned) return;
+  storageWarned = true;
+  alert(
+    `Local storage is full — ${context} could not be saved.\n\n` +
+    `This usually happens after uploading several images/videos, since each stays ` +
+    `embedded in every history snapshot.\n\n` +
+    `Use "⬇ Backup" now to save your work externally, then try removing some node media ` +
+    `or clearing older History entries to free up space.`
+  );
+}
+
 function saveStore(store) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(store));
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+  } catch (err) {
+    warnStorageFull('your last change');
+  }
 }
 
 function loadHistory() {
@@ -691,7 +712,19 @@ function loadHistory() {
 }
 
 function saveHistory(h) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+  // History stores a full copy of the store per snapshot (including embedded
+  // media), so it's the most likely place to hit the localStorage quota.
+  // Retry with progressively fewer (most-recent) snapshots before giving up,
+  // rather than letting the quota error propagate and lose the whole write.
+  for (const count of [h.snapshots.length, 20, 10, 5, 1, 0]) {
+    const trimmed = { snapshots: h.snapshots.slice(-count) };
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+      if (count < h.snapshots.length) h.snapshots = trimmed.snapshots;
+      return;
+    } catch (err) { /* try smaller */ }
+  }
+  warnStorageFull('history');
 }
 
 // ── NODE_JSON PARSER ──────────────────────────────────────────────────
@@ -846,12 +879,44 @@ function ConsequencesTab({ consequences, store, onStoreChange }) {
     onStoreChange(next, `Deleted consequence: ${id}`);
   };
 
+  const addConsequence = () => {
+    const id = prompt('Consequence ID (short, unique, e.g. cold_open_shed):');
+    if (!id || !id.trim()) return;
+    const key = id.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    if ((store.consequences || []).find(c => c.id === key)) { alert('That ID already exists.'); return; }
+    const trigger = prompt('Trigger condition (e.g. branch_shed = true):') || '';
+    const description = prompt('Description of what happens:') || '';
+    const next = JSON.parse(JSON.stringify(store));
+    if (!next.consequences) next.consequences = [];
+    next.consequences.push({ id: key, trigger, description, sets: {}, downstream: [] });
+    onStoreChange(next, `Added consequence: ${key}`);
+  };
+
+  const addDownstream = (id) => {
+    const scene = prompt('Which scene is affected? (scene id)');
+    if (!scene) return;
+    const effect = prompt('What effect does it have there?');
+    if (!effect) return;
+    const next = JSON.parse(JSON.stringify(store));
+    const c = next.consequences.find(x => x.id === id);
+    if (!c) return;
+    if (!c.downstream) c.downstream = [];
+    c.downstream.push({ scene, effect });
+    onStoreChange(next, `Added downstream effect to: ${id}`);
+  };
+
   if (!consequences.length) {
     return (
-      <div style={{color:'var(--text-dim)',fontSize:'11px',lineHeight:1.6,padding:'4px 0'}}>
-        No consequences yet.<br/><br/>
-        When Claude creates scenes with cross-scene effects, they appear here.<br/><br/>
-        <span style={{fontSize:'10px',opacity:0.6}}>Example: "diner massacre → PI trio active in scene 3"</span>
+      <div>
+        <div style={{color:'var(--text-dim)',fontSize:'11px',lineHeight:1.6,padding:'4px 0',marginBottom:10}}>
+          No consequences yet.<br/><br/>
+          When Claude creates scenes with cross-scene effects, they appear here — or add one manually.<br/><br/>
+          <span style={{fontSize:'10px',opacity:0.6}}>Example: "diner massacre → PI trio active in scene 3"</span>
+        </div>
+        <button className="edit-btn" style={{background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',boxShadow:'none'}}
+          onClick={addConsequence}>
+          + Add Consequence
+        </button>
       </div>
     );
   }
@@ -874,6 +939,9 @@ function ConsequencesTab({ consequences, store, onStoreChange }) {
             </div>
             {open && (
               <div style={{padding:'0 10px 10px',fontSize:'10px',lineHeight:1.6}}>
+                {c.description && (
+                  <div style={{marginBottom:6,color:'var(--bone-dim)'}}>{c.description}</div>
+                )}
                 {c.trigger && (
                   <div style={{marginBottom:6}}>
                     <span style={{color:'var(--text-dim)'}}>trigger: </span>
@@ -889,7 +957,7 @@ function ConsequencesTab({ consequences, store, onStoreChange }) {
                   </div>
                 )}
                 {c.downstream?.length > 0 && (
-                  <div>
+                  <div style={{marginBottom:6}}>
                     <div style={{color:'var(--text-dim)',marginBottom:4}}>downstream effects:</div>
                     {c.downstream.map((d,i) => (
                       <div key={i} style={{padding:'4px 8px',background:'rgba(0,0,0,0.2)',borderRadius:3,marginBottom:3,color:'var(--bone-dim)'}}>
@@ -899,29 +967,37 @@ function ConsequencesTab({ consequences, store, onStoreChange }) {
                     ))}
                   </div>
                 )}
+                <button onClick={() => addDownstream(c.id)}
+                  style={{background:'none',border:'none',color:'var(--text-dim)',fontFamily:'inherit',fontSize:'9px',cursor:'pointer',padding:0}}>
+                  + downstream effect
+                </button>
               </div>
             )}
           </div>
         );
       })}
+      <button className="edit-btn" style={{background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',boxShadow:'none'}}
+        onClick={addConsequence}>
+        + Add Consequence
+      </button>
     </div>
   );
 }
 
 // ── VARIABLES TAB ─────────────────────────────────────────────────────
-function VariablesTab({ variables, scenes, onSet }) {
+function VariablesTab({ variables, scenes, onSet, onAdd, onJumpToNode }) {
   const [provenanceFor, setProvenanceFor] = useState(null);
   const intVars  = Object.entries(variables).filter(([,v]) => v.type === 'int');
   const boolVars = Object.entries(variables).filter(([,v]) => v.type === 'bool');
 
-  // Find which scene nodes reference a variable name
+  // Find which scene nodes reference a variable name (across ALL scenes)
   const getProvenance = (varName) => {
     const hits = [];
     (scenes || []).forEach(sc => {
       (sc.nodes || []).forEach(n => {
         const nodeStr = JSON.stringify(n);
         if (nodeStr.includes(`"${varName}"`)) {
-          hits.push({ scene: sc.name, nodeId: n.id, type: n.type });
+          hits.push({ scene: sc.name, sceneId: sc.id, nodeId: n.id, type: n.type });
         }
       });
     });
@@ -933,7 +1009,9 @@ function VariablesTab({ variables, scenes, onSet }) {
     return (
       <div style={{marginTop:4,marginLeft:2,marginBottom:4,borderLeft:'2px solid var(--border)',paddingLeft:8}}>
         {hits.slice(0,6).map((h,i) => (
-          <div key={i} style={{fontSize:'9px',color:'var(--text-dim)',lineHeight:1.7}}>
+          <div key={i} style={{fontSize:'9px',color:'var(--text-dim)',lineHeight:1.7,cursor: onJumpToNode ? 'pointer' : 'default'}}
+            onClick={() => onJumpToNode && onJumpToNode(h.sceneId, h.nodeId)}
+            title={onJumpToNode ? 'Click to jump to this node in TREE' : ''}>
             <span style={{color:'var(--amber-dim)'}}>{h.scene}</span>
             {' · '}<span style={{fontFamily:'monospace',opacity:0.7}}>{h.nodeId}</span>
             {' '}<span style={{fontSize:'8px',opacity:0.5}}>[{h.type}]</span>
@@ -996,6 +1074,12 @@ function VariablesTab({ variables, scenes, onSet }) {
           </div>
         ))}
       </div>
+      {onAdd && (
+        <button className="edit-btn" style={{background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',boxShadow:'none'}}
+          onClick={onAdd}>
+          + New Variable
+        </button>
+      )}
     </div>
   );
 }
@@ -1111,13 +1195,28 @@ function DocsTab({ store, onStoreChange }) {
 }
 
 // ── GAME BIBLE SIDEBAR ─────────────────────────────────────────────────
-function GameBibleSidebar({ store, onStoreChange, onAddCanon }) {
+function GameBibleSidebar({ store, onStoreChange, onAddCanon, onJumpToNode }) {
   const [tab, setTab] = useState('SCENES');
 
   const setVar = useCallback((name, value) => {
     const next = JSON.parse(JSON.stringify(store));
     next.variables[name] = { ...next.variables[name], value };
     onStoreChange(next, `Edited variable: ${name}=${value}`);
+  }, [store, onStoreChange]);
+
+  const addVariable = useCallback(() => {
+    const name = prompt('New variable name (lowercase, underscores):');
+    if (!name || !name.trim()) return;
+    const key = name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    if (store.variables[key]) { alert(`Variable "${key}" already exists.`); return; }
+    const isInt = confirm('OK = integer (with range), Cancel = boolean');
+    const next = JSON.parse(JSON.stringify(store));
+    if (isInt) {
+      next.variables[key] = { type: 'int', initial: 0, value: 0, range: [0, 100] };
+    } else {
+      next.variables[key] = { type: 'bool', initial: false, value: false };
+    }
+    onStoreChange(next, `Added variable: ${key}`);
   }, [store, onStoreChange]);
 
   const deleteCanon = useCallback((id) => {
@@ -1201,7 +1300,7 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon }) {
           </>
         )}
         {tab === 'VARS' && (
-          <VariablesTab variables={store.variables} scenes={store.scenes} onSet={setVar} />
+          <VariablesTab variables={store.variables} scenes={store.scenes} onSet={setVar} onAdd={addVariable} onJumpToNode={onJumpToNode} />
         )}
         {tab === 'FX' && (
           <ConsequencesTab consequences={store.consequences || []} store={store} onStoreChange={onStoreChange} />
@@ -1270,7 +1369,7 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon }) {
 }
 
 // ── CHAT VIEW ─────────────────────────────────────────────────────────
-function ChatView({ store, onStoreChange, onSnapshot, history }) {
+function ChatView({ store, onStoreChange, history, onSwitchToTree, pendingNodeContext, onJumpToNode }) {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [canonModal, setCanonModal] = useState(null);
@@ -1312,16 +1411,19 @@ function ChatView({ store, onStoreChange, onSnapshot, history }) {
 
   const deleteSession = (id) => {
     if (Object.keys(store.chatSessions).length <= 1) return;
+    const sess = store.chatSessions[id];
+    if (!confirm(`Delete session "${sess?.name}" (${sess?.messages.length || 0} messages)? This cannot be undone from here — use History to recover.`)) return;
     const next = JSON.parse(JSON.stringify(store));
     delete next.chatSessions[id];
     if (next.activeSession === id) {
       next.activeSession = Object.keys(next.chatSessions)[0];
     }
-    onStoreChange(next, null);
+    onStoreChange(next, `Deleted session: ${sess?.name}`);
     setShowSessionMenu(false);
   };
 
   const clearSession = () => {
+    if (messages.length && !confirm(`Clear all ${messages.length} messages in "${session.name}"?`)) return;
     const next = JSON.parse(JSON.stringify(store));
     next.chatSessions[next.activeSession].messages = [];
     onStoreChange(next, 'Cleared chat session');
@@ -1342,6 +1444,13 @@ function ChatView({ store, onStoreChange, onSnapshot, history }) {
   }, []);
 
   useEffect(() => { scrollToBottom(); }, [messages.length, streaming]);
+
+  // Pre-fill input when "Ask Claude" is clicked on a node in TREE
+  useEffect(() => {
+    if (!pendingNodeContext) return;
+    setInput(prev => pendingNodeContext.str + (prev ? prev : ''));
+    inputRef.current?.focus();
+  }, [pendingNodeContext]);
 
   const updateMessages = useCallback((newMessages, snapshotLabel) => {
     const next = JSON.parse(JSON.stringify(store));
@@ -1441,11 +1550,21 @@ function ChatView({ store, onStoreChange, onSnapshot, history }) {
   const undoLastNodes = useCallback((msgId) => {
     const msg = messages.find(m => m.id === msgId);
     if (!msg?.nodeJson) return;
-    // Restore previous snapshot from history
+    // Find the exact snapshot created when this message's nodes were applied,
+    // then restore whatever came immediately before it — not just "one back
+    // from wherever history currently sits" (which would undo unrelated
+    // edits made after this message instead of this message's nodes).
     const snaps = history.snapshots;
-    if (snaps.length > 1) {
-      const prev = snaps[snaps.length - 2];
-      onStoreChange(prev.state, null);
+    const idx = snaps.findIndex(s => {
+      const sess = s.state?.chatSessions?.[s.state.activeSession];
+      return sess?.messages?.some(m => m.id === msgId);
+    });
+    if (idx > 0) {
+      onStoreChange(snaps[idx - 1].state, null);
+    } else if (idx === 0) {
+      alert("Can't undo — this is the earliest recorded change.");
+    } else {
+      alert("Couldn't find this change in history — it may be too old (history keeps the last 50 actions).");
     }
   }, [messages, history, onStoreChange]);
 
@@ -1455,6 +1574,7 @@ function ChatView({ store, onStoreChange, onSnapshot, history }) {
         store={store}
         onStoreChange={onStoreChange}
         onAddCanon={() => setCanonModal({ msg: null, prefill: '' })}
+        onJumpToNode={onJumpToNode}
       />
 
       <div className="chat-main">
@@ -1550,6 +1670,14 @@ function ChatView({ store, onStoreChange, onSnapshot, history }) {
                     <div className="node-banner">
                       <span>✓ Claude added {msg.nodeJson.nodes?.length || 0} nodes to {msg.nodeJson.scene}</span>
                       <div className="node-banner-btns">
+                        {onSwitchToTree && (
+                          <button className="node-banner-btn" onClick={() => {
+                            const next = JSON.parse(JSON.stringify(store));
+                            next.activeScene = msg.nodeJson.scene || next.activeScene;
+                            onStoreChange(next, null);
+                            onSwitchToTree(true);
+                          }}>View in Tree</button>
+                        )}
                         <button className="node-banner-btn" onClick={() => undoLastNodes(msg.id)}>Undo</button>
                       </div>
                     </div>
@@ -1606,6 +1734,37 @@ const NODE_H = 90;
 const V_GAP  = 60;
 const H_GAP  = 40;
 
+const TIER_LABELS = ['FERAL','WAKING','CLEAR','GRIOTTE'];
+
+function nodePreview(node) {
+  if (node.text) return node.text.length > 110 ? node.text.slice(0, 110) + '…' : node.text;
+  switch (node.type) {
+    case 'CONDITION':
+      if (node.variable) return `${node.variable} ${node.operator || '>='} ${node.threshold ?? 0}`;
+      break;
+    case 'VAR_SET': {
+      const op = node.operation === 'add' ? '+=' : node.operation === 'subtract' ? '-=' : '=';
+      if (node.variable) return `${node.variable} ${op} ${node.value ?? 0}`;
+      break;
+    }
+    case 'CONSCIOUSNESS_GATE':
+      return `tier ≥ ${TIER_LABELS[node.min_tier ?? 0]}`;
+    case 'ATTITUDE_BRANCH': {
+      const keys = Object.keys(node.branches || {});
+      return keys.length ? keys.join(' / ') : 'attitude → …';
+    }
+    case 'SCENE_TRANSITION':
+      return node.target_scene ? `→ ${node.target_scene}` : '→ scene';
+    case 'SECTION_LABEL':
+      return node.label || '── section ──';
+    case 'ANCHOR_USE':
+      return `calm +${node.calm_gain ?? 5}`;
+    default:
+      break;
+  }
+  return null;
+}
+
 // ── TREE LAYOUT ───────────────────────────────────────────────────────
 function computeLayout(nodes) {
   if (!nodes || nodes.length === 0) return {};
@@ -1661,16 +1820,68 @@ function getNextIds(node) {
 }
 
 // ── EDIT PANEL ────────────────────────────────────────────────────────
-function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
+function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToNode }) {
   const [text, setText]   = useState(node.text || '');
   const [type, setType]   = useState(node.type || 'NARRATION');
   const [nextId, setNextId] = useState(node.next || '');
   const [options, setOptions] = useState(node.options ? JSON.parse(JSON.stringify(node.options)) : []);
+  const [extra, setExtra] = useState(() => ({
+    variable:     node.variable    || '',
+    operator:     node.operator    || '>=',
+    threshold:    node.threshold   ?? 0,
+    true_next:    node.true_next   || '',
+    false_next:   node.false_next  || '',
+    operation:    node.operation   || 'set',
+    value:        node.value       ?? 0,
+    min_tier:     node.min_tier    ?? 0,
+    pass_next:    node.pass_next   || '',
+    fail_next:    node.fail_next   || '',
+    branches:     node.branches    ? { ...node.branches } : {},
+    target_scene: node.target_scene || '',
+    calm_gain:    node.calm_gain   ?? 5,
+    label:        node.label       || '',
+  }));
+  const setE = (field, val) => setExtra(x => ({ ...x, [field]: val }));
   const fileRef = useRef(null);
 
   const scene = store.scenes.find(s => s.id === store.activeScene);
   const allIds = (scene?.nodes || []).map(n => n.id);
+  const allVarKeys = Object.keys(store.variables);
   const consequences = (store.consequences || []).filter(c => JSON.stringify(c).includes(node.id));
+
+  // Cross-scene references — other nodes (in any scene) that touch this variable
+  const getCrossSceneRefs = (varName) => {
+    if (!varName) return [];
+    const hits = [];
+    store.scenes.forEach(sc => {
+      (sc.nodes || []).forEach(n => {
+        if (n.id === node.id) return;
+        if (JSON.stringify(n).includes(`"${varName}"`)) {
+          hits.push({ sceneId: sc.id, sceneName: sc.name, nodeId: n.id, type: n.type });
+        }
+      });
+    });
+    return hits;
+  };
+  const CrossSceneRefs = ({ varName }) => {
+    const hits = getCrossSceneRefs(varName);
+    if (!varName || !hits.length) return null;
+    return (
+      <div style={{marginTop:4,marginBottom:8,borderLeft:'2px solid var(--border)',paddingLeft:8}}>
+        <div style={{fontSize:'9px',color:'var(--text-dim)',marginBottom:2}}>Also referenced by:</div>
+        {hits.slice(0, 8).map((h, i) => (
+          <div key={i} style={{fontSize:'9px',color:'var(--text-dim)',lineHeight:1.7,cursor: onJumpToNode ? 'pointer' : 'default'}}
+            onClick={() => onJumpToNode && onJumpToNode(h.sceneId, h.nodeId)}
+            title={onJumpToNode ? 'Click to jump to this node' : ''}>
+            <span style={{color:'var(--amber-dim)'}}>{h.sceneName}</span>
+            {' · '}<span style={{fontFamily:'monospace',opacity:0.7}}>{h.nodeId}</span>
+            {' '}<span style={{fontSize:'8px',opacity:0.5}}>[{h.type}]</span>
+          </div>
+        ))}
+        {hits.length > 8 && <div style={{fontSize:'9px',color:'var(--text-dim)',opacity:0.5}}>+{hits.length - 8} more</div>}
+      </div>
+    );
+  };
 
   const save = () => {
     const next = JSON.parse(JSON.stringify(store));
@@ -1678,9 +1889,27 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
     if (!sc) return;
     const idx = sc.nodes.findIndex(n => n.id === node.id);
     if (idx >= 0) {
-      sc.nodes[idx] = { ...sc.nodes[idx], text, type };
-      if (nextId) sc.nodes[idx].next = nextId;
-      if (type === 'CHOICE') sc.nodes[idx].options = options;
+      const updated = { ...sc.nodes[idx], text, type };
+      updated.next = nextId || null;
+      if (type === 'CHOICE') { updated.options = options; }
+      if (type === 'CONDITION') {
+        updated.variable = extra.variable; updated.operator = extra.operator;
+        updated.threshold = Number(extra.threshold);
+        updated.true_next = extra.true_next || null; updated.false_next = extra.false_next || null;
+      }
+      if (type === 'VAR_SET') {
+        updated.variable = extra.variable; updated.operation = extra.operation;
+        updated.value = extra.value;
+      }
+      if (type === 'CONSCIOUSNESS_GATE') {
+        updated.min_tier = Number(extra.min_tier);
+        updated.pass_next = extra.pass_next || null; updated.fail_next = extra.fail_next || null;
+      }
+      if (type === 'ATTITUDE_BRANCH') { updated.branches = extra.branches; }
+      if (type === 'SCENE_TRANSITION') { updated.target_scene = extra.target_scene; }
+      if (type === 'ANCHOR_USE') { updated.calm_gain = Number(extra.calm_gain); }
+      if (type === 'SECTION_LABEL') { updated.label = extra.label; }
+      sc.nodes[idx] = updated;
     }
     onStoreChange(next, `Edited node: ${node.id}`);
     onClose();
@@ -1723,6 +1952,24 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
   const updateOption = (i, field, val) =>
     setOptions(opts => opts.map((o, j) => j === i ? { ...o, [field]: val } : o));
 
+  const addOptionSet = (i) => {
+    const k = prompt('Variable name to set:');
+    if (!k) return;
+    setOptions(opts => opts.map((o, j) => j !== i ? o : { ...o, sets: { ...(o.sets || {}), [k]: false } }));
+  };
+  const removeOptionSet = (i, k) =>
+    setOptions(opts => opts.map((o, j) => {
+      if (j !== i) return o;
+      const s = { ...(o.sets || {}) }; delete s[k]; return { ...o, sets: s };
+    }));
+  const updateOptionSet = (i, k, raw) => {
+    const vv = store.variables[k];
+    const val = vv?.type === 'bool' ? (raw === 'true' || raw === true)
+              : vv?.type === 'int'  ? Number(raw)
+              : raw;
+    setOptions(opts => opts.map((o, j) => j !== i ? o : { ...o, sets: { ...(o.sets || {}), [k]: val } }));
+  };
+
   return (
     <div className="edit-panel">
       <div className="edit-panel-header">
@@ -1742,9 +1989,16 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
         <textarea className="edit-textarea" value={text} onChange={e => setText(e.target.value)} rows={4} />
 
         <div className="edit-field-label">Next Node ID</div>
-        <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
-          list={`next-list-${node.id}`}
-          value={nextId} onChange={e => setNextId(e.target.value)} placeholder="node_id or END" />
+        <div className="edit-next-field">
+          <input className="edit-next-input" style={{flex:1}}
+            list={`next-list-${node.id}`}
+            value={nextId} onChange={e => setNextId(e.target.value)} placeholder="node_id or END" />
+          {nextId && (
+            <button onClick={() => setNextId('')}
+              style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:3,padding:'3px 7px',cursor:'pointer',fontSize:'10px'}}
+              title="Disconnect">×</button>
+          )}
+        </div>
         <datalist id={`next-list-${node.id}`}>
           {allIds.filter(id => id !== node.id).map(id => <option key={id} value={id} />)}
         </datalist>
@@ -1783,7 +2037,33 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
                     style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:3,padding:'2px 6px',cursor:'pointer',fontSize:'10px'}}>✕</button>
                 </div>
                 <input className="edit-select" style={{width:'100%',height:'auto',padding:'3px 5px',fontSize:'10px'}}
+                  list={`opt-list-${node.id}-${i}`}
                   value={o.next || ''} onChange={e => updateOption(i,'next',e.target.value)} placeholder="→ next node id" />
+                <datalist id={`opt-list-${node.id}-${i}`}>
+                  {allIds.filter(id => id !== node.id).map(id => <option key={id} value={id} />)}
+                </datalist>
+                {/* Variable sets for this option */}
+                {Object.entries(o.sets || {}).map(([k, v]) => (
+                  <div key={k} style={{display:'flex',gap:4,marginTop:4,alignItems:'center'}}>
+                    <span style={{fontSize:'9px',color:'var(--text-dim)',minWidth:80,flexShrink:0}}>{k} =</span>
+                    {store.variables[k]?.type === 'bool' ? (
+                      <select style={{flex:1,background:'var(--surface2)',border:'1px solid var(--border)',color:'var(--text)',fontFamily:'inherit',fontSize:'10px',padding:'2px 4px',borderRadius:3}}
+                        value={String(v)} onChange={e => updateOptionSet(i, k, e.target.value)}>
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                      </select>
+                    ) : (
+                      <input style={{flex:1,background:'var(--surface2)',border:'1px solid var(--border)',color:'var(--text)',fontFamily:'inherit',fontSize:'10px',padding:'2px 4px',borderRadius:3}}
+                        value={v} onChange={e => updateOptionSet(i, k, e.target.value)} />
+                    )}
+                    <button onClick={() => removeOptionSet(i, k)}
+                      style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize:'10px',flexShrink:0}}>×</button>
+                  </div>
+                ))}
+                <button onClick={() => addOptionSet(i)}
+                  style={{background:'none',border:'none',color:'var(--text-dim)',fontFamily:'inherit',fontSize:'9px',cursor:'pointer',padding:'3px 0 0',textAlign:'left'}}>
+                  + set var
+                </button>
               </div>
             ))}
             <button className="edit-btn"
@@ -1793,6 +2073,105 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
             </button>
           </>
         )}
+
+        {/* ── CONDITION ── */}
+        {type === 'CONDITION' && (<>
+          <div className="edit-field-label">Variable</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="cond-var-list" value={extra.variable} onChange={e => setE('variable', e.target.value)} placeholder="variable name" />
+          <datalist id="cond-var-list">{allVarKeys.map(k => <option key={k} value={k} />)}</datalist>
+          <div className="edit-field-label">Operator</div>
+          <select className="edit-select" value={extra.operator} onChange={e => setE('operator', e.target.value)}>
+            {['>=','<=','>','<','=='].map(op => <option key={op} value={op}>{op}</option>)}
+          </select>
+          <div className="edit-field-label">Threshold</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}} type="number"
+            value={extra.threshold} onChange={e => setE('threshold', e.target.value)} />
+          <div className="edit-field-label">True → Node</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="cond-true-list" value={extra.true_next} onChange={e => setE('true_next', e.target.value)} placeholder="node_id" />
+          <datalist id="cond-true-list">{allIds.map(id => <option key={id} value={id} />)}</datalist>
+          <div className="edit-field-label">False → Node</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="cond-false-list" value={extra.false_next} onChange={e => setE('false_next', e.target.value)} placeholder="node_id" />
+          <datalist id="cond-false-list">{allIds.map(id => <option key={id} value={id} />)}</datalist>
+          <CrossSceneRefs varName={extra.variable} />
+        </>)}
+
+        {/* ── VAR_SET ── */}
+        {type === 'VAR_SET' && (<>
+          <div className="edit-field-label">Variable</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="varset-var-list" value={extra.variable} onChange={e => setE('variable', e.target.value)} placeholder="variable name" />
+          <datalist id="varset-var-list">{allVarKeys.map(k => <option key={k} value={k} />)}</datalist>
+          <div className="edit-field-label">Operation</div>
+          <select className="edit-select" value={extra.operation} onChange={e => setE('operation', e.target.value)}>
+            <option value="set">set =</option>
+            <option value="add">add +=</option>
+            <option value="subtract">subtract -=</option>
+          </select>
+          <div className="edit-field-label">Value</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            value={extra.value} onChange={e => setE('value', e.target.value)} placeholder="value" />
+          <CrossSceneRefs varName={extra.variable} />
+        </>)}
+
+        {/* ── CONSCIOUSNESS_GATE ── */}
+        {type === 'CONSCIOUSNESS_GATE' && (<>
+          <div className="edit-field-label">Minimum Tier</div>
+          <select className="edit-select" value={extra.min_tier} onChange={e => setE('min_tier', e.target.value)}>
+            <option value={0}>0 — FERAL</option>
+            <option value={1}>1 — WAKING</option>
+            <option value={2}>2 — CLEAR</option>
+            <option value={3}>3 — GRIOTTE</option>
+          </select>
+          <div className="edit-field-label">Pass → Node</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="gate-pass-list" value={extra.pass_next} onChange={e => setE('pass_next', e.target.value)} placeholder="node_id" />
+          <datalist id="gate-pass-list">{allIds.map(id => <option key={id} value={id} />)}</datalist>
+          <div className="edit-field-label">Fail → Node</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="gate-fail-list" value={extra.fail_next} onChange={e => setE('fail_next', e.target.value)} placeholder="node_id" />
+          <datalist id="gate-fail-list">{allIds.map(id => <option key={id} value={id} />)}</datalist>
+        </>)}
+
+        {/* ── ATTITUDE_BRANCH ── */}
+        {type === 'ATTITUDE_BRANCH' && (<>
+          {['reticence','anger','curiosity','joy','greed'].map(att => (
+            <React.Fragment key={att}>
+              <div className="edit-field-label" style={{textTransform:'capitalize'}}>{att} →</div>
+              <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+                list={`att-list-${att}`}
+                value={extra.branches[att] || ''}
+                onChange={e => setE('branches', { ...extra.branches, [att]: e.target.value })}
+                placeholder="node_id" />
+              <datalist id={`att-list-${att}`}>{allIds.map(id => <option key={id} value={id} />)}</datalist>
+            </React.Fragment>
+          ))}
+        </>)}
+
+        {/* ── SCENE_TRANSITION ── */}
+        {type === 'SCENE_TRANSITION' && (<>
+          <div className="edit-field-label">Target Scene</div>
+          <select className="edit-select" value={extra.target_scene} onChange={e => setE('target_scene', e.target.value)}>
+            <option value="">— none —</option>
+            {store.scenes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </>)}
+
+        {/* ── ANCHOR_USE ── */}
+        {type === 'ANCHOR_USE' && (<>
+          <div className="edit-field-label">Calm Gain</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}} type="number" min={0} max={100}
+            value={extra.calm_gain} onChange={e => setE('calm_gain', e.target.value)} />
+        </>)}
+
+        {/* ── SECTION_LABEL ── */}
+        {type === 'SECTION_LABEL' && (<>
+          <div className="edit-field-label">Label</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            value={extra.label} onChange={e => setE('label', e.target.value)} placeholder="Section I" />
+        </>)}
 
         {consequences.length > 0 && (
           <>
@@ -1816,7 +2195,7 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude }) {
 }
 
 // ── TREE VIEW ─────────────────────────────────────────────────────────
-function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
+function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerTrigger, jumpToNode, onJumpToNode }) {
   const [offset, setOffset] = useState({ x: 0, y: 80 });
   const [zoom, setZoom]     = useState(1);
   const [panning, setPanning] = useState(false);
@@ -1843,6 +2222,23 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
     setZoom(1);
   }, []);
 
+  const fitAll = useCallback(() => {
+    if (!nodes.length || !wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    const positions = nodes.map(n => getPos(n.id));
+    const xs = positions.map(p => p.x), ys = positions.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs) + NODE_W;
+    const minY = Math.min(...ys), maxY = Math.max(...ys) + NODE_H;
+    const worldW = maxX - minX || 1, worldH = maxY - minY || 1;
+    const pad = 60;
+    const z = Math.min((rect.width - pad*2) / worldW, (rect.height - pad*2) / worldH, 1.5);
+    setZoom(z);
+    setOffset({
+      x: rect.width/2  - (minX + worldW/2) * z,
+      y: rect.height/2 - (minY + worldH/2) * z,
+    });
+  }, [nodes, getPos]);
+
   useEffect(() => { centerCanvas(); }, []);
 
   useEffect(() => {
@@ -1851,6 +2247,69 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
     ro.observe(wrapRef.current);
     return () => ro.disconnect();
   }, [centerCanvas]);
+
+  // Clear positions + selection when scene changes
+  useEffect(() => {
+    setManualPos({});
+    setSelected(null);
+  }, [store.activeScene]);
+
+  // Center view when requested externally (e.g. "View in Tree" from chat banner)
+  useEffect(() => {
+    if (!centerTrigger) return;
+    setTimeout(centerCanvas, 50);
+  }, [centerTrigger, centerCanvas]);
+
+  // Jump to and select a specific node (e.g. from cross-scene provenance link).
+  // Scene switch (if needed) happens in the caller before this fires, so by
+  // the time this effect runs `nodes` should already reflect the target scene.
+  useEffect(() => {
+    if (!jumpToNode?.nodeId) return;
+    const hit = nodes.find(n => n.id === jumpToNode.nodeId);
+    if (!hit) return;
+    const t = setTimeout(() => {
+      const pos = getPos(hit.id);
+      const rect = wrapRef.current?.getBoundingClientRect();
+      if (rect) setOffset({ x: rect.width/2 - pos.x * zoom, y: rect.height/2 - pos.y * zoom - 40 });
+      setSelected(hit.id);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [jumpToNode, nodes, getPos, zoom]);
+
+  // Keyboard shortcuts: Delete=remove node, Escape=deselect, Ctrl+D=duplicate
+  useEffect(() => {
+    const handler = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key === 'Escape') { setSelected(null); return; }
+      if (!selected) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        const next = JSON.parse(JSON.stringify(store));
+        const sc = next.scenes.find(s => s.id === next.activeScene);
+        if (!sc) return;
+        sc.nodes = sc.nodes.filter(n => n.id !== selected);
+        onStoreChange(next, `Deleted node: ${selected}`);
+        setSelected(null);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        const sc = store.scenes.find(s => s.id === store.activeScene);
+        const src = sc?.nodes.find(n => n.id === selected);
+        if (!src) return;
+        const newId = `${src.type.toLowerCase()}_${Date.now()}`;
+        const copy = { ...JSON.parse(JSON.stringify(src)), id: newId, next: null };
+        const pos = getPos(selected);
+        const next = JSON.parse(JSON.stringify(store));
+        const sc2 = next.scenes.find(s => s.id === next.activeScene);
+        sc2.nodes.push(copy);
+        setManualPos(p => ({ ...p, [newId]: { x: pos.x + 30, y: pos.y + 30 } }));
+        onStoreChange(next, `Duplicated: ${selected}`);
+        setSelected(newId);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selected, store, onStoreChange, getPos]);
 
   // Wheel zoom at cursor — must be non-passive to call preventDefault
   useEffect(() => {
@@ -1923,7 +2382,22 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
         const next = JSON.parse(JSON.stringify(store));
         const sc = next.scenes.find(s => s.id === next.activeScene);
         const src = sc?.nodes.find(n => n.id === drawingWire.fromId);
-        if (src) src.next = target.id;
+        if (src) {
+          if (src.type === 'CHOICE') {
+            if (!src.options) src.options = [];
+            src.options.push({ label: 'Option ' + (src.options.length + 1), next: target.id });
+          } else if (src.type === 'CONDITION') {
+            if (!src.true_next) src.true_next = target.id;
+            else if (!src.false_next) src.false_next = target.id;
+            else src.true_next = target.id;
+          } else if (src.type === 'ATTITUDE_BRANCH') {
+            if (!src.branches) src.branches = {};
+            const open = ['reticence','anger','curiosity','joy','greed'].find(k => !src.branches[k]);
+            if (open) src.branches[open] = target.id;
+          } else {
+            src.next = target.id;
+          }
+        }
         onStoreChange(next, `Connected: ${drawingWire.fromId} → ${target.id}`);
       }
       setDrawingWire(null);
@@ -2013,6 +2487,8 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
         <button className="tree-ctrl-btn" onClick={() => setZoom(z => Math.min(3, z * 1.2))}>+</button>
         <button className="tree-ctrl-btn" onClick={() => setZoom(z => Math.max(0.1, z * 0.85))}>−</button>
         <button className="tree-ctrl-btn" onClick={centerCanvas} title="Reset view">↺</button>
+        <button className="tree-ctrl-btn" onClick={fitAll} title="Fit all nodes in view">⊡</button>
+        <button className="tree-ctrl-btn" onClick={() => setManualPos({})} title="Auto-layout (clear manual positions)">⊞</button>
         <span style={{color:'var(--text-dim)',fontSize:'10px',minWidth:36,letterSpacing:'0.02em'}}>{Math.round(zoom*100)}%</span>
         <input
           type="text" placeholder="find node…" value={search}
@@ -2045,6 +2521,8 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
             value={fontSize} onChange={e => setFontSize(Number(e.target.value))} />
           <span style={{color:'var(--text-dim)',fontSize:'12px'}}>Aa</span>
         </div>
+        <span style={{color:'var(--text-dim)',fontSize:'9px',marginLeft:8,opacity:0.6}}
+          title="Del=delete · Ctrl+D=duplicate · Esc=deselect · drag ●=connect · ⊡=fit all · ⊞=auto-layout">?</span>
       </div>
 
       <div
@@ -2104,12 +2582,19 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
           {nodes.length === 0 ? (
             <div style={{position:'absolute',width:360,left:-180,top:40,textAlign:'center'}}>
               <div style={{color:'var(--amber)',fontSize:'12px',letterSpacing:'0.1em',marginBottom:8}}>NO NODES YET</div>
-              <div style={{color:'var(--text-dim)',fontSize:'11px'}}>Use CHAT to ask Claude to write a scene.</div>
+              <div style={{color:'var(--text-dim)',fontSize:'11px'}}>Ask Claude in CHAT, or right-click here to add a node manually.</div>
             </div>
-          ) : nodes.map((node, seqIdx) => {
+          ) : (() => {
+            const nodeIdSet = new Set(nodes.map(n => n.id));
+            const isBroken = (id) => id && id !== 'END' && !nodeIdSet.has(id);
+            return nodes.map((node, seqIdx) => {
             const pos = getPos(node.id);
             const col = NODE_COLORS[node.type] || NODE_COLORS.NARRATION;
             const isSelected = selected === node.id;
+            const targets = [node.next, node.true_next, node.false_next, node.pass_next, node.fail_next,
+              ...(node.options || []).map(o => o.next),
+              ...Object.values(node.branches || {})].filter(Boolean);
+            const hasBrokenLink = targets.some(isBroken);
             return (
               <div
                 key={node.id}
@@ -2143,6 +2628,10 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
 
                 <div className="tree-node-header" style={{background:col.header}}>
                   <span className="tree-node-type" style={{color:col.text}}>{node.type}</span>
+                  {hasBrokenLink && (
+                    <span title="Points to a node that doesn't exist"
+                      style={{color:'#e05040',fontSize:'10px',marginLeft:4,lineHeight:1}}>⚠</span>
+                  )}
                   <button className="tree-node-ask"
                     onClick={e => { e.stopPropagation(); onNodeContext && onNodeContext(node); }}>
                     Ask Claude
@@ -2163,9 +2652,12 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
                 </div>
 
                 <div className="tree-node-body" style={{fontSize:`${fontSize}px`}}>
-                  {node.text
-                    ? (node.text.length > 110 ? node.text.slice(0,110)+'…' : node.text)
-                    : <em style={{color:'var(--text-dim)'}}>no text</em>}
+                  {(() => {
+                    const preview = nodePreview(node);
+                    return preview
+                      ? preview
+                      : <em style={{color:'var(--text-dim)'}}>no content</em>;
+                  })()}
                 </div>
 
                 {node.options && node.options.length > 0 && (
@@ -2180,8 +2672,52 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
                 )}
               </div>
             );
-          })}
+          });
+          })()}
         </div>
+
+        {/* Minimap — overview of all nodes */}
+        {nodes.length > 1 && (() => {
+          const MM_W = 140, MM_H = 100;
+          const pads = 8;
+          const positions = nodes.map(n => getPos(n.id));
+          const xs = positions.map(p => p.x);
+          const ys = positions.map(p => p.y);
+          const minX = Math.min(...xs), maxX = Math.max(...xs) + NODE_W;
+          const minY = Math.min(...ys), maxY = Math.max(...ys) + NODE_H;
+          const worldW = maxX - minX || 1, worldH = maxY - minY || 1;
+          const scaleX = (MM_W - pads*2) / worldW;
+          const scaleY = (MM_H - pads*2) / worldH;
+          const sc = Math.min(scaleX, scaleY);
+          const ox = pads + ((MM_W - pads*2) - worldW * sc) / 2 - minX * sc;
+          const oy = pads + ((MM_H - pads*2) - worldH * sc) / 2 - minY * sc;
+          const ww = wrapRef.current?.clientWidth || 800;
+          const wh = wrapRef.current?.clientHeight || 600;
+          const vpX = (-offset.x / zoom) * sc + ox;
+          const vpY = (-offset.y / zoom) * sc + oy;
+          const vpW = (ww / zoom) * sc;
+          const vpH = (wh / zoom) * sc;
+          return (
+            <div style={{
+              position:'absolute', bottom:8, right:8, width:MM_W, height:MM_H, zIndex:20,
+              background:'rgba(13,12,11,0.9)', border:'1px solid var(--border)',
+              borderRadius:4, overflow:'hidden', pointerEvents:'none',
+            }}>
+              <svg width={MM_W} height={MM_H}>
+                {nodes.map(n => {
+                  const p = getPos(n.id);
+                  const col = NODE_COLORS[n.type] || NODE_COLORS.NARRATION;
+                  return <rect key={n.id}
+                    x={p.x * sc + ox} y={p.y * sc + oy}
+                    width={Math.max(2, NODE_W * sc)} height={Math.max(1.5, NODE_H * sc)}
+                    fill={col.bg} stroke={n.id === selected ? '#c8880a' : col.border} strokeWidth="0.5" />;
+                })}
+                <rect x={vpX} y={vpY} width={vpW} height={vpH}
+                  fill="none" stroke="rgba(200,136,10,0.4)" strokeWidth="1" />
+              </svg>
+            </div>
+          );
+        })()}
 
         {/* Right-click context menu */}
         {ctxMenu && (
@@ -2202,11 +2738,13 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext }) {
 
       {selected && nodes.find(n => n.id === selected) && (
         <EditPanel
+          key={selected}
           node={nodes.find(n => n.id === selected)}
           store={store}
           onStoreChange={onStoreChange}
           onClose={() => setSelected(null)}
           onAskClaude={node => { onNodeContext && onNodeContext(node); setSelected(null); }}
+          onJumpToNode={onJumpToNode}
         />
       )}
     </div>
@@ -2218,10 +2756,58 @@ function StoryView({ store, onStoreChange, onSwitchTab }) {
   const lanes = ['shared', 'shed', 'run', 'go'];
   const laneLabels = { shared: '── SHARED ──', shed: '── SHED ──', run: '── RUN ──', go: '── GO ──' };
 
+  const canvasRef = useRef(null);
+  const cardRefs = useRef({});
+  const [cardRects, setCardRects] = useState({});
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
+
+  const measure = useCallback(() => {
+    if (!canvasRef.current) return;
+    const rects = {};
+    Object.entries(cardRefs.current).forEach(([id, el]) => {
+      if (!el) return;
+      rects[id] = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+    });
+    setCardRects(rects);
+    setCanvasSize({ w: canvasRef.current.scrollWidth, h: canvasRef.current.scrollHeight });
+  }, []);
+
+  useEffect(() => {
+    measure();
+    const t = setTimeout(measure, 60); // catch late layout from thumbnail images loading
+    return () => clearTimeout(t);
+  }, [store.scenes, measure]);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(canvasRef.current);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  // Scene-to-scene edges derived from SCENE_TRANSITION nodes
+  const edges = useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    store.scenes.forEach(sc => {
+      (sc.nodes || []).forEach(n => {
+        if (n.type === 'SCENE_TRANSITION' && n.target_scene && n.target_scene !== sc.id
+            && store.scenes.some(s => s.id === n.target_scene)) {
+          const key = `${sc.id}->${n.target_scene}`;
+          if (!seen.has(key)) { seen.add(key); list.push({ from: sc.id, to: n.target_scene }); }
+        }
+      });
+    });
+    return list;
+  }, [store.scenes]);
+
   const addScene = (branch) => {
     const name = prompt(`Scene name for ${branch} branch:`);
     if (!name) return;
-    const id = name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const base = name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const existingIds = new Set(store.scenes.map(s => s.id));
+    let id = base, n = 2;
+    while (existingIds.has(id)) { id = `${base}_${n}`; n++; }
     const next = JSON.parse(JSON.stringify(store));
     next.scenes.push({ id, name, branch, type: 'playable', status: 'draft', nodes: [], wires: [] });
     onStoreChange(next, `Added scene: ${name}`);
@@ -2229,37 +2815,69 @@ function StoryView({ store, onStoreChange, onSwitchTab }) {
 
   return (
     <div className="story-layout">
-      <div className="story-canvas">
+      <div className="story-canvas" ref={canvasRef}>
         <div style={{color:'var(--text-dim)',fontSize:'10px',marginBottom:16,letterSpacing:'0.06em'}}>
           STORY MAP · {store.scenes.length} scenes · Click a scene to open in TREE
         </div>
+
+        {canvasSize.w > 0 && (
+          <svg className="story-arrows-svg" width={canvasSize.w} height={canvasSize.h}>
+            <defs>
+              <marker id="story-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#c8880a" opacity="0.7" />
+              </marker>
+            </defs>
+            {edges.map(({ from, to }) => {
+              const f = cardRects[from], t = cardRects[to];
+              if (!f || !t) return null;
+              const fx = f.x + f.w, fy = f.y + f.h / 2;
+              const tx = t.x, ty = t.y + t.h / 2;
+              const curve = Math.max(30, Math.abs(tx - fx) / 2);
+              const d = `M${fx},${fy} C${fx + curve},${fy} ${tx - curve},${ty} ${tx},${ty}`;
+              return (
+                <path key={`${from}->${to}`} d={d} fill="none" stroke="#c8880a" strokeWidth="1.5"
+                  strokeDasharray="5 4" opacity="0.55" markerEnd="url(#story-arrowhead)" />
+              );
+            })}
+          </svg>
+        )}
+
         <div className="story-lanes">
           {lanes.map(lane => {
             const laneScenes = store.scenes.filter(s => s.branch === lane);
             return (
               <div key={lane} className="story-lane">
                 <div className="story-lane-header">{laneLabels[lane]}</div>
-                {laneScenes.map(s => (
-                  <div key={s.id} className="story-card"
-                    onClick={() => { const next = JSON.parse(JSON.stringify(store)); next.activeScene = s.id; onStoreChange(next, null); onSwitchTab && onSwitchTab('TREE'); }}>
-                    <button className="story-card-play" onClick={e => {
-                      e.stopPropagation();
-                      const next = JSON.parse(JSON.stringify(store));
-                      next.activeScene = s.id;
-                      onStoreChange(next, null);
-                      onSwitchTab && onSwitchTab('PLAY');
-                    }}>▶ Play</button>
-                    <div className="story-card-name">{s.name}</div>
-                    <div className="story-card-badges">
-                      <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>
-                      <span className={`scene-badge badge-${s.type}`}>{s.type}</span>
-                      <span className={`scene-badge badge-${s.status}`}>{s.status}</span>
+                {laneScenes.map(s => {
+                  const thumbNode = s.nodes.find(n => n.media);
+                  return (
+                    <div key={s.id} className="story-card"
+                      ref={el => { cardRefs.current[s.id] = el; }}
+                      onClick={() => { const next = JSON.parse(JSON.stringify(store)); next.activeScene = s.id; onStoreChange(next, null); onSwitchTab && onSwitchTab('TREE'); }}>
+                      <button className="story-card-play" onClick={e => {
+                        e.stopPropagation();
+                        const next = JSON.parse(JSON.stringify(store));
+                        next.activeScene = s.id;
+                        onStoreChange(next, null);
+                        onSwitchTab && onSwitchTab('PLAY');
+                      }}>▶ Play</button>
+                      {thumbNode && (
+                        thumbNode.media.startsWith('data:video')
+                          ? <video src={thumbNode.media} className="story-card-thumb" muted onLoadedData={measure} />
+                          : <img src={thumbNode.media} className="story-card-thumb" alt="" onLoad={measure} />
+                      )}
+                      <div className="story-card-name">{s.name}</div>
+                      <div className="story-card-badges">
+                        <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>
+                        <span className={`scene-badge badge-${s.type}`}>{s.type}</span>
+                        <span className={`scene-badge badge-${s.status}`}>{s.status}</span>
+                      </div>
+                      <div className="story-card-stats">
+                        {s.nodes.length} nodes · {s.nodes.filter(n=>n.media).length} media
+                      </div>
                     </div>
-                    <div className="story-card-stats">
-                      {s.nodes.length} nodes · {s.nodes.filter(n=>n.media).length} media
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <button className="story-add-btn" onClick={() => addScene(lane)}>+ New Scene</button>
               </div>
             );
@@ -2382,10 +3000,74 @@ function InkExportModal({ store, onClose }) {
   );
 }
 
+function VarsInkModal({ store, onClose }) {
+  const ink = useMemo(() => {
+    const vars = store.variables;
+    const groups = {
+      core: ['calm','consciousness','face_worn','face_stable'],
+      attitudes: ['att_reticence','att_anger','att_curiosity','att_joy','att_greed'],
+      branches: ['branch_shed','branch_run','branch_go'],
+      world: [],
+    };
+    const known = new Set([...groups.core, ...groups.attitudes, ...groups.branches]);
+    Object.keys(vars).forEach(k => { if (!known.has(k)) groups.world.push(k); });
+
+    const fmt = (k, v) => {
+      const vv = vars[k];
+      if (!vv) return null;
+      const init = vv.initial !== undefined ? vv.initial : vv.value !== undefined ? vv.value : false;
+      const val = typeof init === 'boolean' ? (init ? 'true' : 'false') : init;
+      const comment = vv.range ? `// ${vv.range[0]}-${vv.range[1]}` : '';
+      return `VAR ${k} = ${val}${comment ? '  ' + comment : ''}`;
+    };
+
+    let out = `// ═══════════════════════════════════════════════════════════════
+// BOO HAG — MASTER VARIABLE REGISTRY
+// INCLUDE this file at the top of every scene .ink file.
+// NEVER reset variables between scenes — state carries forward.
+// Generated: ${new Date().toISOString().slice(0,10)}
+// ═══════════════════════════════════════════════════════════════
+
+// ── CORE STATE ────────────────────────────────────────────────
+`;
+    groups.core.forEach(k => { const l = fmt(k, vars[k]); if (l) out += l + '\n'; });
+    out += `\n// ── ATTITUDES ─────────────────────────────────────────────────\n`;
+    groups.attitudes.forEach(k => { const l = fmt(k, vars[k]); if (l) out += l + '\n'; });
+    out += `\n// ── BRANCH FLAGS ──────────────────────────────────────────────\n`;
+    groups.branches.forEach(k => { const l = fmt(k, vars[k]); if (l) out += l + '\n'; });
+    if (groups.world.length) {
+      out += `\n// ── WORLD / CUSTOM ────────────────────────────────────────────\n`;
+      groups.world.forEach(k => { const l = fmt(k, vars[k]); if (l) out += l + '\n'; });
+    }
+    return out;
+  }, [store.variables]);
+
+  const download = () => {
+    const blob = new Blob([ink], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'variables.ink';
+    a.click();
+  };
+
+  return (
+    <div className="ink-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ink-modal">
+        <div className="ink-modal-header">
+          <h3>EXPORT — variables.ink</h3>
+          <button className="topbar-btn" onClick={download}>⬇ Download variables.ink</button>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+        <pre className="ink-modal-pre">{ink}</pre>
+      </div>
+    </div>
+  );
+}
+
 // ── PLAY VIEW ─────────────────────────────────────────────────────────
 const CONSCIOUSNESS_LABELS = ['FERAL', 'WAKING', 'CLEAR', 'GRIOTTE'];
 
-function PlayView({ store, onStoreChange, onSnapshot }) {
+function PlayView({ store, onStoreChange }) {
   // playSceneId is independent of store.activeScene so scene transitions
   // during play don't reset vars (vars are local play state, not design state)
   const [playSceneId, setPlaySceneId] = useState(store.activeScene);
@@ -2398,6 +3080,9 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
   const [path, setPath] = useState([]);
   const [flash, setFlash] = useState(null);
   const [showVars, setShowVars] = useState(true);
+  const [flashedVar, setFlashedVar] = useState(null);
+  const [showCheckpoints, setShowCheckpoints] = useState(false);
+  const checkpointMenuRef = useRef(null);
 
   const scene = store.scenes.find(s => s.id === playSceneId) || store.scenes.find(s => s.id === store.activeScene);
   const nodes = scene?.nodes || [];
@@ -2444,6 +3129,8 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
       else if (operation === 'subtract') next[variable] = cur - Number(value);
       return next;
     });
+    setFlashedVar(variable);
+    setTimeout(() => setFlashedVar(null), 1400);
   };
 
   // Auto-resolve non-interactive nodes
@@ -2453,7 +3140,7 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
     const delay = (fn, ms) => { timer = setTimeout(fn, ms); };
 
     if (node.type === 'SECTION_LABEL') {
-      delay(() => goto(node.next, null), 300);
+      delay(() => goto(node.next, null), 1400);
 
     } else if (node.type === 'VAR_SET') {
       applyVar(node.variable, node.operation || 'set', node.value ?? 0);
@@ -2512,6 +3199,69 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
     setFlash(null);
   };
 
+  // Close checkpoint dropdown on outside click
+  useEffect(() => {
+    if (!showCheckpoints) return;
+    const handler = (e) => { if (!checkpointMenuRef.current?.contains(e.target)) setShowCheckpoints(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showCheckpoints]);
+
+  const saveCheckpoint = () => {
+    const defaultLabel = `${scene.name} @ ${currentId || 'start'}`;
+    const label = prompt('Checkpoint label:', defaultLabel);
+    if (label === null) return;
+    const next = JSON.parse(JSON.stringify(store));
+    if (!next.checkpoints) next.checkpoints = [];
+    next.checkpoints.push({
+      id: `cp_${Date.now()}`,
+      label: label.trim() || defaultLabel,
+      sceneId: playSceneId,
+      currentId,
+      vars: { ...vars },
+      path: [...path],
+      timestamp: Date.now(),
+    });
+    onStoreChange(next, `Checkpoint saved: ${label.trim() || defaultLabel}`);
+    showFlash('Checkpoint saved');
+  };
+
+  const loadCheckpoint = (cp) => {
+    setPlaySceneId(cp.sceneId);
+    setCurrentId(cp.currentId);
+    setVars(cp.vars);
+    setPath(cp.path || []);
+    setFlash(null);
+    setShowCheckpoints(false);
+    showFlash(`Loaded: ${cp.label}`);
+  };
+
+  const deleteCheckpoint = (id, e) => {
+    e.stopPropagation();
+    const next = JSON.parse(JSON.stringify(store));
+    next.checkpoints = (next.checkpoints || []).filter(c => c.id !== id);
+    onStoreChange(next, null);
+  };
+
+  const exportPlaythrough = () => {
+    const fullPath = [...path, currentId].filter(Boolean);
+    const lines = fullPath.map((id, i) => {
+      const n = nodes.find(x => x.id === id);
+      if (!n) return `${i + 1}. [missing node: ${id}]`;
+      const preview = (n.text || nodePreview(n) || n.type || '').replace(/\s+/g, ' ').slice(0, 90);
+      return `${i + 1}. [${n.type}] ${id}${preview ? ' — ' + preview : ''}`;
+    });
+    const finalVars = Object.entries(vars).map(([k, v]) => `${k}=${v}`).join('\n');
+    const content = `PLAYTHROUGH LOG — ${scene.name}\nGenerated: ${new Date().toISOString()}\n\n${lines.join('\n')}\n\n── FINAL VARIABLES ──\n${finalVars}\n`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `playthrough_${scene.id}_${Date.now()}.txt`;
+    a.click();
+  };
+
+  const checkpoints = store.checkpoints || [];
+
   // No scene
   if (!scene) {
     return (
@@ -2531,10 +3281,37 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
         {path.length > 0 && <span style={{color:'var(--text-dim)',fontSize:'10px'}}>node {path.length + 1}</span>}
         <button className="play-ctrl-btn" onClick={back} disabled={!path.length}>◀ Back</button>
         <button className="play-ctrl-btn" onClick={reset}>↺ Reset</button>
-        <button className="play-ctrl-btn" onClick={() => {
-          onSnapshot && onSnapshot(`Checkpoint: ${scene.name} @ ${currentId || 'start'}`);
-          showFlash('Checkpoint saved to History');
-        }} title="Save current playthrough position to History">📍 Checkpoint</button>
+        <button className="play-ctrl-btn" onClick={saveCheckpoint} title="Save current playthrough position — reloadable">📍 Checkpoint</button>
+        <div style={{position:'relative'}} ref={checkpointMenuRef}>
+          <button className="play-ctrl-btn" onClick={() => setShowCheckpoints(v => !v)}
+            title="Load a saved checkpoint">📂 Load ({checkpoints.length})</button>
+          {showCheckpoints && (
+            <div style={{
+              position:'absolute', top:'100%', left:0, marginTop:4, zIndex:30, minWidth:220, maxWidth:320,
+              background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6,
+              boxShadow:'0 8px 24px rgba(0,0,0,0.5)', padding:'4px 0', maxHeight:280, overflowY:'auto',
+            }}>
+              {checkpoints.length === 0 && (
+                <div style={{padding:'8px 12px',color:'var(--text-dim)',fontSize:'10px'}}>No checkpoints saved yet.</div>
+              )}
+              {[...checkpoints].reverse().map(cp => {
+                const cpScene = store.scenes.find(s => s.id === cp.sceneId);
+                return (
+                  <div key={cp.id} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',cursor:'pointer'}}
+                    onClick={() => loadCheckpoint(cp)}>
+                    <div style={{flex:1,overflow:'hidden'}}>
+                      <div style={{color:'var(--bone-dim)',fontSize:'11px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{cp.label}</div>
+                      <div style={{color:'var(--text-dim)',fontSize:'9px'}}>{cpScene?.name || cp.sceneId} · {new Date(cp.timestamp).toLocaleString()}</div>
+                    </div>
+                    <button onClick={e => deleteCheckpoint(cp.id, e)}
+                      style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'12px',cursor:'pointer',padding:'0 2px',flexShrink:0}}>✕</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <button className="play-ctrl-btn" onClick={exportPlaythrough} title="Download the path taken as a test log">⬇ Export Log</button>
         <button className={`play-ctrl-btn${showVars ? ' active' : ''}`}
           style={{marginLeft:'auto'}} onClick={() => setShowVars(v => !v)}>
           Variables
@@ -2565,8 +3342,13 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
                 <div className="play-node-text">{node.text}</div>
               )}
 
-              {node.type === 'SECTION_LABEL' && node.text && (
-                <div className="play-section-label">{node.text}</div>
+              {node.type === 'SECTION_LABEL' && (
+                <div className="play-section-label">
+                  {node.label || node.text || 'Section'}
+                  {node.label && node.text && (
+                    <div style={{fontSize:'12px',marginTop:8,color:'var(--bone-dim)',textTransform:'none',letterSpacing:'0.01em'}}>{node.text}</div>
+                  )}
+                </div>
               )}
 
               {node.type === 'NARRATION' && (
@@ -2581,8 +3363,7 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
                 <div className="play-choices">
                   {node.options.map((o, i) => (
                     <button key={i} className="play-choice-btn" onClick={() => {
-                      if (o.sets) Object.entries(o.sets).forEach(([k,v]) =>
-                        setVars(vars => ({ ...vars, [k]: v })));
+                      if (o.sets) Object.entries(o.sets).forEach(([k, v]) => applyVar(k, 'set', v));
                       goto(o.next, null);
                     }}>
                       {o.label}
@@ -2626,10 +3407,14 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
 
           {path.length > 0 && (
             <div className="play-breadcrumb">
-              {path.slice(-5).map((id, i) => (
-                <span key={id}>{i > 0 && ' › '}<span>{id}</span></span>
-              ))}
-              {' › '}<span style={{color:'var(--amber)'}}>{currentId}</span>
+              {path.slice(-4).map((id, i) => {
+                const n = nodes.find(x => x.id === id);
+                const label = n ? (n.text || n.label || n.type).slice(0, 28) : id.slice(0, 20);
+                return <span key={id}>{i > 0 && ' › '}<span title={id}>{label}</span></span>;
+              })}
+              {' › '}<span style={{color:'var(--amber)'}} title={currentId}>
+                {node ? (node.text || node.label || node.type).slice(0, 28) : currentId}
+              </span>
             </div>
           )}
         </div>
@@ -2637,30 +3422,88 @@ function PlayView({ store, onStoreChange, onSnapshot }) {
         {showVars && (
           <div className="play-vars-panel">
             <div className="play-vars-title">Variables</div>
-            <div className="play-var-row">
+            <div className="play-var-row" style={{background: flashedVar === 'calm' ? 'rgba(200,136,10,0.12)' : 'transparent', transition:'background 0.3s', borderRadius:3}}>
               <span className="play-var-name">calm</span>
               <div className="play-calm-bar">
                 <div className="play-calm-fill" style={{width:`${Math.min(100, Math.max(0, vars.calm ?? 10))}%`}} />
               </div>
               <span className="play-var-val">{vars.calm ?? 10}</span>
             </div>
-            <div className="play-var-row">
+            <div className="play-var-row" style={{background: flashedVar === 'consciousness' ? 'rgba(200,136,10,0.12)' : 'transparent', transition:'background 0.3s', borderRadius:3}}>
               <span className="play-var-name">consciousness</span>
               <span className="play-var-val" style={{color:'var(--amber)',fontSize:'9px'}}>
                 {CONSCIOUSNESS_LABELS[vars.consciousness ?? 0]}
               </span>
             </div>
-            {['face_worn','face_stable','att_reticence','att_anger','att_curiosity','att_joy','att_greed',
-              'branch_shed','branch_run','branch_go','diner_massacre','cop_knows_face'].map(k => (
-              <div key={k} className="play-var-row">
-                <span className="play-var-name">{k.replace(/_/g,' ')}</span>
-                <span className="play-var-val" style={{color: vars[k] ? 'var(--amber)' : 'var(--text-dim)'}}>
-                  {vars[k] ? '✓' : '✗'}
-                </span>
+            {Object.keys(store.variables)
+              .filter(k => k !== 'calm' && k !== 'consciousness')
+              .map(k => {
+                const val = vars[k];
+                const vv = store.variables[k];
+                const isInt = vv?.type === 'int';
+                return (
+                  <div key={k} className="play-var-row" style={{background: flashedVar === k ? 'rgba(200,136,10,0.12)' : 'transparent', transition:'background 0.3s', borderRadius:3}}>
+                    <span className="play-var-name">{k.replace(/_/g,' ')}</span>
+                    {isInt ? (
+                      <span className="play-var-val">{val ?? vv?.initial ?? 0}</span>
+                    ) : (
+                      <span className="play-var-val" style={{color: val ? 'var(--amber)' : 'var(--text-dim)'}}>
+                        {val ? '✓' : '✗'}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ShortcutsModal({ onClose }) {
+  const groups = [
+    { title: 'Global', rows: [
+      ['Ctrl+Z', 'Undo last tracked action'],
+      ['?', 'Show this shortcuts overlay'],
+    ]},
+    { title: 'Tree view', rows: [
+      ['Scroll', 'Zoom in/out at cursor'],
+      ['Drag canvas', 'Pan'],
+      ['Drag node', 'Reposition manually'],
+      ['Drag ● (node bottom)', 'Connect to another node'],
+      ['Right-click canvas', 'Add a node at cursor'],
+      ['Click node', 'Select / open edit panel'],
+      ['Delete / Backspace', 'Delete selected node'],
+      ['Ctrl+D', 'Duplicate selected node'],
+      ['Escape', 'Deselect'],
+      ['⊡ button', 'Fit all nodes in view'],
+      ['⊞ button', 'Clear manual layout (auto-layout)'],
+      ['↺ button', 'Reset view to origin'],
+    ]},
+    { title: 'Chat', rows: [
+      ['Enter', 'Send message'],
+      ['Shift+Enter', 'New line'],
+    ]},
+  ];
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'16px 20px',minWidth:340,maxWidth:440,maxHeight:'80vh',overflowY:'auto',boxShadow:'0 12px 40px rgba(0,0,0,0.6)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <h3 style={{margin:0,color:'var(--amber)',fontSize:'13px',letterSpacing:'0.06em'}}>KEYBOARD SHORTCUTS</h3>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+        {groups.map(g => (
+          <div key={g.title} style={{marginBottom:14}}>
+            <div style={{color:'var(--text-dim)',fontSize:'10px',letterSpacing:'0.1em',marginBottom:6,textTransform:'uppercase'}}>{g.title}</div>
+            {g.rows.map(([key, desc]) => (
+              <div key={key} style={{display:'flex',gap:10,padding:'3px 0',fontSize:'11px'}}>
+                <span style={{minWidth:150,flexShrink:0,fontFamily:'monospace',color:'var(--bone)',background:'rgba(255,255,255,0.05)',borderRadius:3,padding:'1px 6px'}}>{key}</span>
+                <span style={{color:'var(--bone-dim)'}}>{desc}</span>
               </div>
             ))}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
@@ -2671,8 +3514,13 @@ function App() {
   const [tab, setTab]         = useState('TREE');
   const [store, setStoreRaw]  = useState(loadStore);
   const [history, setHistory] = useState(loadHistory);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showExport, setShowExport]   = useState(false);
+  const [showHistory, setShowHistory]       = useState(false);
+  const [showExport, setShowExport]         = useState(false);
+  const [showVarsExport, setShowVarsExport] = useState(false);
+  const [pendingNodeContext, setPendingNodeContext] = useState(null);
+  const [treeCenterTrigger, setTreeCenterTrigger] = useState(0);
+  const [jumpToNode, setJumpToNode] = useState(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [leftWidth, setLeftWidth] = useState(() => {
     const s = localStorage.getItem('boo_hag_left_w');
     return s ? Number(s) : 520;
@@ -2722,18 +3570,13 @@ function App() {
     }
   }, []);
 
-  const onSnapshot = useCallback((label) => {
-    setHistory(prev => {
-      const snaps = [...prev.snapshots, { timestamp: Date.now(), label, state: store }].slice(-MAX_HISTORY);
-      const h = { snapshots: snaps };
-      saveHistory(h);
-      return h;
-    });
-  }, [store]);
-
-  // Ctrl+Z undo
+  // Ctrl+Z undo — ignore while typing so native text-undo in inputs/textareas
+  // (e.g. fixing a typo in the chat box) isn't hijacked into reverting the
+  // whole studio's design state.
   useEffect(() => {
     const handler = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         const snaps = history.snapshots;
         if (snaps.length > 1) {
@@ -2748,22 +3591,36 @@ function App() {
     return () => window.removeEventListener('keydown', handler);
   }, [history]);
 
-  const restoreSnapshot = useCallback((snap) => {
-    setStoreRaw(snap.state);
-    saveStore(snap.state);
-    setShowHistory(false);
+  // "?" opens the shortcuts overlay — ignored while typing
+  useEffect(() => {
+    const handler = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key === '?') { e.preventDefault(); setShowShortcuts(v => !v); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  const restoreSnapshot = useCallback((snap) => {
+    onStoreChange(snap.state, `Restored: ${snap.label}`);
+    setShowHistory(false);
+  }, [onStoreChange]);
+
   const injectNodeToChat = useCallback((node) => {
-    const next = JSON.parse(JSON.stringify(store));
-    const session = next.chatSessions[next.activeSession] || { name: 'Session', messages: [] };
-    session.messages = [...session.messages, {
-      role: 'user',
-      content: `[Node context — ${node.type}: "${(node.text || '').slice(0, 120)}"] Ask Claude about this node or request a rewrite.`,
-      id: Date.now(),
-    }];
-    next.chatSessions[next.activeSession] = session;
-    onStoreChange(next, null);
+    const preview = (node.text || node.label || Object.values(node.branches || {})[0] || '').slice(0, 100);
+    const contextStr = `[${node.type}${preview ? ': "' + preview + '"' : ''}] `;
+    setPendingNodeContext({ str: contextStr, ts: Date.now() });
+  }, []);
+
+  const jumpToNodeInScene = useCallback((sceneId, nodeId) => {
+    if (store.activeScene !== sceneId) {
+      const next = JSON.parse(JSON.stringify(store));
+      next.activeScene = sceneId;
+      onStoreChange(next, null);
+    }
+    setTab('TREE');
+    setJumpToNode({ sceneId, nodeId, ts: Date.now() });
   }, [store, onStoreChange]);
 
   return (
@@ -2773,8 +3630,32 @@ function App() {
           <span className="topbar-title">BOO HAG ◆ STUDIO</span>
           <div className="topbar-right">
             <button className="topbar-btn" onClick={() => setShowHistory(true)}>⟳ History ({history.snapshots.length})</button>
-            <button className="topbar-btn" onClick={() => setShowExport(true)}>⬇ Export .ink</button>
-            <button className="topbar-btn" style={{color:'var(--text-dim)',fontSize:'10px'}} title="Ctrl+Z to undo">Ctrl+Z Undo</button>
+            <button className="topbar-btn" onClick={() => setShowExport(true)}>⬇ Scene .ink</button>
+            <button className="topbar-btn" onClick={() => setShowVarsExport(true)}>⬇ variables.ink</button>
+            <button className="topbar-btn" onClick={() => {
+              const blob = new Blob([JSON.stringify(store, null, 2)], { type: 'application/json' });
+              const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+              a.download = `boo_hag_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+            }} title="Download full project backup as JSON">⬇ Backup</button>
+            <label className="topbar-btn" style={{cursor:'pointer'}} title="Restore from JSON backup">
+              ↑ Restore
+              <input type="file" accept=".json" style={{display:'none'}} onChange={e => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => {
+                  try {
+                    const data = JSON.parse(ev.target.result);
+                    if (!data.scenes) throw new Error('Not a valid backup');
+                    if (!confirm('Replace all studio data with backup? This cannot be undone.')) return;
+                    onStoreChange(data, 'Restored from backup');
+                  } catch (err) { alert('Invalid backup file: ' + err.message); }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+              }} />
+            </label>
+            <button className="topbar-btn" style={{color:'var(--text-dim)',fontSize:'10px'}} title="Ctrl+Z to undo">Ctrl+Z</button>
+            <button className="topbar-btn" onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)">?</button>
           </div>
         </div>
 
@@ -2784,9 +3665,10 @@ function App() {
             <ChatView
               store={store}
               onStoreChange={onStoreChange}
-              onSnapshot={onSnapshot}
               history={history}
-              onNodeContext={injectNodeToChat}
+              pendingNodeContext={pendingNodeContext}
+              onSwitchToTree={(andCenter) => { setTab('TREE'); if (andCenter) setTreeCenterTrigger(t => t + 1); }}
+              onJumpToNode={jumpToNodeInScene}
             />
           </div>
 
@@ -2804,8 +3686,8 @@ function App() {
               </span>
             </div>
             <div className="right-col-content">
-              {tab === 'TREE'  && <TreeView  store={store} onStoreChange={onStoreChange} onNodeContext={injectNodeToChat} />}
-              {tab === 'PLAY'  && <PlayView  store={store} onStoreChange={onStoreChange} onSnapshot={onSnapshot} />}
+              {tab === 'TREE'  && <TreeView  store={store} onStoreChange={onStoreChange} onNodeContext={injectNodeToChat} centerTrigger={treeCenterTrigger} jumpToNode={jumpToNode} onJumpToNode={jumpToNodeInScene} />}
+              {tab === 'PLAY'  && <PlayView  store={store} onStoreChange={onStoreChange} />}
               {tab === 'STORY' && <StoryView store={store} onStoreChange={onStoreChange} onSwitchTab={setTab} />}
             </div>
           </div>
@@ -2822,6 +3704,12 @@ function App() {
 
       {showExport && (
         <InkExportModal store={store} onClose={() => setShowExport(false)} />
+      )}
+      {showVarsExport && (
+        <VarsInkModal store={store} onClose={() => setShowVarsExport(false)} />
+      )}
+      {showShortcuts && (
+        <ShortcutsModal onClose={() => setShowShortcuts(false)} />
       )}
     </>
   );

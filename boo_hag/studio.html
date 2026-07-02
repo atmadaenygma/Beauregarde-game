@@ -54,6 +54,32 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 .view { flex: 1; overflow: hidden; display: flex; }
 
+/* ── TWO-COLUMN LAYOUT ──────────────────────────────── */
+.studio-body { display: flex; flex: 1; overflow: hidden; }
+.left-col {
+  width: 420px; flex-shrink: 0; display: flex; flex-direction: column;
+  border-right: 2px solid var(--border); overflow: hidden; position: relative;
+}
+.left-col-resize {
+  position: absolute; right: -3px; top: 0; bottom: 0; width: 6px;
+  cursor: col-resize; z-index: 10;
+}
+.left-col-resize:hover { background: var(--amber-dim); opacity: 0.5; }
+.right-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.right-tabs {
+  display: flex; align-items: center; background: var(--surface);
+  border-bottom: 1px solid var(--border); height: 36px; flex-shrink: 0; padding: 0 8px;
+}
+.right-tab-btn {
+  background: none; border: none; color: var(--text-dim); font-family: inherit;
+  font-size: 11px; padding: 0 14px; height: 36px; cursor: pointer;
+  border-bottom: 2px solid transparent; letter-spacing: 0.06em;
+  transition: color 0.15s, border-color 0.15s;
+}
+.right-tab-btn:hover { color: var(--text); }
+.right-tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+.right-col-content { flex: 1; overflow: hidden; display: flex; }
+
 /* ── CHAT VIEW ─────────────────────────────────────── */
 .chat-layout { display: flex; width: 100%; overflow: hidden; }
 
@@ -1491,7 +1517,7 @@ function PlayView({ store }) {
 
 // ── APP ROOT ──────────────────────────────────────────────────────────
 function App() {
-  const [tab, setTab]         = useState('CHAT');
+  const [tab, setTab]         = useState('TREE');
   const [store, setStoreRaw]  = useState(loadStore);
   const [history, setHistory] = useState(loadHistory);
   const [showHistory, setShowHistory] = useState(false);
@@ -1542,38 +1568,58 @@ function App() {
     setShowHistory(false);
   }, []);
 
+  const injectNodeToChat = useCallback((node) => {
+    const next = JSON.parse(JSON.stringify(store));
+    const session = next.chatSessions[next.activeSession] || { name: 'Session', messages: [] };
+    session.messages = [...session.messages, {
+      role: 'user',
+      content: `[Node context — ${node.type}: "${(node.text || '').slice(0, 120)}"] Ask Claude about this node or request a rewrite.`,
+      id: Date.now(),
+    }];
+    next.chatSessions[next.activeSession] = session;
+    onStoreChange(next, null);
+  }, [store, onStoreChange]);
+
   return (
     <>
       <div id="root-inner" style={{display:'flex',flexDirection:'column',height:'100vh'}}>
         <div className="topbar">
           <span className="topbar-title">BOO HAG ◆ STUDIO</span>
-          {['STORY','TREE','PLAY','CHAT'].map(t => (
-            <button key={t} className={`tab-btn${tab===t?' active':''}`} onClick={() => setTab(t)}>{t}</button>
-          ))}
           <div className="topbar-right">
             <button className="topbar-btn" onClick={() => setShowHistory(true)}>⟳ History ({history.snapshots.length})</button>
             <button className="topbar-btn" style={{color:'var(--text-dim)',fontSize:'10px'}} title="Ctrl+Z to undo">Ctrl+Z Undo</button>
           </div>
         </div>
 
-        <div className="view">
-                  {tab === 'CHAT'  && <ChatView  store={store} onStoreChange={onStoreChange} onSnapshot={onSnapshot} history={history}
-                              onNodeContext={node => { /* jump to tree with node pre-selected */ setTab('TREE'); }} />}
-                                        {tab === 'TREE'  && <TreeView  store={store} onStoreChange={onStoreChange}
-                                                    onSwitchToChat={() => setTab('CHAT')}
-                                                                onNodeContext={node => {
-                                                                              // Pre-fill chat with node context
-                                                                                            const next = JSON.parse(JSON.stringify(store));
-                                                                                                          const session = next.chatSessions[next.activeSession] || { name:'Session', messages:[] };
-                                                                                                                        session.messages = [...session.messages, { role:'user', content:`[Asking about node: ${node.id} (${node.type})] ${node.text ? '"' + node.text.slice(0,120) + '"' : ''}`, id: Date.now() }];
-                                                                                                                                      next.chatSessions[next.activeSession] = session;
-                                                                                                                                                    onStoreChange(next, null);
-                                                                                                                                                                  setTab('CHAT');
-                                                                                                                                                                              }}
-                                                                                                                                                                                        />}
-                                                                                                                                                                                                  {tab === 'PLAY'  && <PlayView  store={store} />}
-                                                                                                                                                                                                            {tab === 'STORY' && <StoryView store={store} onStoreChange={onStoreChange} onSwitchTab={setTab} />}
-                                                                                                                                                                                                                    </div>
+        <div className="studio-body">
+          {/* LEFT — chat always visible */}
+          <div className="left-col">
+            <ChatView
+              store={store}
+              onStoreChange={onStoreChange}
+              onSnapshot={onSnapshot}
+              history={history}
+              onNodeContext={injectNodeToChat}
+            />
+          </div>
+
+          {/* RIGHT — TREE / STORY / PLAY */}
+          <div className="right-col">
+            <div className="right-tabs">
+              {['TREE','STORY','PLAY'].map(t => (
+                <button key={t} className={`right-tab-btn${tab===t?' active':''}`} onClick={() => setTab(t)}>{t}</button>
+              ))}
+              <span style={{marginLeft:'auto',color:'var(--text-dim)',fontSize:'10px'}}>
+                {store.scenes.find(s=>s.id===store.activeScene)?.name || '—'} · {store.scenes.find(s=>s.id===store.activeScene)?.nodes.length || 0} nodes
+              </span>
+            </div>
+            <div className="right-col-content">
+              {tab === 'TREE'  && <TreeView  store={store} onStoreChange={onStoreChange} onNodeContext={injectNodeToChat} />}
+              {tab === 'PLAY'  && <PlayView  store={store} />}
+              {tab === 'STORY' && <StoryView store={store} onStoreChange={onStoreChange} onSwitchTab={setTab} />}
+            </div>
+          </div>
+        </div>
       </div>
 
       {showHistory && (

@@ -242,9 +242,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .tree-layout { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .tree-canvas-wrap {
   flex: 1; position: relative; overflow: hidden;
-  background: #0d0c0b;
-  background-image: radial-gradient(circle, #2a2520 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-color: #efe7d2;
+  background-image:
+    linear-gradient(rgba(60,90,130,0.32) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60,90,130,0.32) 1px, transparent 1px),
+    linear-gradient(rgba(60,90,130,0.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60,90,130,0.13) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
   cursor: grab; -webkit-user-select: none; user-select: none;
 }
 .tree-canvas-wrap.panning { cursor: grabbing; }
@@ -252,83 +256,86 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .tree-canvas-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .tree-svg-layer { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
 
-/* Neo-skeuo node card */
+/* Drafting-card node: cream paper, ink border, very slight idle wiggle */
+@keyframes tree-node-wiggle {
+  0%, 100% { transform: rotate(-0.45deg); }
+  50%      { transform: rotate(0.45deg); }
+}
 .tree-node {
   position: absolute; width: 210px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.07);
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 3px;
+  border: 1.5px solid #3c4a5c;
+  background: #fdf8ec;
   cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    inset 0 -1px 0 rgba(0,0,0,0.4),
-    0 2px 4px rgba(0,0,0,0.6),
-    0 6px 16px rgba(0,0,0,0.5);
-  transition: box-shadow 0.12s, transform 0.08s;
+  transform-origin: 50% 50%;
+  animation-name: tree-node-wiggle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  box-shadow: 2px 2px 0 rgba(60,74,92,0.16), 0 2px 6px rgba(0,0,0,0.15);
+  transition: box-shadow 0.12s;
 }
 .tree-node:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.1),
-    inset 0 -1px 0 rgba(0,0,0,0.4),
-    0 4px 8px rgba(0,0,0,0.7),
-    0 10px 28px rgba(0,0,0,0.5);
-  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 rgba(60,74,92,0.22), 0 4px 12px rgba(0,0,0,0.2);
+  animation-play-state: paused;
 }
 .tree-node.selected {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.1),
-    inset 0 -1px 0 rgba(0,0,0,0.4),
-    0 0 0 2px var(--amber),
-    0 6px 20px rgba(200,136,10,0.2),
-    0 10px 28px rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 2px var(--amber), 3px 3px 0 rgba(60,74,92,0.22), 0 4px 12px rgba(0,0,0,0.2);
 }
 .tree-node-seq {
-  position: absolute; top: -8px; left: -8px;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: var(--surface); border: 1px solid var(--border);
-  color: var(--text-dim); font-size: 9px; line-height: 18px;
+  position: absolute; top: -9px; left: -9px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fdf8ec; border: 1.5px solid #3c4a5c;
+  font-size: 9px; line-height: 17px;
   text-align: center; font-weight: bold; z-index: 2;
 }
 .tree-node-header {
+  flex: 0 0 auto;
   padding: 7px 10px 6px;
-  border-radius: 7px 7px 0 0;
   display: flex; align-items: center; gap: 6px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(0,0,0,0.08) 100%);
-  border-bottom: 1px solid rgba(0,0,0,0.3);
 }
 .tree-node-type { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: bold; }
 .tree-node-body {
-  padding: 8px 10px 9px; font-size: 10px; line-height: 1.6; color: var(--bone-dim);
-  word-break: break-word; max-height: 80px; overflow: hidden;
+  flex: 1 1 auto; overflow-y: auto; min-height: 0;
+  padding: 8px 10px 9px; font-size: 10px; line-height: 1.6; color: #2c3540;
+  word-break: break-word;
 }
 .tree-node-media-zone {
-  margin: 0 10px 8px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 4px;
+  flex: 0 0 auto;
+  margin: 0 10px 8px; border: 1px dashed rgba(60,74,92,0.35); border-radius: 4px;
   height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: var(--text-dim); font-size: 9px; transition: border-color 0.15s, background 0.15s;
+  color: rgba(60,74,92,0.6); font-size: 9px; transition: border-color 0.15s, background 0.15s;
   overflow: hidden; position: relative;
 }
-.tree-node-media-zone:hover { border-color: var(--amber-dim); background: rgba(200,136,10,0.04); }
+.tree-node-media-zone:hover { border-color: var(--amber-dim); background: rgba(200,136,10,0.06); }
 .tree-node-media-zone img, .tree-node-media-zone video {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 3px;
 }
 .tree-node-footer {
-  padding: 5px 10px 7px; border-top: 1px solid rgba(0,0,0,0.3);
-  display: flex; gap: 4px; flex-wrap: wrap; border-radius: 0 0 7px 7px;
-  background: linear-gradient(0deg, rgba(0,0,0,0.15) 0%, transparent 100%);
+  flex: 0 0 auto;
+  padding: 5px 10px 7px; border-top: 1px solid rgba(60,74,92,0.2);
+  display: flex; gap: 4px; flex-wrap: wrap;
 }
 .tree-node-option {
-  font-size: 9px; color: var(--text-dim); background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 10px;
+  font-size: 9px; color: #3c4a5c; background: rgba(60,74,92,0.08);
+  border: 1px solid rgba(60,74,92,0.2); padding: 2px 6px; border-radius: 10px;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tree-node-ask {
-  background: none; border: none; color: rgba(255,255,255,0.2); font-family: inherit;
+  background: none; border: none; color: rgba(60,74,92,0.4); font-family: inherit;
   font-size: 9px; padding: 0 4px; cursor: pointer; margin-left: auto; line-height: 1;
 }
-.tree-node-ask:hover { color: var(--amber); }
+.tree-node-ask:hover { color: var(--amber-dim); }
+.tree-node-resize-handle {
+  position: absolute; right: 0; bottom: 0; width: 15px; height: 15px;
+  cursor: nwse-resize; z-index: 5;
+  background: linear-gradient(135deg, transparent 0 45%, rgba(60,74,92,0.5) 45% 55%, transparent 55% 100%),
+              linear-gradient(135deg, transparent 0 65%, rgba(60,74,92,0.5) 65% 75%, transparent 75% 100%);
+}
 .node-conn-out {
   position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
   width: 13px; height: 13px; border-radius: 50%; z-index: 4;
-  background: var(--surface); border: 2px solid var(--border);
+  background: #fdf8ec; border: 2px solid #3c4a5c;
   cursor: crosshair; transition: border-color 0.12s, background 0.12s;
 }
 .node-conn-out:hover { border-color: var(--amber); background: rgba(200,136,10,0.3); }
@@ -1731,10 +1738,26 @@ const NODE_COLORS = {
 
 const NODE_W = 220;
 const NODE_H = 90;
-const V_GAP  = 60;
-const H_GAP  = 40;
+const V_GAP  = 110;
+const H_GAP  = 70;
 
 const TIER_LABELS = ['FERAL','WAKING','CLEAR','GRIOTTE'];
+
+// Deterministic pseudo-random hash so each node's wiggle phase/speed stays
+// stable across re-renders instead of resetting (which would look jittery).
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
+  return Math.abs(h);
+}
+
+function hexToRgba(hex, alpha) {
+  const h = (hex || '#4a4438').replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16) || 0;
+  const g = parseInt(h.substring(2, 4), 16) || 0;
+  const b = parseInt(h.substring(4, 6), 16) || 0;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 function nodePreview(node) {
   if (node.text) return node.text.length > 110 ? node.text.slice(0, 110) + '…' : node.text;
@@ -2202,7 +2225,9 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
   const [panStart, setPanStart] = useState(null);
   const [selected, setSelected] = useState(null);
   const [draggingNode, setDraggingNode] = useState(null);
+  const [resizingNode, setResizingNode] = useState(null); // { id, startW, startH, startMX, startMY }
   const [manualPos, setManualPos] = useState({});
+  const [manualSize, setManualSize] = useState({});
   const [fontSize, setFontSize] = useState(11);
   const [search, setSearch]     = useState('');
   const [drawingWire, setDrawingWire] = useState(null); // { fromId, curX, curY } world coords
@@ -2214,6 +2239,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
   const autoPos = useMemo(() => computeLayout(nodes), [nodes]);
 
   const getPos = useCallback(id => manualPos[id] || autoPos[id] || { x: 0, y: 0 }, [manualPos, autoPos]);
+  const getSize = useCallback(id => manualSize[id] || { w: NODE_W, h: NODE_H }, [manualSize]);
 
   const centerCanvas = useCallback(() => {
     if (!wrapRef.current) return;
@@ -2225,10 +2251,11 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
   const fitAll = useCallback(() => {
     if (!nodes.length || !wrapRef.current) return;
     const rect = wrapRef.current.getBoundingClientRect();
-    const positions = nodes.map(n => getPos(n.id));
-    const xs = positions.map(p => p.x), ys = positions.map(p => p.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs) + NODE_W;
-    const minY = Math.min(...ys), maxY = Math.max(...ys) + NODE_H;
+    const boxes = nodes.map(n => ({ p: getPos(n.id), s: getSize(n.id) }));
+    const xs = boxes.map(b => b.p.x), ys = boxes.map(b => b.p.y);
+    const xs2 = boxes.map(b => b.p.x + b.s.w), ys2 = boxes.map(b => b.p.y + b.s.h);
+    const minX = Math.min(...xs), maxX = Math.max(...xs2);
+    const minY = Math.min(...ys), maxY = Math.max(...ys2);
     const worldW = maxX - minX || 1, worldH = maxY - minY || 1;
     const pad = 60;
     const z = Math.min((rect.width - pad*2) / worldW, (rect.height - pad*2) / worldH, 1.5);
@@ -2237,7 +2264,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
       x: rect.width/2  - (minX + worldW/2) * z,
       y: rect.height/2 - (minY + worldH/2) * z,
     });
-  }, [nodes, getPos]);
+  }, [nodes, getPos, getSize]);
 
   useEffect(() => { centerCanvas(); }, []);
 
@@ -2365,18 +2392,25 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
       const dy = (e.clientY - startMY) / zoom;
       setManualPos(p => ({ ...p, [id]: { x: startX + dx, y: startY + dy } }));
     }
+    if (resizingNode) {
+      const { id, startW, startH, startMX, startMY } = resizingNode;
+      const dw = (e.clientX - startMX) / zoom;
+      const dh = (e.clientY - startMY) / zoom;
+      setManualSize(s => ({ ...s, [id]: { w: Math.max(140, startW + dw), h: Math.max(70, startH + dh) } }));
+    }
     if (drawingWire) {
       const { wx, wy } = screenToWorld(e.clientX, e.clientY);
       setDrawingWire(w => w ? { ...w, curX: wx, curY: wy } : null);
     }
-  }, [panning, panStart, draggingNode, zoom, drawingWire, screenToWorld]);
+  }, [panning, panStart, draggingNode, resizingNode, zoom, drawingWire, screenToWorld]);
 
   const onMouseUp = useCallback((e) => {
     if (drawingWire) {
       const { wx, wy } = screenToWorld(e.clientX, e.clientY);
       const target = nodes.find(n => {
         const p = getPos(n.id);
-        return wx >= p.x && wx <= p.x + NODE_W && wy >= p.y && wy <= p.y + NODE_H;
+        const s = getSize(n.id);
+        return wx >= p.x && wx <= p.x + s.w && wy >= p.y && wy <= p.y + s.h;
       });
       if (target && target.id !== drawingWire.fromId) {
         const next = JSON.parse(JSON.stringify(store));
@@ -2405,7 +2439,8 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     setPanning(false);
     setPanStart(null);
     setDraggingNode(null);
-  }, [drawingWire, nodes, getPos, store, onStoreChange, screenToWorld]);
+    setResizingNode(null);
+  }, [drawingWire, nodes, getPos, getSize, store, onStoreChange, screenToWorld]);
 
   const onContextMenu = useCallback((e) => {
     if (e.target.closest('.tree-node')) return;
@@ -2437,13 +2472,21 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     setDraggingNode({ id, startX: pos.x, startY: pos.y, startMX: e.clientX, startMY: e.clientY });
   }, [getPos]);
 
+  const startResizeNode = useCallback((e, id) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const size = getSize(id);
+    setResizingNode({ id, startW: size.w, startH: size.h, startMX: e.clientX, startMY: e.clientY });
+  }, [getSize]);
+
   // Wire paths in world space (nodes positioned at pos.x, pos.y; SVG overflow:visible)
   const wires = useMemo(() => {
     const paths = [];
     nodes.forEach(node => {
       const from = getPos(node.id);
-      const fx = from.x + NODE_W / 2;
-      const fy = from.y + NODE_H;
+      const fromSize = getSize(node.id);
+      const fx = from.x + fromSize.w / 2;
+      const fy = from.y + fromSize.h;
       const col = NODE_COLORS[node.type]?.border || '#4a4438';
 
       const addWire = (toId, label) => {
@@ -2451,7 +2494,8 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
         const toNode = nodes.find(n => n.id === toId);
         if (!toNode) return;
         const to = getPos(toId);
-        const tx = to.x + NODE_W / 2;
+        const toSize = getSize(toId);
+        const tx = to.x + toSize.w / 2;
         const ty = to.y;
         const span = Math.abs(ty - fy);
         const cy1 = fy + span * 0.4;
@@ -2478,7 +2522,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
       }
     });
     return paths;
-  }, [nodes, manualPos, autoPos]);
+  }, [nodes, manualPos, autoPos, getPos, getSize]);
 
   return (
     <div className="tree-layout">
@@ -2488,7 +2532,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
         <button className="tree-ctrl-btn" onClick={() => setZoom(z => Math.max(0.1, z * 0.85))}>−</button>
         <button className="tree-ctrl-btn" onClick={centerCanvas} title="Reset view">↺</button>
         <button className="tree-ctrl-btn" onClick={fitAll} title="Fit all nodes in view">⊡</button>
-        <button className="tree-ctrl-btn" onClick={() => setManualPos({})} title="Auto-layout (clear manual positions)">⊞</button>
+        <button className="tree-ctrl-btn" onClick={() => { setManualPos({}); setManualSize({}); }} title="Auto-layout (clear manual positions and sizes)">⊞</button>
         <span style={{color:'var(--text-dim)',fontSize:'10px',minWidth:36,letterSpacing:'0.02em'}}>{Math.round(zoom*100)}%</span>
         <input
           type="text" placeholder="find node…" value={search}
@@ -2567,9 +2611,10 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
             {/* In-progress wire while dragging from connector dot */}
             {drawingWire && (() => {
               const fp = getPos(drawingWire.fromId);
+              const fs = getSize(drawingWire.fromId);
               return (
                 <line
-                  x1={fp.x + NODE_W / 2} y1={fp.y + NODE_H + 7}
+                  x1={fp.x + fs.w / 2} y1={fp.y + fs.h + 7}
                   x2={drawingWire.curX}   y2={drawingWire.curY}
                   stroke="#c8880a" strokeWidth="2" strokeDasharray="6 4" opacity="0.85"
                   markerEnd="url(#arrowhead)"
@@ -2589,12 +2634,17 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
             const isBroken = (id) => id && id !== 'END' && !nodeIdSet.has(id);
             return nodes.map((node, seqIdx) => {
             const pos = getPos(node.id);
+            const size = getSize(node.id);
             const col = NODE_COLORS[node.type] || NODE_COLORS.NARRATION;
             const isSelected = selected === node.id;
+            const isBeingMoved = (draggingNode && draggingNode.id === node.id) || (resizingNode && resizingNode.id === node.id);
             const targets = [node.next, node.true_next, node.false_next, node.pass_next, node.fail_next,
               ...(node.options || []).map(o => o.next),
               ...Object.values(node.branches || {})].filter(Boolean);
             const hasBrokenLink = targets.some(isBroken);
+            const h = hashStr(node.id);
+            const wiggleDelay = -((h % 40) / 10);       // negative so phase is already mid-cycle on mount
+            const wiggleDuration = 5.5 + (h % 30) / 10;  // ~5.5-8.5s, varies per node
             return (
               <div
                 key={node.id}
@@ -2602,9 +2652,12 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                 style={{
                   left: pos.x,
                   top:  pos.y,
-                  width: NODE_W,
+                  width: size.w,
+                  height: size.h,
                   borderColor: isSelected ? 'var(--amber)' : col.border,
-                  background: col.bg,
+                  animationDelay: `${wiggleDelay}s`,
+                  animationDuration: `${wiggleDuration}s`,
+                  animationPlayState: (isSelected || isBeingMoved) ? 'paused' : 'running',
                 }}
                 onClick={() => setSelected(isSelected ? null : node.id)}
                 onMouseDown={e => {
@@ -2612,7 +2665,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                     startDragNode(e, node.id);
                 }}
               >
-                <div className="tree-node-seq">{seqIdx + 1}</div>
+                <div className="tree-node-seq" style={{borderColor: col.border, color: col.border}}>{seqIdx + 1}</div>
 
                 {/* Connector dot — drag to another node to set next */}
                 <div
@@ -2621,16 +2674,17 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                     e.stopPropagation();
                     e.preventDefault();
                     const pos = getPos(node.id);
-                    setDrawingWire({ fromId: node.id, curX: pos.x + NODE_W / 2, curY: pos.y + NODE_H });
+                    const sz = getSize(node.id);
+                    setDrawingWire({ fromId: node.id, curX: pos.x + sz.w / 2, curY: pos.y + sz.h });
                   }}
                   title="Drag to connect → next node"
                 />
 
-                <div className="tree-node-header" style={{background:col.header}}>
-                  <span className="tree-node-type" style={{color:col.text}}>{node.type}</span>
+                <div className="tree-node-header" style={{background: hexToRgba(col.border, 0.12), borderBottom: `1px solid ${hexToRgba(col.border, 0.3)}`}}>
+                  <span className="tree-node-type" style={{color: col.border}}>{node.type}</span>
                   {hasBrokenLink && (
                     <span title="Points to a node that doesn't exist"
-                      style={{color:'#e05040',fontSize:'10px',marginLeft:4,lineHeight:1}}>⚠</span>
+                      style={{color:'#c0392b',fontSize:'10px',marginLeft:4,lineHeight:1}}>⚠</span>
                   )}
                   <button className="tree-node-ask"
                     onClick={e => { e.stopPropagation(); onNodeContext && onNodeContext(node); }}>
@@ -2670,6 +2724,11 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                     )}
                   </div>
                 )}
+
+                {/* Resize handle — drag to change card size */}
+                <div className="tree-node-resize-handle"
+                  onMouseDown={e => startResizeNode(e, node.id)}
+                  title="Drag to resize" />
               </div>
             );
           });
@@ -2680,11 +2739,11 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
         {nodes.length > 1 && (() => {
           const MM_W = 140, MM_H = 100;
           const pads = 8;
-          const positions = nodes.map(n => getPos(n.id));
-          const xs = positions.map(p => p.x);
-          const ys = positions.map(p => p.y);
-          const minX = Math.min(...xs), maxX = Math.max(...xs) + NODE_W;
-          const minY = Math.min(...ys), maxY = Math.max(...ys) + NODE_H;
+          const boxes = nodes.map(n => ({ p: getPos(n.id), s: getSize(n.id) }));
+          const xs = boxes.map(b => b.p.x);
+          const ys = boxes.map(b => b.p.y);
+          const minX = Math.min(...xs), maxX = Math.max(...boxes.map(b => b.p.x + b.s.w));
+          const minY = Math.min(...ys), maxY = Math.max(...boxes.map(b => b.p.y + b.s.h));
           const worldW = maxX - minX || 1, worldH = maxY - minY || 1;
           const scaleX = (MM_W - pads*2) / worldW;
           const scaleY = (MM_H - pads*2) / worldH;
@@ -2706,11 +2765,12 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
               <svg width={MM_W} height={MM_H}>
                 {nodes.map(n => {
                   const p = getPos(n.id);
+                  const s = getSize(n.id);
                   const col = NODE_COLORS[n.type] || NODE_COLORS.NARRATION;
                   return <rect key={n.id}
                     x={p.x * sc + ox} y={p.y * sc + oy}
-                    width={Math.max(2, NODE_W * sc)} height={Math.max(1.5, NODE_H * sc)}
-                    fill={col.bg} stroke={n.id === selected ? '#c8880a' : col.border} strokeWidth="0.5" />;
+                    width={Math.max(2, s.w * sc)} height={Math.max(1.5, s.h * sc)}
+                    fill="#fdf8ec" stroke={n.id === selected ? '#c8880a' : col.border} strokeWidth="0.5" />;
                 })}
                 <rect x={vpX} y={vpY} width={vpW} height={vpH}
                   fill="none" stroke="rgba(200,136,10,0.4)" strokeWidth="1" />

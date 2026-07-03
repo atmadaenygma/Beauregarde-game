@@ -259,14 +259,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 /* Drafting-card node: cream paper, ink border, matching the graph-paper
    canvas. Content stays perfectly still — a separate echo layer (::before)
-   traces the border and does the slight wiggle, so text never moves while
-   reading. The wiggle layer sits OUTSIDE .tree-node's own overflow, on a
+   traces the border and gets a Squigglevision-style hand-tremor via an SVG
+   feTurbulence/feDisplacementMap filter (see the hidden <svg><defs> in
+   TreeView), so it looks hand-drawn/redrawn rather than a smooth rotation.
+   The echo layer sits OUTSIDE .tree-node's own overflow, on a
    .tree-node-inner wrapper that clips the header/body/footer instead, so
-   the echo border isn't clipped away. */
-@keyframes tree-node-wiggle {
-  0%, 100% { transform: rotate(-0.6deg); }
-  50%      { transform: rotate(0.6deg); }
-}
+   it isn't clipped away. */
 .tree-node {
   position: absolute; width: 210px;
   display: flex; flex-direction: column;
@@ -283,23 +281,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .tree-node.selected {
   box-shadow: 0 0 0 2px var(--amber), 3px 3px 0 rgba(60,74,92,0.22), 0 4px 12px rgba(0,0,0,0.2);
 }
-/* Border-echo wiggle layer */
+/* Border-echo squiggle layer */
 .tree-node::before {
   content: '';
   position: absolute; inset: -2px;
   border: inherit;
   border-radius: inherit;
   pointer-events: none;
-  opacity: 0.6;
-  transform-origin: 50% 50%;
-  animation-name: tree-node-wiggle;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-  animation-duration: var(--wiggle-duration, 6.5s);
-  animation-delay: var(--wiggle-delay, 0s);
-  animation-play-state: var(--wiggle-play, running);
+  opacity: 0.7;
+  filter: var(--squiggle-filter, url(#squiggle-filter-0));
 }
-.tree-node:hover::before, .tree-node.selected::before { animation-play-state: paused; }
+.tree-node:hover::before, .tree-node.selected::before { filter: none; }
 .tree-node-inner {
   flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
   overflow: hidden; border-radius: inherit;
@@ -2604,6 +2596,25 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
           title="Del=delete · Ctrl+D=duplicate · Esc=deselect · drag ●=connect · ⊡=fit all · ⊞=auto-layout">?</span>
       </div>
 
+      {/* Squigglevision filters — hand-tremor line displacement for node
+          borders (Dr. Katz style). Several variants with different timing
+          so nodes don't all jitter in perfect lockstep. */}
+      <svg width="0" height="0" style={{position:'absolute'}}>
+        <defs>
+          {[0,1,2].map(i => (
+            <filter key={i} id={`squiggle-filter-${i}`} x="-40%" y="-40%" width="180%" height="180%">
+              <feTurbulence type="fractalNoise" numOctaves="2" seed={i * 7 + 3} result="noise">
+                <animate attributeName="baseFrequency"
+                  dur={`${0.8 + i * 0.25}s`}
+                  values="0.06;0.1;0.07;0.12;0.08;0.06"
+                  calcMode="discrete" repeatCount="indefinite" />
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.5" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          ))}
+        </defs>
+      </svg>
+
       <div
         className={`tree-canvas-wrap${panning ? ' panning' : ''}${drawingWire ? ' wiring' : ''}`}
         ref={wrapRef}
@@ -2678,8 +2689,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
               ...Object.values(node.branches || {})].filter(Boolean);
             const hasBrokenLink = targets.some(isBroken);
             const h = hashStr(node.id);
-            const wiggleDelay = -((h % 40) / 10);       // negative so phase is already mid-cycle on mount
-            const wiggleDuration = 5.5 + (h % 30) / 10;  // ~5.5-8.5s, varies per node
+            const squiggleFilter = isBeingMoved ? 'none' : `url(#squiggle-filter-${h % 3})`;
             return (
               <div
                 key={node.id}
@@ -2690,9 +2700,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   width: size.w,
                   height: size.h,
                   borderColor: isSelected ? 'var(--amber)' : col.border,
-                  '--wiggle-delay': `${wiggleDelay}s`,
-                  '--wiggle-duration': `${wiggleDuration}s`,
-                  '--wiggle-play': isBeingMoved ? 'paused' : 'running',
+                  '--squiggle-filter': squiggleFilter,
                 }}
                 onClick={() => setSelected(isSelected ? null : node.id)}
                 onMouseDown={e => {

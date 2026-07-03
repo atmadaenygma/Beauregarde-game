@@ -727,6 +727,51 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   cursor: pointer; border-radius: 3px;
 }
 .modal-btn-ok:hover { background: var(--amber-glow); }
+
+/* ── HOW TO USE GUIDE ──────────────────────────────────────────── */
+.howto-modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  width: 900px; max-width: 96vw; height: 82vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.howto-header {
+  display: flex; align-items: center; padding: 12px 18px; gap: 10px;
+  border-bottom: 1px solid var(--border); background: var(--surface2); flex-shrink: 0;
+}
+.howto-header h3 { color: var(--amber); font-size: 13px; letter-spacing: 0.08em; flex: 1; }
+.howto-body { flex: 1; display: flex; overflow: hidden; }
+.howto-nav {
+  width: 210px; flex-shrink: 0; overflow-y: auto; padding: 10px;
+  border-right: 1px solid var(--border); background: var(--surface2);
+}
+.howto-nav-btn {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  color: var(--text-dim); font-family: inherit; font-size: 11px; padding: 7px 10px;
+  border-radius: 4px; cursor: pointer; margin-bottom: 2px; letter-spacing: 0.02em;
+}
+.howto-nav-btn:hover { background: rgba(0,0,0,0.05); color: var(--bone); }
+.howto-nav-btn.active { background: var(--amber); color: var(--ink); font-weight: bold; }
+.howto-content { flex: 1; overflow-y: auto; padding: 20px 26px; font-size: 12px; line-height: 1.7; color: var(--bone-dim); }
+.howto-content h4 { color: var(--amber); font-size: 15px; letter-spacing: 0.04em; margin-bottom: 4px; }
+.howto-content .howto-sub { color: var(--text-dim); font-size: 11px; margin-bottom: 18px; }
+.howto-content h5 { color: var(--steel); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin: 20px 0 8px; }
+.howto-content h5:first-of-type { margin-top: 0; }
+.howto-content p { margin-bottom: 10px; }
+.howto-content ul { margin: 0 0 12px 18px; }
+.howto-content li { margin-bottom: 6px; }
+.howto-chip {
+  font-family: monospace; font-size: 10.5px; color: var(--bone); background: rgba(0,0,0,0.06);
+  border-radius: 3px; padding: 1px 6px; white-space: nowrap;
+}
+.howto-note {
+  background: rgba(58,88,120,0.08); border-left: 3px solid var(--steel);
+  padding: 8px 12px; border-radius: 0 4px 4px 0; margin-bottom: 12px; font-size: 11px;
+}
+.howto-warn {
+  background: rgba(138,26,16,0.06); border-left: 3px solid var(--red);
+  padding: 8px 12px; border-radius: 0 4px 4px 0; margin-bottom: 12px; font-size: 11px;
+}
 </style>
 </head>
 <body>
@@ -5204,6 +5249,348 @@ function PlayView({ store, onStoreChange }) {
   );
 }
 
+function HowToUseModal({ onClose }) {
+  const [section, setSection] = useState('overview');
+
+  const sections = [
+    { id: 'overview', title: 'Overview', body: (
+      <>
+        <h4>Boo Hag Studio</h4>
+        <div className="howto-sub">A construction kit for dialogue, quests, and locations — write with Claude, see it as a tree, test it as a player.</div>
+        <p>
+          The studio has four main views along the top-right tabs, plus a Chat panel
+          on the left that's always visible. The workflow is: <strong>describe the scene
+          to Claude in CHAT</strong> → it writes nodes into the <strong>TREE</strong> → you
+          test the flow in <strong>PLAY</strong> → <strong>STORY</strong> shows how all your
+          scenes connect across locations and branches.
+        </p>
+        <h5>The four views</h5>
+        <ul>
+          <li><strong>TREE</strong> — the visual node graph for the currently active scene. This is where most editing happens.</li>
+          <li><strong>STORY</strong> — a map of every scene, grouped into branch lanes (shared/shed/run/go), with location badges and transition arrows between scenes.</li>
+          <li><strong>PLAY</strong> — runs the active scene as a player would experience it: narration, choices, skill checks, hub conversations, with a live variables and quest panel.</li>
+        </ul>
+        <h5>The Game Bible sidebar (inside CHAT)</h5>
+        <p>
+          On the far left, seven tabs hold everything that isn't a node: <span className="howto-chip">SCENES</span> <span className="howto-chip">LOC</span> <span className="howto-chip">QST</span> <span className="howto-chip">VARS</span> <span className="howto-chip">FX</span> <span className="howto-chip">CANON</span> <span className="howto-chip">DOCS</span> <span className="howto-chip">CHAR</span>.
+          Each is covered in its own section on the left.
+        </p>
+        <div className="howto-note">
+          Nothing here is destructive by accident — every meaningful change is tracked
+          in <span className="howto-chip">⟳ History</span> (topbar) and can be undone with
+          <span className="howto-chip">Ctrl+Z</span>. See the History &amp; Undo section.
+        </div>
+      </>
+    )},
+
+    { id: 'chat', title: 'Chat & Claude', body: (
+      <>
+        <h4>Writing scenes with Claude</h4>
+        <div className="howto-sub">The primary way content gets made</div>
+        <p>
+          Type what you want in the input box at the bottom — "write the scene where she
+          meets the cop", "add a choice where she lies about her name", "give this NPC three
+          lines of dialogue". Claude replies conversationally <em>and</em>, when it's actually
+          building content, attaches a hidden data block that the studio turns into nodes automatically.
+        </p>
+        <h5>The node banner</h5>
+        <p>
+          When Claude adds nodes, a banner appears under its message: <span className="howto-chip">✓ Claude added N nodes to scene_id</span>.
+          Two buttons sit on it:
+        </p>
+        <ul>
+          <li><span className="howto-chip">View in Tree</span> — switches to TREE, jumps to that scene, and centers the camera on the new nodes.</li>
+          <li><span className="howto-chip">Undo</span> — reverts <em>exactly</em> the nodes that message added, restoring the state from right before it, even if you've made other changes since.</li>
+        </ul>
+        <h5>Per-message actions</h5>
+        <ul>
+          <li><strong>Lock to Canon</strong> — saves the response as a locked decision in the CANON tab, so it's remembered and can be referenced later.</li>
+          <li><strong>Add to Tree</strong> — if Claude replied with plain text (no nodes), pastes it in as a manual NARRATION node.</li>
+        </ul>
+        <h5>Sessions</h5>
+        <p>
+          The session name button (top of the chat panel, e.g. "Main Session ▾") opens a
+          dropdown to switch between named conversations, start a new one, rename, or clear
+          the current one. Each session keeps its own message history — useful for keeping
+          "brainstorming" separate from "writing the actual scene".
+        </p>
+        <h5>Node context</h5>
+        <p>
+          Click <span className="howto-chip">Ask Claude</span> on any node's header (in the
+          expanded card view) to pre-fill the chat input with that node's context, so you can
+          ask for a rewrite or follow-up without retyping what you're talking about.
+        </p>
+        <div className="howto-note">
+          Everything Claude sees — active scene, its location, variables, canon, quests, and
+          any enabled reference docs — is assembled automatically and sent with every message.
+          You never have to explain the whole game again.
+        </div>
+      </>
+    )},
+
+    { id: 'sidebar', title: 'Game Bible Sidebar', body: (
+      <>
+        <h4>The seven sidebar tabs</h4>
+        <div className="howto-sub">Everything that isn't a node lives here</div>
+        <h5>SCENES</h5>
+        <p>
+          Every scene in the project. Click one to make it active (loads it into TREE/PLAY).
+          Each row has a rename (✎) and delete (✕) button, badges for branch/type/status
+          (click the status badge to cycle draft → in_progress → canon), and a
+          location dropdown (⌖) to assign where the scene takes place.
+        </p>
+        <h5>LOC — Locations</h5>
+        <p>
+          The "levels": the places dialogue happens in. Each location has a name, region,
+          description, ambient notes (sounds/smells/weather), and an optional background
+          image. Expand one to see which scenes are set there — click a scene name to jump
+          to it. Locations feed directly into what Claude knows when writing a scene, so it
+          references the right setting.
+        </p>
+        <h5>QST — Quests</h5>
+        <p>
+          Quests hold objectives that can span multiple scenes. Each quest has a state
+          (inactive/active/complete/failed), a description, an optional location, and a list
+          of objectives. Objectives get linked to specific tree nodes from the node's own edit
+          panel (see the Tree View section) — visiting a linked node during PLAY is what
+          actually advances the quest.
+        </p>
+        <h5>VARS — Variables</h5>
+        <p>
+          Every game variable (calm, consciousness, attitude flags, custom ones Claude
+          declares) with live sliders/toggles for testing. Click a variable's name to see
+          <strong> provenance</strong> — every node across every scene that references it,
+          with a click-to-jump link. <span className="howto-chip">+ New Variable</span> adds
+          one manually without needing Claude to declare it first.
+        </p>
+        <h5>FX — Consequences</h5>
+        <p>
+          Cross-scene cause-and-effect entries: "if branch_shed is true, six people are dead
+          in scene 3's newspaper." Each has a trigger, variable sets, and a list of downstream
+          effects on other scenes. Add them manually or let Claude create them alongside nodes.
+        </p>
+        <h5>CANON</h5>
+        <p>
+          Locked story decisions, either written manually (<span className="howto-chip">+ Add Canon Note</span>) or
+          saved from a Claude response (<span className="howto-chip">Lock to Canon</span> in CHAT).
+          These get fed back to Claude as established facts it shouldn't contradict.
+        </p>
+        <h5>DOCS — Imported Reference</h5>
+        <p>
+          Drag in .md/.yaml/.ink/.txt files (character bibles, style guides, outlines) for
+          Claude to read as context. Toggle each on/off per-document; only enabled ones are sent.
+        </p>
+        <h5>CHAR — Character</h5>
+        <p>A read-only reference card summarizing the protagonist's core premise, forms, and consciousness tiers.</p>
+      </>
+    )},
+
+    { id: 'tree', title: 'Tree View', body: (
+      <>
+        <h4>The node graph</h4>
+        <div className="howto-sub">Reads left → right, like a flow chart</div>
+        <p>
+          Nodes render as compact colored <strong>pills</strong> by default — clicking one
+          expands it into a full editable card (text, media, options, resize handle). Only
+          one card is expanded at a time; clicking elsewhere collapses it back to a pill.
+        </p>
+        <h5>Canvas controls (top toolbar)</h5>
+        <ul>
+          <li><span className="howto-chip">+ / −</span> zoom in/out, or scroll the mouse wheel over the canvas</li>
+          <li><span className="howto-chip">↺</span> reset the view to the origin</li>
+          <li><span className="howto-chip">⊡</span> fit all nodes in view</li>
+          <li><span className="howto-chip">⊞</span> auto-layout — clears manual positions/sizes back to the automatic left→right layout</li>
+          <li><span className="howto-chip">find node…</span> search box — jumps to and selects a matching node</li>
+          <li>Drag empty canvas to pan; drag a node to reposition it manually; drag its bottom-right corner (when expanded) to resize</li>
+        </ul>
+        <h5>Speaker colors</h5>
+        <p>
+          Every node is colored by <strong>who's speaking</strong>, not its mechanical type
+          (see the legend, bottom-left of the canvas): NPC (dark slate), Player choice (amber),
+          Inner voice / narration (cream), Check / gate (teal), System bookkeeping (khaki).
+          You can override the auto-assigned speaker per node in its edit panel.
+        </p>
+        <h5>Connecting nodes</h5>
+        <ul>
+          <li>Drag the small circle on a node's right edge to another node to link them</li>
+          <li>Right-click empty canvas to add a new node (or a sticky note) at that spot</li>
+          <li>A red <span className="howto-chip">⚠</span> on a pill means it links to a node id that no longer exists</li>
+        </ul>
+        <h5>Collapsing subtrees</h5>
+        <p>
+          Double-click a node (or select it and press <span className="howto-chip">C</span>) to
+          fold everything downstream of it into that one pill, shown as <span className="howto-chip">▸N</span> where
+          N is the hidden node count. Useful for hiding a finished branch while you work on another.
+        </p>
+        <h5>Section frames</h5>
+        <p>
+          A SECTION_LABEL node automatically draws a dashed frame around every node it reaches
+          (stopping at the next section label) with its title on the border — the same
+          "I. THE ROAD" containment look as the reference storyboards.
+        </p>
+        <h5>Sticky notes</h5>
+        <p>
+          Right-click → <strong>STICKY NOTE</strong> drops a free-floating paper note for
+          design annotations (stage directions, reminders). Drag by its header, edit the text
+          inline, delete with its ✕. These aren't game content — just notes to yourself.
+        </p>
+        <h5>END terminals</h5>
+        <p>A node with an explicit divert to END gets a black <span className="howto-chip">END</span> pill instead of a dangling arrow, so scene endings are always visible at a glance.</p>
+        <h5>The minimap</h5>
+        <p>Bottom-right of the canvas — a small overview of every node, colored by speaker, with your current viewport outlined. Not shown for scenes with only one node.</p>
+      </>
+    )},
+
+    { id: 'nodetypes', title: 'Node Types', body: (
+      <>
+        <h4>Every node type</h4>
+        <div className="howto-sub">What each one does and its key fields</div>
+        <ul>
+          <li><strong>NARRATION</strong> — plain prose text the player reads, then continues. Fields: text, media, next.</li>
+          <li><strong>CHOICE</strong> — player picks from 2+ options. Each option can set variables and has its own destination.</li>
+          <li><strong>HUB</strong> — a Disco Elysium–style conversation hub. Options gray out after being picked (unless marked "once" is off), an "exit" option leaves the conversation for good, and any branch that dead-ends automatically <em>returns to the hub</em> instead of ending the scene.</li>
+          <li><strong>CHECK</strong> — a skill check rolled as <em>variable + 2d6 vs difficulty</em>. White checks re-roll every time you visit; red checks lock in their first result permanently. Has success/failure destinations.</li>
+          <li><strong>CONDITION</strong> — branches on a variable comparison (operator + threshold) without any dice — a pure logic gate.</li>
+          <li><strong>VAR_SET</strong> — silently sets/adds/subtracts a variable, then continues.</li>
+          <li><strong>ATTITUDE_BRANCH</strong> — branches by whichever attitude flag (reticence/anger/curiosity/joy/greed) is currently active.</li>
+          <li><strong>CONSCIOUSNESS_GATE</strong> — branches on the protagonist's consciousness tier (feral/waking/clear/griotte).</li>
+          <li><strong>SCENE_TRANSITION</strong> — ends the current scene and moves to another one; variables carry forward.</li>
+          <li><strong>SECTION_LABEL</strong> — a section marker (e.g. "II. THE HUNT") that also draws a containing frame around its stretch of nodes in TREE.</li>
+          <li><strong>ANCHOR_USE</strong> — the protagonist uses a calm anchor, gaining a set amount of calm.</li>
+        </ul>
+        <div className="howto-note">
+          Add any of these via the TREE right-click menu, or just ask Claude — it knows all
+          the field conventions and will build the right node type for what you describe.
+        </div>
+      </>
+    )},
+
+    { id: 'story', title: 'Story View', body: (
+      <>
+        <h4>The scene map</h4>
+        <div className="howto-sub">How every scene connects</div>
+        <p>
+          Scenes are grouped into four lanes — <strong>shared</strong>, <strong>shed</strong>,
+          <strong>run</strong>, <strong>go</strong> — matching the cold open's three-way
+          fork plus the shared setup before it. Each card shows its branch/type/status badges,
+          a location badge if assigned, node and media counts, and a thumbnail if any node has
+          attached media.
+        </p>
+        <ul>
+          <li>Click a card to open that scene in TREE</li>
+          <li><span className="howto-chip">▶ Play</span> on a card jumps straight into PLAY for that scene</li>
+          <li><span className="howto-chip">+ New Scene</span> at the bottom of a lane creates an empty scene there</li>
+          <li>Dashed arrows connect scenes that have a SCENE_TRANSITION node linking them</li>
+        </ul>
+      </>
+    )},
+
+    { id: 'play', title: 'Play View', body: (
+      <>
+        <h4>Testing as a player</h4>
+        <div className="howto-sub">A dark "theater mode" — separate from the studio's cream editor look</div>
+        <p>Nodes resolve according to their type:</p>
+        <ul>
+          <li><strong>NARRATION</strong> shows text with a Continue button (or "[ END OF SCENE ]" at a dead end)</li>
+          <li><strong>CHOICE</strong> shows clickable option buttons</li>
+          <li><strong>HUB</strong> shows options that gray out once picked, with a Continue button once every option is used up</li>
+          <li><strong>CHECK</strong> shows a roll button — click it to see the dice result and pass/fail in the flash message at the top</li>
+          <li><strong>CONDITION / ATTITUDE_BRANCH / CONSCIOUSNESS_GATE / VAR_SET</strong> auto-resolve after a short delay, showing what happened</li>
+          <li><strong>SCENE_TRANSITION</strong> shows an Enter Scene button, including the location change if both scenes have one assigned</li>
+        </ul>
+        <h5>The side panel</h5>
+        <p>
+          Toggle it with the <span className="howto-chip">Variables</span> button. Shows calm,
+          consciousness, every other variable (with a brief highlight flash when one changes),
+          and — if any quests exist — a <strong>live quest log</strong> underneath: objectives
+          check off as you actually visit the nodes they're linked to, and a quest flips from
+          inactive to active the moment you hit its first objective.
+        </p>
+        <h5>Controls</h5>
+        <ul>
+          <li><span className="howto-chip">◀ Back</span> — step back one node</li>
+          <li><span className="howto-chip">↺ Reset</span> — restart the scene from its first node with default variables</li>
+          <li><span className="howto-chip">📍 Checkpoint</span> — save your current position, variables, and path to a named checkpoint you can reload later from the same button's dropdown</li>
+          <li><span className="howto-chip">⬇ Export Log</span> — downloads a text file of the exact path you took through the scene, useful for sharing a playtest</li>
+        </ul>
+      </>
+    )},
+
+    { id: 'importexport', title: 'Import & Export', body: (
+      <>
+        <h4>Moving content in and out</h4>
+        <h5>⬆ Import .ink</h5>
+        <p>
+          Parses knots, stitches, choices (both <span className="howto-chip">*</span> once-only
+          and <span className="howto-chip">+</span> sticky), diverts, variable ops, and
+          conditionals from a real Ink file into a brand-new scene — your existing scene is
+          never overwritten. Use the quick-load buttons to pull the project's own
+          <span className="howto-chip">cold_open.ink</span> / <span className="howto-chip">scene_2_shed.ink</span> straight
+          from the repo, or pick any .ink file from disk. Shows a preview (node counts, new
+          variables, warnings) before you commit.
+        </p>
+        <h5>⬇ Scene .ink</h5>
+        <p>Exports the currently active scene as a valid Ink script, with a preview before downloading.</p>
+        <h5>⬇ variables.ink</h5>
+        <p>Exports the full variable registry (grouped: core state, attitudes, branch flags, world/custom) as a master Ink include file.</p>
+        <h5>⬇ Backup / ↑ Restore</h5>
+        <p>
+          Backup downloads the <em>entire</em> project — every scene, variable, location, quest,
+          canon note, and chat session — as one JSON file. Restore loads one back, completely
+          replacing the current project after a confirmation prompt. Do this before any large
+          experimental change.
+        </p>
+      </>
+    )},
+
+    { id: 'history', title: 'History & Undo', body: (
+      <>
+        <h4>Nothing is permanent by accident</h4>
+        <p>
+          Most meaningful actions — Claude adding nodes, editing a node, moving/resizing,
+          deleting, importing, restoring a backup — get recorded as a labeled snapshot.
+        </p>
+        <ul>
+          <li><span className="howto-chip">Ctrl+Z</span> — undo the most recent tracked action (ignored while typing in a text field, so it won't fight with normal text-editing undo)</li>
+          <li><span className="howto-chip">⟳ History</span> (topbar) — opens a scrollable list of every recent snapshot with a timestamp; click <strong>Restore this state</strong> on any entry to jump back to it (this is itself undoable)</li>
+          <li>The <strong>Undo</strong> button on a Claude node banner reverts specifically that message's nodes, even if you've done other things since</li>
+        </ul>
+        <div className="howto-warn">
+          History keeps the last 50 snapshots. If localStorage ever fills up (usually from a lot
+          of embedded images/videos on nodes), the studio warns you and suggests using Backup —
+          it won't silently lose your latest change.
+        </div>
+      </>
+    )},
+  ];
+
+  const active = sections.find(s => s.id === section) || sections[0];
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="howto-modal">
+        <div className="howto-header">
+          <h3>HOW TO USE — BOO HAG STUDIO</h3>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="howto-body">
+          <div className="howto-nav">
+            {sections.map(s => (
+              <button key={s.id} className={`howto-nav-btn${section === s.id ? ' active' : ''}`}
+                onClick={() => setSection(s.id)}>
+                {s.title}
+              </button>
+            ))}
+          </div>
+          <div className="howto-content">
+            {active.body}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShortcutsModal({ onClose }) {
   const groups = [
     { title: 'Global', rows: [
@@ -5267,6 +5654,7 @@ function App() {
   const [treeCenterTrigger, setTreeCenterTrigger] = useState(0);
   const [jumpToNode, setJumpToNode] = useState(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showHowTo, setShowHowTo] = useState(false);
   const [leftWidth, setLeftWidth] = useState(() => {
     const s = localStorage.getItem('boo_hag_left_w');
     return s ? Number(s) : 520;
@@ -5402,6 +5790,7 @@ function App() {
               }} />
             </label>
             <button className="topbar-btn" style={{color:'var(--text-dim)',fontSize:'10px'}} title="Ctrl+Z to undo">Ctrl+Z</button>
+            <button className="topbar-btn" onClick={() => setShowHowTo(true)} title="Full guide to using the studio">📖 How To Use</button>
             <button className="topbar-btn" onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)">?</button>
           </div>
         </div>
@@ -5465,6 +5854,9 @@ function App() {
       )}
       {showShortcuts && (
         <ShortcutsModal onClose={() => setShowShortcuts(false)} />
+      )}
+      {showHowTo && (
+        <HowToUseModal onClose={() => setShowHowTo(false)} />
       )}
     </>
   );

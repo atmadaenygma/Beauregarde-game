@@ -388,6 +388,53 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   cursor: crosshair; transition: border-color 0.12s, background 0.12s;
 }
 .node-conn-out:hover { border-color: var(--amber); background: rgba(200,136,10,0.3); }
+
+/* Section frame — soft box drawn behind a SECTION_LABEL's stretch of nodes */
+.tree-frame {
+  position: absolute; z-index: 0; pointer-events: none;
+  border: 1.5px dashed rgba(58,88,120,0.4);
+  background: rgba(58,88,120,0.045);
+  border-radius: 10px;
+}
+.tree-frame-label {
+  position: absolute; top: -17px; left: 10px;
+  font-size: 10px; font-weight: bold; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(58,88,120,0.75);
+  background: #efe7d2; padding: 0 6px; white-space: nowrap;
+}
+
+/* Sticky note — free-floating design annotation on the canvas */
+.tree-note {
+  position: absolute; z-index: 3; width: 185px;
+  background: #fbf3cf; border: 1.5px solid #b8935a;
+  border-radius: 3px; padding: 6px 8px 8px;
+  box-shadow: 2px 3px 0 rgba(122,82,6,0.14), 0 2px 8px rgba(0,0,0,0.12);
+  cursor: grab;
+}
+.tree-note.dragging { cursor: grabbing; }
+.tree-note-head {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+  -webkit-user-select: none; user-select: none;
+}
+.tree-note-title { font-size: 8px; letter-spacing: 0.14em; color: #b8935a; font-weight: bold; flex: 1; }
+.tree-note-del {
+  background: none; border: none; color: #b8935a; font-size: 11px;
+  cursor: pointer; line-height: 1; padding: 0 2px;
+}
+.tree-note-del:hover { color: var(--red); }
+.tree-note-textarea {
+  width: 100%; background: transparent; border: none; outline: none; resize: vertical;
+  font-family: inherit; font-size: 10px; line-height: 1.55; color: #5c4a28;
+  min-height: 44px; cursor: text;
+}
+
+/* END terminal — explicit black pill so scene ends never dangle */
+.tree-end-pill {
+  position: absolute; z-index: 2; pointer-events: none;
+  background: #1a1512; color: #efe7d2; border: 1.5px solid #1a1512;
+  border-radius: 999px; padding: 3px 11px;
+  font-size: 9px; font-weight: bold; letter-spacing: 0.14em;
+}
 .tree-ctx-menu {
   position: absolute; z-index: 50;
   background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
@@ -743,6 +790,7 @@ const DEFAULT_STORE = {
   consequences: [],
   scenes: INITIAL_SCENES,
   locations: JSON.parse(JSON.stringify(INITIAL_LOCATIONS)),
+  quests: [],
   canon: [],
   importedDocs: [],
   checkpoints: [],
@@ -769,6 +817,7 @@ function loadStore() {
     if (!stored.consequences) stored.consequences = [];
     if (!stored.importedDocs) stored.importedDocs = [];
     if (!stored.checkpoints) stored.checkpoints = [];
+    if (!stored.quests) stored.quests = [];
     if (!stored.locations) {
       // First run after the locations feature: seed the registry and give
       // the two original scenes their obvious homes.
@@ -865,6 +914,29 @@ function applyNodeJson(store, nj) {
     });
   }
 
+  // Add / update quests
+  if (nj.quests) {
+    if (!next.quests) next.quests = [];
+    nj.quests.forEach(q => {
+      const existing = next.quests.find(x => x.id === q.id);
+      if (existing) {
+        Object.assign(existing, q, {
+          // merge objectives by id instead of clobbering node links
+          objectives: (q.objectives || []).map(o => {
+            const eo = (existing.objectives || []).find(x => x.id === o.id);
+            return eo ? { ...eo, ...o, nodeIds: eo.nodeIds || [] } : { nodeIds: [], done: false, ...o };
+          }),
+        });
+      } else {
+        next.quests.push({
+          state: 'inactive', locationId: null, description: '',
+          ...q,
+          objectives: (q.objectives || []).map(o => ({ nodeIds: [], done: false, ...o })),
+        });
+      }
+    });
+  }
+
   // Nodes
   if (nj.nodes && nj.scene) {
     let scene = next.scenes.find(s => s.id === nj.scene);
@@ -930,6 +1002,15 @@ ${activeLoc.description || ''}${activeLoc.ambient ? `\nAmbient: ${activeLoc.ambi
       return `• ${l.name}${l.region ? ` (${l.region})` : ''}${scenesHere ? ` — scenes: ${scenesHere}` : ''}`;
     }).join('\n').slice(0, 600);
     if (others) locText += `\nOTHER LOCATIONS:\n${others}`;
+  }
+
+  // Quests — states + objectives so Claude writes content that advances them
+  const quests = store.quests || [];
+  if (quests.length) {
+    locText += `\nQUESTS:\n` + quests.slice(0, 8).map(q => {
+      const objs = (q.objectives || []).map(o => o.text).join('; ').slice(0, 200);
+      return `• [${q.state}] ${q.name}${q.description ? ` — ${q.description.slice(0, 120)}` : ''}${objs ? `\n  objectives: ${objs}` : ''}`;
+    }).join('\n');
   }
 
   return `Active Scene: ${scene ? scene.name : '(none)'} — ${scene?.type || ''} — ${scene?.status || ''}${locText}
@@ -1097,6 +1178,143 @@ function ConsequencesTab({ consequences, store, onStoreChange }) {
       <button className="edit-btn" style={{background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',boxShadow:'none'}}
         onClick={addConsequence}>
         + Add Consequence
+      </button>
+    </div>
+  );
+}
+
+// ── QUESTS TAB ────────────────────────────────────────────────────────
+const QUEST_STATES = ['inactive', 'active', 'complete', 'failed'];
+const QUEST_STATE_COLORS = { inactive: 'var(--text-dim)', active: 'var(--amber)', complete: 'var(--green)', failed: 'var(--red)' };
+
+function QuestsTab({ store, onStoreChange }) {
+  const [expanded, setExpanded] = useState({});
+  const quests = store.quests || [];
+
+  const mutate = (label, fn) => {
+    const next = JSON.parse(JSON.stringify(store));
+    if (!next.quests) next.quests = [];
+    fn(next);
+    onStoreChange(next, label);
+  };
+
+  const addQuest = () => {
+    const name = prompt('Quest name:');
+    if (!name || !name.trim()) return;
+    const base = name.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'quest';
+    let id = base, n = 2;
+    while (quests.some(q => q.id === id)) { id = `${base}_${n}`; n++; }
+    mutate(`Added quest: ${name.trim()}`, next => {
+      next.quests.push({ id, name: name.trim(), description: '', state: 'inactive', locationId: null, objectives: [] });
+    });
+    setExpanded(x => ({ ...x, [id]: true }));
+  };
+
+  const updateQuest = (id, field, value) =>
+    mutate(null, next => { const q = next.quests.find(x => x.id === id); if (q) q[field] = value; });
+
+  const deleteQuest = (id, e) => {
+    e.stopPropagation();
+    const q = quests.find(x => x.id === id);
+    if (!confirm(`Delete quest "${q?.name}"?`)) return;
+    mutate(`Deleted quest: ${q?.name}`, next => { next.quests = next.quests.filter(x => x.id !== id); });
+  };
+
+  const addObjective = (qid) => {
+    const text = prompt('Objective (what the player must do):');
+    if (!text || !text.trim()) return;
+    mutate('Added quest objective', next => {
+      const q = next.quests.find(x => x.id === qid);
+      if (q) q.objectives.push({ id: `obj_${Date.now()}`, text: text.trim(), done: false, nodeIds: [] });
+    });
+  };
+
+  const updateObjective = (qid, oid, text) =>
+    mutate(null, next => {
+      const o = next.quests.find(x => x.id === qid)?.objectives.find(x => x.id === oid);
+      if (o) o.text = text;
+    });
+
+  const removeObjective = (qid, oid) =>
+    mutate('Removed quest objective', next => {
+      const q = next.quests.find(x => x.id === qid);
+      if (q) q.objectives = q.objectives.filter(x => x.id !== oid);
+    });
+
+  return (
+    <div>
+      {quests.length === 0 && (
+        <div style={{color:'var(--text-dim)',fontSize:'11px',lineHeight:1.6,marginBottom:10}}>
+          No quests yet. Quests hold objectives that span scenes; link nodes to
+          objectives from the node's edit panel, and PLAY tracks progress live.
+        </div>
+      )}
+      {quests.map(q => {
+        const open = expanded[q.id];
+        const objs = q.objectives || [];
+        const linkedCount = objs.reduce((acc, o) => acc + (o.nodeIds || []).length, 0);
+        return (
+          <div key={q.id} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:5,marginBottom:8,overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',cursor:'pointer'}}
+              onClick={() => setExpanded(x => ({ ...x, [q.id]: !x[q.id] }))}>
+              <span style={{color:QUEST_STATE_COLORS[q.state] || 'var(--bone)',fontSize:'10px',flexShrink:0}}>◆</span>
+              <span style={{color:'var(--bone)',fontSize:'11px',fontWeight:'bold',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{q.name}</span>
+              <span style={{color:'var(--text-dim)',fontSize:'9px',flexShrink:0}}>{objs.length} obj</span>
+              <span style={{color:'var(--text-dim)',fontSize:'9px',flexShrink:0}}>{open ? '▲' : '▼'}</span>
+              <button onClick={e => deleteQuest(q.id, e)}
+                style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'12px',cursor:'pointer',lineHeight:1,padding:'0 2px',flexShrink:0}}>✕</button>
+            </div>
+            {open && (
+              <div style={{padding:'0 10px 10px'}}>
+                <div className="edit-field-label" style={{marginTop:4}}>State</div>
+                <select className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+                  value={q.state} onChange={e => updateQuest(q.id, 'state', e.target.value)}>
+                  {QUEST_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <div className="edit-field-label">Description</div>
+                <textarea className="edit-textarea" style={{minHeight:44,fontSize:'10px'}} rows={2}
+                  value={q.description || ''} onChange={e => updateQuest(q.id, 'description', e.target.value)}
+                  placeholder="What this quest is about…" />
+                {(store.locations || []).length > 0 && (
+                  <>
+                    <div className="edit-field-label">Location</div>
+                    <select className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+                      value={q.locationId || ''} onChange={e => updateQuest(q.id, 'locationId', e.target.value || null)}>
+                      <option value="">— none —</option>
+                      {store.locations.map(l => <option key={l.id} value={l.id}>⌖ {l.name}</option>)}
+                    </select>
+                  </>
+                )}
+                <div className="edit-field-label" style={{marginTop:10}}>
+                  Objectives {linkedCount > 0 && <span style={{opacity:0.6}}>({linkedCount} node link{linkedCount !== 1 ? 's' : ''})</span>}
+                </div>
+                {objs.map(o => (
+                  <div key={o.id} style={{display:'flex',gap:4,marginBottom:4,alignItems:'center'}}>
+                    <input className="edit-next-input" style={{flex:1,fontSize:'10px'}}
+                      value={o.text} onChange={e => updateObjective(q.id, o.id, e.target.value)} />
+                    <span title={`${(o.nodeIds || []).length} linked node(s)`}
+                      style={{fontSize:'9px',color:(o.nodeIds || []).length ? 'var(--amber)' : 'var(--text-dim)',flexShrink:0}}>
+                      ◆{(o.nodeIds || []).length}
+                    </span>
+                    <button onClick={() => removeObjective(q.id, o.id)}
+                      style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize:'10px',flexShrink:0}}>×</button>
+                  </div>
+                ))}
+                <button onClick={() => addObjective(q.id)}
+                  style={{background:'none',border:'none',color:'var(--text-dim)',fontFamily:'inherit',fontSize:'9px',cursor:'pointer',padding:'3px 0 0'}}>
+                  + objective
+                </button>
+                <div style={{fontSize:'9px',color:'var(--text-dim)',marginTop:6,lineHeight:1.5,opacity:0.7}}>
+                  Link nodes to objectives from a node's edit panel (Quest Links).
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button className="edit-btn" style={{background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',boxShadow:'none'}}
+        onClick={addQuest}>
+        + New Quest
       </button>
     </div>
   );
@@ -1522,7 +1740,7 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon, onJumpToNode }) {
   return (
     <div className="bible-sidebar">
       <div className="bible-tabs">
-        {['SCENES','LOC','VARS','FX','CANON','DOCS','CHAR'].map(t => (
+        {['SCENES','LOC','QST','VARS','FX','CANON','DOCS','CHAR'].map(t => (
           <button key={t} className={`bible-tab${tab===t?' active':''}`} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
@@ -1571,6 +1789,9 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon, onJumpToNode }) {
         )}
         {tab === 'LOC' && (
           <LocationsTab store={store} onStoreChange={onStoreChange} />
+        )}
+        {tab === 'QST' && (
+          <QuestsTab store={store} onStoreChange={onStoreChange} />
         )}
         {tab === 'VARS' && (
           <VariablesTab variables={store.variables} scenes={store.scenes} onSet={setVar} onAdd={addVariable} onJumpToNode={onJumpToNode} />
@@ -2630,6 +2851,62 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
           </>
         )}
 
+        {/* Quest links — visiting this node in PLAY ticks the objective */}
+        {(store.quests || []).length > 0 && (() => {
+          const ref = `${store.activeScene}:${node.id}`;
+          const linked = [];
+          store.quests.forEach(q => (q.objectives || []).forEach(o => {
+            if ((o.nodeIds || []).includes(ref)) linked.push({ q, o });
+          }));
+          const linkable = [];
+          store.quests.forEach(q => (q.objectives || []).forEach(o => {
+            if (!(o.nodeIds || []).includes(ref)) linkable.push({ q, o });
+          }));
+          const linkObjective = (val) => {
+            if (!val) return;
+            const [qid, oid] = val.split('|');
+            const next = JSON.parse(JSON.stringify(store));
+            const o = next.quests.find(x => x.id === qid)?.objectives.find(x => x.id === oid);
+            if (o) {
+              o.nodeIds = [...(o.nodeIds || []), ref];
+              onStoreChange(next, `Linked node to quest objective`);
+            }
+          };
+          const unlink = (qid, oid) => {
+            const next = JSON.parse(JSON.stringify(store));
+            const o = next.quests.find(x => x.id === qid)?.objectives.find(x => x.id === oid);
+            if (o) {
+              o.nodeIds = (o.nodeIds || []).filter(r => r !== ref);
+              onStoreChange(next, `Unlinked node from quest objective`);
+            }
+          };
+          return (
+            <>
+              <div className="edit-field-label">Quest Links</div>
+              {linked.map(({ q, o }) => (
+                <div key={q.id + o.id} style={{display:'flex',alignItems:'center',gap:5,fontSize:'10px',marginBottom:3}}>
+                  <span style={{color:'var(--amber)',flexShrink:0}}>◆</span>
+                  <span style={{flex:1,color:'var(--bone-dim)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+                    title={`${q.name} — ${o.text}`}>
+                    {q.name}: {o.text}
+                  </span>
+                  <button onClick={() => unlink(q.id, o.id)}
+                    style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize:'10px',flexShrink:0}}>×</button>
+                </div>
+              ))}
+              {linkable.length > 0 && (
+                <select className="edit-select" style={{height:'auto',padding:'4px 6px',color:'var(--text-dim)'}}
+                  value="" onChange={e => linkObjective(e.target.value)}>
+                  <option value="">+ link to objective…</option>
+                  {linkable.map(({ q, o }) => (
+                    <option key={q.id + o.id} value={`${q.id}|${o.id}`}>{q.name}: {o.text.slice(0, 40)}</option>
+                  ))}
+                </select>
+              )}
+            </>
+          );
+        })()}
+
         <button className="edit-btn" onClick={save}>Save Changes</button>
         <button className="edit-btn edit-btn-secondary" style={{marginTop:4}}
           onClick={() => { onAskClaude(node); }}>Ask Claude About This</button>
@@ -2651,6 +2928,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
   const [manualPos, setManualPos] = useState({});
   const [manualSize, setManualSize] = useState({});
   const [collapsed, setCollapsed] = useState(() => new Set()); // node ids whose subtrees are hidden
+  const [noteDrag, setNoteDrag] = useState(null); // { id, startX, startY, startMX, startMY, dx, dy }
   const [fontSize, setFontSize] = useState(11);
   const [search, setSearch]     = useState('');
   const [drawingWire, setDrawingWire] = useState(null); // { fromId, curX, curY } world coords
@@ -2669,6 +2947,19 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     nodes.forEach(n => { m[n.id] = n; });
     return m;
   }, [nodes]);
+
+  // Nodes in this scene linked to a quest objective (◆ badge)
+  const questLinkedIds = useMemo(() => {
+    const s = new Set();
+    (store.quests || []).forEach(q => (q.objectives || []).forEach(o =>
+      (o.nodeIds || []).forEach(ref => {
+        const ix = ref.indexOf(':');
+        if (ix > 0 && ref.slice(0, ix) === store.activeScene) s.add(ref.slice(ix + 1));
+      })));
+    return s;
+  }, [store.quests, store.activeScene]);
+
+  const sceneNotes = scene?.notes || [];
 
   // Visual size — what the node actually occupies on screen right now:
   // compact pill by default, full card when selected. Wires, hit tests,
@@ -2729,6 +3020,58 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
       return next;
     });
   }, []);
+
+  // Section frames: each SECTION_LABEL boxes the nodes it reaches, stopping
+  // at the next SECTION_LABEL — the "I. THE ROAD" containment look.
+  const frames = useMemo(() => {
+    const out = [];
+    nodes.forEach(lab => {
+      if (lab.type !== 'SECTION_LABEL' || hiddenIds.has(lab.id)) return;
+      const members = new Set([lab.id]);
+      const queue = getNextIds(lab);
+      while (queue.length) {
+        const id = queue.pop();
+        if (members.has(id) || !nodeMapMemo[id]) continue;
+        if (nodeMapMemo[id].type === 'SECTION_LABEL') continue;
+        members.add(id);
+        getNextIds(nodeMapMemo[id]).forEach(x => queue.push(x));
+      }
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, count = 0;
+      members.forEach(id => {
+        if (hiddenIds.has(id)) return;
+        const p = getPos(id);
+        const s = getVis(id);
+        minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x + s.w); maxY = Math.max(maxY, p.y + s.h);
+        count++;
+      });
+      if (count < 2) return; // a frame around just the label is noise
+      const PAD = 16, TOP = 24;
+      out.push({
+        id: lab.id,
+        label: lab.label || lab.text || 'Section',
+        x: minX - PAD, y: minY - TOP,
+        w: (maxX - minX) + PAD * 2, h: (maxY - minY) + TOP + PAD,
+      });
+    });
+    return out;
+  }, [nodes, hiddenIds, nodeMapMemo, getPos, getVis]);
+
+  // END terminals: nodes with an explicit -> END link get a black END pill
+  const endMarkers = useMemo(() => {
+    const out = [];
+    nodes.forEach(n => {
+      if (hiddenIds.has(n.id) || collapsed.has(n.id)) return;
+      const links = [n.next, n.true_next, n.false_next, n.pass_next, n.fail_next, n.success_next,
+        ...(n.options || []).map(o => o.next),
+        ...Object.values(n.branches || {})];
+      if (!links.some(l => l === 'END')) return;
+      const p = getPos(n.id);
+      const s = getVis(n.id);
+      out.push({ id: n.id, x: p.x + s.w + 46, y: p.y + s.h / 2 - 10, lineY: p.y + s.h / 2, lineX: p.x + s.w });
+    });
+    return out;
+  }, [nodes, hiddenIds, collapsed, getPos, getVis]);
 
   const centerCanvas = useCallback(() => {
     if (!wrapRef.current) return;
@@ -2872,7 +3215,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
   }, [offset, zoom]);
 
   const onMouseDown = useCallback((e) => {
-    if (e.target.closest('.tree-node') || e.button !== 0) return;
+    if (e.target.closest('.tree-node') || e.target.closest('.tree-note') || e.button !== 0) return;
     setCtxMenu(null);
     setPanning(true);
     setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
@@ -2894,13 +3237,30 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
       const dh = (e.clientY - startMY) / zoom;
       setManualSize(s => ({ ...s, [id]: { w: Math.max(140, startW + dw), h: Math.max(70, startH + dh) } }));
     }
+    if (noteDrag) {
+      setNoteDrag(d => d ? { ...d, dx: (e.clientX - d.startMX) / zoom, dy: (e.clientY - d.startMY) / zoom } : null);
+    }
     if (drawingWire) {
       const { wx, wy } = screenToWorld(e.clientX, e.clientY);
       setDrawingWire(w => w ? { ...w, curX: wx, curY: wy } : null);
     }
-  }, [panning, panStart, draggingNode, resizingNode, zoom, drawingWire, screenToWorld]);
+  }, [panning, panStart, draggingNode, resizingNode, noteDrag, zoom, drawingWire, screenToWorld]);
 
   const onMouseUp = useCallback((e) => {
+    if (noteDrag) {
+      // Commit the note's new position to the store once, at drop
+      if (noteDrag.dx || noteDrag.dy) {
+        const next = JSON.parse(JSON.stringify(store));
+        const sc = next.scenes.find(s => s.id === next.activeScene);
+        const note = (sc?.notes || []).find(n => n.id === noteDrag.id);
+        if (note) {
+          note.x = noteDrag.startX + noteDrag.dx;
+          note.y = noteDrag.startY + noteDrag.dy;
+          onStoreChange(next, null);
+        }
+      }
+      setNoteDrag(null);
+    }
     if (drawingWire) {
       const { wx, wy } = screenToWorld(e.clientX, e.clientY);
       const target = nodes.find(n => {
@@ -2940,10 +3300,10 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     setPanStart(null);
     setDraggingNode(null);
     setResizingNode(null);
-  }, [drawingWire, nodes, getPos, getVis, store, onStoreChange, screenToWorld]);
+  }, [drawingWire, noteDrag, nodes, getPos, getVis, store, onStoreChange, screenToWorld]);
 
   const onContextMenu = useCallback((e) => {
-    if (e.target.closest('.tree-node')) return;
+    if (e.target.closest('.tree-node') || e.target.closest('.tree-note')) return;
     e.preventDefault();
     const rect = wrapRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -2964,6 +3324,33 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     onStoreChange(next, `Added ${type} node`);
     setCtxMenu(null);
     setSelected(id);
+  }, [store, onStoreChange]);
+
+  const addNoteAt = useCallback((wx, wy) => {
+    const next = JSON.parse(JSON.stringify(store));
+    const sc = next.scenes.find(s => s.id === next.activeScene);
+    if (!sc) return;
+    if (!sc.notes) sc.notes = [];
+    sc.notes.push({ id: `note_${Date.now()}`, text: '', x: wx - 92, y: wy - 20 });
+    onStoreChange(next, 'Added sticky note');
+    setCtxMenu(null);
+  }, [store, onStoreChange]);
+
+  const updateNote = useCallback((id, text) => {
+    const next = JSON.parse(JSON.stringify(store));
+    const sc = next.scenes.find(s => s.id === next.activeScene);
+    const note = (sc?.notes || []).find(n => n.id === id);
+    if (!note) return;
+    note.text = text;
+    onStoreChange(next, null);
+  }, [store, onStoreChange]);
+
+  const deleteNote = useCallback((id) => {
+    const next = JSON.parse(JSON.stringify(store));
+    const sc = next.scenes.find(s => s.id === next.activeScene);
+    if (!sc?.notes) return;
+    sc.notes = sc.notes.filter(n => n.id !== id);
+    onStoreChange(next, 'Deleted sticky note');
   }, [store, onStoreChange]);
 
   const startDragNode = useCallback((e, id) => {
@@ -3127,6 +3514,12 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
           className="tree-canvas-inner"
           style={{ transform: `translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin: '0 0' }}
         >
+          {/* Section frames — behind everything */}
+          {frames.map(f => (
+            <div key={f.id} className="tree-frame" style={{left: f.x, top: f.y, width: f.w, height: f.h}}>
+              <div className="tree-frame-label">{f.label}</div>
+            </div>
+          ))}
           {/* SVG wires — overflow:visible so beziers draw past the 1×1 box */}
           <svg style={{position:'absolute',left:0,top:0,width:1,height:1,overflow:'visible',pointerEvents:'none'}}>
             <defs>
@@ -3161,7 +3554,45 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                 />
               );
             })()}
+
+            {/* Short leads into END terminals */}
+            {endMarkers.map(m => (
+              <line key={`end-${m.id}`}
+                x1={m.lineX} y1={m.lineY} x2={m.x} y2={m.lineY}
+                stroke="#1a1512" strokeWidth="1.5" opacity="0.55" />
+            ))}
           </svg>
+
+          {/* END terminal pills */}
+          {endMarkers.map(m => (
+            <div key={`endpill-${m.id}`} className="tree-end-pill" style={{left: m.x, top: m.y}}>END</div>
+          ))}
+
+          {/* Sticky notes — free-floating design annotations */}
+          {sceneNotes.map(note => {
+            const dragging = noteDrag?.id === note.id;
+            const nx = dragging ? noteDrag.startX + (noteDrag.dx || 0) : note.x;
+            const ny = dragging ? noteDrag.startY + (noteDrag.dy || 0) : note.y;
+            const tilt = ((hashStr(note.id) % 5) - 2) * 0.6; // −1.2°…1.2°
+            return (
+              <div key={note.id} className={`tree-note${dragging ? ' dragging' : ''}`}
+                style={{left: nx, top: ny, transform: `rotate(${tilt}deg)`}}
+                onMouseDown={e => {
+                  if (e.target.closest('textarea') || e.target.closest('button')) return;
+                  e.stopPropagation();
+                  setNoteDrag({ id: note.id, startX: note.x, startY: note.y, startMX: e.clientX, startMY: e.clientY, dx: 0, dy: 0 });
+                }}>
+                <div className="tree-note-head">
+                  <span className="tree-note-title">NOTE</span>
+                  <button className="tree-note-del" onClick={() => deleteNote(note.id)} title="Delete note">✕</button>
+                </div>
+                <textarea className="tree-note-textarea" value={note.text}
+                  placeholder="design note…"
+                  onChange={e => updateNote(note.id, e.target.value)}
+                  onMouseDown={e => e.stopPropagation()} />
+              </div>
+            );
+          })}
 
           {/* Nodes — compact speaker-colored pills; selected node expands
               into the full card (media, body, options, resize) */}
@@ -3229,6 +3660,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   <div className="tree-pill-label" style={{color: spk.text}}>
                     {node.media && <span className="tree-pill-media">▣</span>}
                     {pillLabelOf(node) || <em style={{opacity:0.6}}>empty</em>}
+                    {questLinkedIds.has(node.id) && <span style={{marginLeft:5,opacity:0.9}} title="Linked to a quest objective">◆</span>}
                     {isCollapsed && <span style={{marginLeft:6,fontWeight:'bold',opacity:0.85}} title="Subtree collapsed">▸{collapsedCountOf(node.id)}</span>}
                     {hasBrokenLink && <span style={{color:'#c0392b',marginLeft:5}}>⚠</span>}
                   </div>
@@ -3364,6 +3796,11 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                 {t}
               </div>
             ))}
+            <div className="tree-ctx-item" style={{borderTop:'1px solid var(--border)',marginTop:3,paddingTop:7}}
+              onClick={() => addNoteAt(ctxMenu.wx, ctxMenu.wy)}>
+              <span className="tree-ctx-dot" style={{background:'#fbf3cf',border:'1px solid #b8935a'}} />
+              STICKY NOTE
+            </div>
           </div>
         )}
       </div>
@@ -4227,6 +4664,7 @@ function PlayView({ store, onStoreChange }) {
   const [hubVisited, setHubVisited] = useState({});   // { hubId: [optionIdx…] }
   const [hubStack, setHubStack] = useState([]);       // active conversation hubs
   const [checkResults, setCheckResults] = useState({}); // { checkNodeId: bool } — red checks lock in
+  const [visitedRefs, setVisitedRefs] = useState([]); // "sceneId:nodeId" — drives the quest log
   const checkpointMenuRef = useRef(null);
 
   const scene = store.scenes.find(s => s.id === playSceneId) || store.scenes.find(s => s.id === store.activeScene);
@@ -4246,6 +4684,7 @@ function PlayView({ store, onStoreChange }) {
     setHubVisited({});
     setHubStack([]);
     setCheckResults({});
+    setVisitedRefs([]);
   }, [store.activeScene]);
 
   // Set initial node once scene is known
@@ -4264,6 +4703,13 @@ function PlayView({ store, onStoreChange }) {
       setHubStack(s => (s[s.length - 1] === node.id ? s : [...s, node.id]));
     }
   }, [currentId]);
+
+  // Record every node visited (scene-qualified) for quest-objective tracking
+  useEffect(() => {
+    if (!currentId) return;
+    const ref = `${playSceneId}:${currentId}`;
+    setVisitedRefs(v => (v.includes(ref) ? v : [...v, ref]));
+  }, [currentId, playSceneId]);
 
   const showFlash = (msg) => {
     setFlash(msg);
@@ -4365,6 +4811,7 @@ function PlayView({ store, onStoreChange }) {
     setHubVisited({});
     setHubStack([]);
     setCheckResults({});
+    setVisitedRefs([]);
   };
 
   // Close checkpoint dropdown on outside click
@@ -4709,6 +5156,47 @@ function PlayView({ store, onStoreChange }) {
                   </div>
                 );
               })}
+
+            {/* Quest log — live progress from visited quest-linked nodes */}
+            {(store.quests || []).length > 0 && (
+              <>
+                <div className="play-vars-title" style={{marginTop:14}}>Quests</div>
+                {store.quests.map(q => {
+                  const objs = q.objectives || [];
+                  const objDone = (o) => (o.nodeIds || []).some(r => visitedRefs.includes(r));
+                  const doneCount = objs.filter(objDone).length;
+                  let liveState = q.state;
+                  if (liveState === 'inactive' && doneCount > 0) liveState = 'active';
+                  if (liveState !== 'failed' && objs.length > 0 && doneCount === objs.length) liveState = 'complete';
+                  const col = liveState === 'complete' ? 'var(--green)'
+                            : liveState === 'failed' ? 'var(--red)'
+                            : liveState === 'active' ? 'var(--amber)' : 'var(--text-dim)';
+                  return (
+                    <div key={q.id} style={{marginBottom:8}}>
+                      <div style={{display:'flex',alignItems:'center',gap:5}}>
+                        <span style={{color:col,fontSize:'9px',flexShrink:0}}>◆</span>
+                        <span style={{color:col,fontSize:'10px',fontWeight:'bold',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={q.description || q.name}>
+                          {q.name}
+                        </span>
+                        <span style={{color:'var(--text-dim)',fontSize:'8px',flexShrink:0}}>{liveState}</span>
+                      </div>
+                      {liveState !== 'inactive' && objs.map(o => (
+                        <div key={o.id} style={{display:'flex',gap:5,fontSize:'9px',lineHeight:1.6,paddingLeft:12}}>
+                          <span style={{color: objDone(o) ? 'var(--green)' : 'var(--text-dim)',flexShrink:0}}>
+                            {objDone(o) ? '✓' : '○'}
+                          </span>
+                          <span style={{color: objDone(o) ? 'var(--bone-dim)' : 'var(--text-dim)',
+                            textDecoration: objDone(o) ? 'line-through' : 'none',
+                            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={o.text}>
+                            {o.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         )}
       </div>

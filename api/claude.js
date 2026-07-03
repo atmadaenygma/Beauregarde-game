@@ -34,6 +34,13 @@ When the user asks you to write a scene, create dialogue, design a quest, or bui
     "sets": { "var": "value" },
     "downstream": [{ "scene": "scene_id", "effect": "Description" }]
   }],
+  "quests": [{
+    "id": "quest_id",
+    "name": "Quest Name",
+    "description": "One-line summary",
+    "state": "inactive|active|complete|failed",
+    "objectives": [{ "id": "obj_id", "text": "What the player must do" }]
+  }],
   "nodes": [{
     "id": "unique_node_id",
     "type": "NARRATION|CHOICE|HUB|CHECK|CONDITION|VAR_SET|ATTITUDE_BRANCH|CONSCIOUSNESS_GATE|SCENE_TRANSITION|SECTION_LABEL|ANCHOR_USE",

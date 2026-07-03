@@ -7,23 +7,24 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:        #111010;
-  --surface:   #1a1918;
-  --surface2:  #221f1e;
-  --border:    #2e2a28;
+  --bg:        #efe7d2;
+  --surface:   #f7f1e0;
+  --surface2:  #fdf8ec;
+  --border:    #d9cca5;
   --amber:     #c8880a;
   --amber-dim: #7a5206;
   --amber-glow:#e8a820;
-  --bone:      #e8e0d4;
-  --bone-dim:  #9a9088;
+  --bone:      #2c2620;
+  --bone-dim:  #6b5f4f;
   --teal:      #1a7870;
   --red:       #8a1a10;
   --purple:    #6a3a8a;
   --green:     #4a7840;
   --steel:     #3a5878;
   --gold:      #a87820;
-  --text:      #d8d0c4;
-  --text-dim:  #786e66;
+  --text:      #2c2620;
+  --text-dim:  #8a7f6c;
+  --ink:       #1a1512;
 }
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Space Mono', 'Courier New', monospace; font-size: 13px; }
 
@@ -180,7 +181,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .msg { max-width: 100%; }
 .msg-user { align-self: flex-end; max-width: 70%; }
 .msg-user .msg-bubble {
-  background: var(--amber-dim); color: var(--bone); border-radius: 6px 6px 2px 6px;
+  background: var(--amber-dim); color: #fdf8ec; border-radius: 6px 6px 2px 6px;
   padding: 10px 14px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
 }
 .msg-assistant .msg-bubble {
@@ -223,7 +224,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 }
 .chat-input:focus { border-color: var(--amber-dim); }
 .send-btn {
-  background: var(--amber); border: none; color: var(--bg); font-family: inherit;
+  background: var(--amber); border: none; color: var(--ink); font-family: inherit;
   font-size: 11px; font-weight: bold; padding: 0 16px; cursor: pointer;
   border-radius: 4px; letter-spacing: 0.05em; transition: background 0.15s; flex-shrink: 0;
 }
@@ -256,43 +257,31 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .tree-canvas-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .tree-svg-layer { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
 
-/* Node card — same dark palette as the rest of the studio, sitting on the
-   graph-paper canvas. Content stays perfectly still; a separate echo layer
-   (::before) traces the border and does the slight wiggle, so text never
-   moves while reading. */
+/* Drafting-card node: cream paper, ink border, matching the graph-paper
+   canvas. Content stays perfectly still — a separate echo layer (::before)
+   traces the border and does the slight wiggle, so text never moves while
+   reading. The wiggle layer sits OUTSIDE .tree-node's own overflow, on a
+   .tree-node-inner wrapper that clips the header/body/footer instead, so
+   the echo border isn't clipped away. */
 @keyframes tree-node-wiggle {
   0%, 100% { transform: rotate(-0.6deg); }
   50%      { transform: rotate(0.6deg); }
 }
 .tree-node {
   position: absolute; width: 210px;
-  display: flex; flex-direction: column; overflow: hidden;
-  border-radius: 7px;
-  border: 1px solid rgba(255,255,255,0.07);
-  background: var(--surface2);
+  display: flex; flex-direction: column;
+  border-radius: 3px;
+  border: 1.5px solid #3c4a5c;
+  background: #fdf8ec;
   cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    inset 0 -1px 0 rgba(0,0,0,0.4),
-    0 2px 4px rgba(0,0,0,0.6),
-    0 6px 16px rgba(0,0,0,0.5);
-  transition: box-shadow 0.12s, transform 0.08s;
+  box-shadow: 2px 2px 0 rgba(60,74,92,0.16), 0 2px 6px rgba(0,0,0,0.15);
+  transition: box-shadow 0.12s;
 }
 .tree-node:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.1),
-    inset 0 -1px 0 rgba(0,0,0,0.4),
-    0 4px 8px rgba(0,0,0,0.7),
-    0 10px 28px rgba(0,0,0,0.5);
-  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 rgba(60,74,92,0.22), 0 4px 12px rgba(0,0,0,0.2);
 }
 .tree-node.selected {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.1),
-    inset 0 -1px 0 rgba(0,0,0,0.4),
-    0 0 0 2px var(--amber),
-    0 6px 20px rgba(200,136,10,0.2),
-    0 10px 28px rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 2px var(--amber), 3px 3px 0 rgba(60,74,92,0.22), 0 4px 12px rgba(0,0,0,0.2);
 }
 /* Border-echo wiggle layer */
 .tree-node::before {
@@ -311,61 +300,64 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   animation-play-state: var(--wiggle-play, running);
 }
 .tree-node:hover::before, .tree-node.selected::before { animation-play-state: paused; }
+.tree-node-inner {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  overflow: hidden; border-radius: inherit;
+}
 .tree-node-seq {
-  position: absolute; top: -8px; left: -8px;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: var(--surface); border: 1px solid var(--border);
-  font-size: 9px; line-height: 16px;
+  position: absolute; top: -9px; left: -9px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fdf8ec; border: 1.5px solid #3c4a5c;
+  font-size: 9px; line-height: 17px;
   text-align: center; font-weight: bold; z-index: 2;
 }
 .tree-node-header {
   flex: 0 0 auto;
   padding: 7px 10px 6px;
   display: flex; align-items: center; gap: 6px;
-  border-bottom: 1px solid rgba(0,0,0,0.3);
 }
 .tree-node-type { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: bold; }
 .tree-node-body {
   flex: 1 1 auto; overflow-y: auto; min-height: 0;
-  padding: 8px 10px 9px; font-size: 10px; line-height: 1.6; color: var(--bone-dim);
+  padding: 8px 10px 9px; font-size: 10px; line-height: 1.6; color: #2c3540;
   word-break: break-word;
 }
 .tree-node-media-zone {
   flex: 0 0 auto;
-  margin: 0 10px 8px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 4px;
+  margin: 0 10px 8px; border: 1px dashed rgba(60,74,92,0.35); border-radius: 4px;
   height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: var(--text-dim); font-size: 9px; transition: border-color 0.15s, background 0.15s;
+  color: rgba(60,74,92,0.6); font-size: 9px; transition: border-color 0.15s, background 0.15s;
   overflow: hidden; position: relative;
 }
-.tree-node-media-zone:hover { border-color: var(--amber-dim); background: rgba(200,136,10,0.04); }
+.tree-node-media-zone:hover { border-color: var(--amber-dim); background: rgba(200,136,10,0.06); }
 .tree-node-media-zone img, .tree-node-media-zone video {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 3px;
 }
 .tree-node-footer {
   flex: 0 0 auto;
-  padding: 5px 10px 7px; border-top: 1px solid rgba(0,0,0,0.3);
+  padding: 5px 10px 7px; border-top: 1px solid rgba(60,74,92,0.2);
   display: flex; gap: 4px; flex-wrap: wrap;
 }
 .tree-node-option {
-  font-size: 9px; color: var(--text-dim); background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 10px;
+  font-size: 9px; color: #3c4a5c; background: rgba(60,74,92,0.08);
+  border: 1px solid rgba(60,74,92,0.2); padding: 2px 6px; border-radius: 10px;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tree-node-ask {
-  background: none; border: none; color: rgba(255,255,255,0.2); font-family: inherit;
+  background: none; border: none; color: rgba(60,74,92,0.4); font-family: inherit;
   font-size: 9px; padding: 0 4px; cursor: pointer; margin-left: auto; line-height: 1;
 }
-.tree-node-ask:hover { color: var(--amber); }
+.tree-node-ask:hover { color: var(--amber-dim); }
 .tree-node-resize-handle {
   position: absolute; right: 0; bottom: 0; width: 15px; height: 15px;
   cursor: nwse-resize; z-index: 5;
-  background: linear-gradient(135deg, transparent 0 45%, rgba(255,255,255,0.25) 45% 55%, transparent 55% 100%),
-              linear-gradient(135deg, transparent 0 65%, rgba(255,255,255,0.25) 65% 75%, transparent 75% 100%);
+  background: linear-gradient(135deg, transparent 0 45%, rgba(60,74,92,0.5) 45% 55%, transparent 55% 100%),
+              linear-gradient(135deg, transparent 0 65%, rgba(60,74,92,0.5) 65% 75%, transparent 75% 100%);
 }
 .node-conn-out {
   position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
   width: 13px; height: 13px; border-radius: 50%; z-index: 4;
-  background: var(--surface); border: 2px solid var(--border);
+  background: #fdf8ec; border: 2px solid #3c4a5c;
   cursor: crosshair; transition: border-color 0.12s, background 0.12s;
 }
 .node-conn-out:hover { border-color: var(--amber); background: rgba(200,136,10,0.3); }
@@ -378,7 +370,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   display: flex; align-items: center; gap: 8px; padding: 6px 12px;
   cursor: pointer; font-size: 11px; color: var(--bone-dim); transition: background 0.1s;
 }
-.tree-ctx-item:hover { background: rgba(255,255,255,0.04); color: var(--bone); }
+.tree-ctx-item:hover { background: rgba(0,0,0,0.05); color: var(--bone); }
 .tree-ctx-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .tree-controls {
   flex-shrink: 0; padding: 5px 12px;
@@ -422,12 +414,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .edit-next-field { display: flex; gap: 6px; align-items: center; }
 .edit-next-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 11px; padding: 6px 8px; border-radius: 5px; outline: none; }
 .edit-next-input:focus { border-color: var(--amber-dim); }
-.edit-btn { width: 100%; background: var(--amber); border: none; color: var(--bg); font-family: inherit; font-size: 11px; font-weight: bold; padding: 8px; cursor: pointer; border-radius: 5px; margin-top: 10px; letter-spacing: 0.04em; box-shadow: 0 2px 6px rgba(200,136,10,0.3); }
+.edit-btn { width: 100%; background: var(--amber); border: none; color: var(--ink); font-family: inherit; font-size: 11px; font-weight: bold; padding: 8px; cursor: pointer; border-radius: 5px; margin-top: 10px; letter-spacing: 0.04em; box-shadow: 0 2px 6px rgba(200,136,10,0.3); }
 .edit-btn:hover { background: var(--amber-glow); }
 .edit-btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--bone-dim); }
 .edit-btn-secondary:hover { color: var(--amber); border-color: var(--amber-dim); box-shadow: none; }
 .edit-btn-danger { background: #2a0e08; border: 1px solid var(--red); color: #d06858; box-shadow: none; }
-.edit-btn-danger:hover { background: var(--red); color: var(--bone); }
+.edit-btn-danger:hover { background: var(--red); color: #fdf8ec; }
 .edit-option-row { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; margin-bottom: 5px; }
 .edit-option-label { color: var(--amber); font-size: 10px; font-weight: bold; margin-bottom: 2px; }
 .edit-option-next { color: var(--text-dim); font-size: 10px; }
@@ -458,7 +450,20 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .story-add-btn:hover { color: var(--amber); border-color: var(--amber-dim); }
 
 /* ── PLAY VIEW ──────────────────────────────────────── */
-.play-layout { display: flex; flex-direction: column; flex: 1; overflow: hidden; background: #0d0c0b; }
+/* PLAY is a deliberately dark "theater" view (testing the scene as a player
+   would see it), independent of the studio's cream editor chrome. It reuses
+   the same var() names as the rest of the app, so re-scope them back to
+   their original dark values here rather than touching every rule below. */
+.play-layout {
+  display: flex; flex-direction: column; flex: 1; overflow: hidden; background: #0d0c0b;
+  --surface:   #1a1918;
+  --surface2:  #221f1e;
+  --border:    #2e2a28;
+  --bone:      #e8e0d4;
+  --bone-dim:  #9a9088;
+  --text:      #d8d0c4;
+  --text-dim:  #786e66;
+}
 .play-ctrl-bar {
   flex-shrink: 0; display: flex; align-items: center; gap: 8px;
   padding: 6px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
@@ -504,7 +509,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   text-transform: uppercase; text-align: center; padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
 }
 .play-continue-btn {
-  background: var(--amber); border: none; color: var(--bg);
+  background: var(--amber); border: none; color: var(--ink);
   font-family: inherit; font-size: 12px; font-weight: bold;
   padding: 10px 28px; cursor: pointer; border-radius: 5px;
   letter-spacing: 0.06em; align-self: flex-start;
@@ -547,7 +552,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .ink-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; width: 680px; max-width: 96vw; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
 .ink-modal-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 10px; background: var(--surface2); border-radius: 8px 8px 0 0; }
 .ink-modal-header h3 { color: var(--amber); font-size: 12px; letter-spacing: 0.08em; flex: 1; }
-.ink-modal-pre { flex: 1; overflow: auto; margin: 0; padding: 16px; background: #0a0909; font-family: 'Space Mono', monospace; font-size: 11px; line-height: 1.7; color: var(--bone-dim); white-space: pre; }
+.ink-modal-pre { flex: 1; overflow: auto; margin: 0; padding: 16px; background: #0a0909; font-family: 'Space Mono', monospace; font-size: 11px; line-height: 1.7; color: #9a9088; white-space: pre; }
 
 /* ── DOCS TAB ────────────────────────────────────────── */
 .docs-upload-zone {
@@ -563,7 +568,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .docs-file-input { display: none; }
 .doc-entry { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
 .doc-entry-header { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; }
-.doc-entry-header:hover { background: rgba(255,255,255,0.02); }
+.doc-entry-header:hover { background: rgba(0,0,0,0.03); }
 .doc-toggle { width: 32px; height: 18px; background: var(--border); border-radius: 9px; position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; border: none; }
 .doc-toggle.on { background: var(--amber-dim); }
 .doc-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 6px; background: var(--bone-dim); transition: left 0.2s; }
@@ -607,7 +612,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   font-family: inherit; font-size: 11px; padding: 8px; cursor: pointer; border-radius: 3px;
   margin-top: 8px; letter-spacing: 0.05em;
 }
-.history-restore-btn:hover { background: var(--amber); color: var(--bg); }
+.history-restore-btn:hover { background: var(--amber); color: var(--ink); }
 
 /* ── MODAL ──────────────────────────────────────────── */
 .modal-overlay {
@@ -639,7 +644,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 }
 .modal-btn-cancel:hover { color: var(--text); }
 .modal-btn-ok {
-  background: var(--amber); border: none; color: var(--bg);
+  background: var(--amber); border: none; color: var(--ink);
   font-family: inherit; font-size: 11px; font-weight: bold; padding: 6px 14px;
   cursor: pointer; border-radius: 3px;
 }
@@ -1781,6 +1786,14 @@ function hashStr(s) {
   return Math.abs(h);
 }
 
+function hexToRgba(hex, alpha) {
+  const h = (hex || '#4a4438').replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16) || 0;
+  const g = parseInt(h.substring(2, 4), 16) || 0;
+  const b = parseInt(h.substring(4, 6), 16) || 0;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function nodePreview(node) {
   if (node.text) return node.text.length > 110 ? node.text.slice(0, 110) + '…' : node.text;
   switch (node.type) {
@@ -2677,7 +2690,6 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   width: size.w,
                   height: size.h,
                   borderColor: isSelected ? 'var(--amber)' : col.border,
-                  background: col.bg,
                   '--wiggle-delay': `${wiggleDelay}s`,
                   '--wiggle-duration': `${wiggleDuration}s`,
                   '--wiggle-play': isBeingMoved ? 'paused' : 'running',
@@ -2703,50 +2715,52 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   title="Drag to connect → next node"
                 />
 
-                <div className="tree-node-header" style={{background: col.header}}>
-                  <span className="tree-node-type" style={{color: col.text}}>{node.type}</span>
-                  {hasBrokenLink && (
-                    <span title="Points to a node that doesn't exist"
-                      style={{color:'#e05040',fontSize:'10px',marginLeft:4,lineHeight:1}}>⚠</span>
-                  )}
-                  <button className="tree-node-ask"
-                    onClick={e => { e.stopPropagation(); onNodeContext && onNodeContext(node); }}>
-                    Ask Claude
-                  </button>
-                </div>
-
-                {/* Media zone — click opens edit panel to upload */}
-                <div className="tree-node-media-zone"
-                  style={node.media ? {border:'none',padding:0,height:48,margin:'0 10px 8px'} : {}}
-                  onClick={e => { e.stopPropagation(); setSelected(node.id); }}>
-                  {node.media ? (
-                    node.media.startsWith('data:video') ? (
-                      <video src={node.media} style={{width:'100%',height:'100%',objectFit:'cover'}} muted loop />
-                    ) : (
-                      <img src={node.media} style={{width:'100%',height:'100%',objectFit:'cover'}} alt="" />
-                    )
-                  ) : '+ media'}
-                </div>
-
-                <div className="tree-node-body" style={{fontSize:`${fontSize}px`}}>
-                  {(() => {
-                    const preview = nodePreview(node);
-                    return preview
-                      ? preview
-                      : <em style={{color:'var(--text-dim)'}}>no content</em>;
-                  })()}
-                </div>
-
-                {node.options && node.options.length > 0 && (
-                  <div className="tree-node-footer">
-                    {node.options.slice(0,3).map((o,i) => (
-                      <span key={i} className="tree-node-option">{o.label}</span>
-                    ))}
-                    {node.options.length > 3 && (
-                      <span className="tree-node-option">+{node.options.length-3} more</span>
+                <div className="tree-node-inner">
+                  <div className="tree-node-header" style={{background: hexToRgba(col.border, 0.12), borderBottom: `1px solid ${hexToRgba(col.border, 0.3)}`}}>
+                    <span className="tree-node-type" style={{color: col.border}}>{node.type}</span>
+                    {hasBrokenLink && (
+                      <span title="Points to a node that doesn't exist"
+                        style={{color:'#c0392b',fontSize:'10px',marginLeft:4,lineHeight:1}}>⚠</span>
                     )}
+                    <button className="tree-node-ask"
+                      onClick={e => { e.stopPropagation(); onNodeContext && onNodeContext(node); }}>
+                      Ask Claude
+                    </button>
                   </div>
-                )}
+
+                  {/* Media zone — click opens edit panel to upload */}
+                  <div className="tree-node-media-zone"
+                    style={node.media ? {border:'none',padding:0,height:48,margin:'0 10px 8px'} : {}}
+                    onClick={e => { e.stopPropagation(); setSelected(node.id); }}>
+                    {node.media ? (
+                      node.media.startsWith('data:video') ? (
+                        <video src={node.media} style={{width:'100%',height:'100%',objectFit:'cover'}} muted loop />
+                      ) : (
+                        <img src={node.media} style={{width:'100%',height:'100%',objectFit:'cover'}} alt="" />
+                      )
+                    ) : '+ media'}
+                  </div>
+
+                  <div className="tree-node-body" style={{fontSize:`${fontSize}px`}}>
+                    {(() => {
+                      const preview = nodePreview(node);
+                      return preview
+                        ? preview
+                        : <em style={{color:'var(--text-dim)'}}>no content</em>;
+                    })()}
+                  </div>
+
+                  {node.options && node.options.length > 0 && (
+                    <div className="tree-node-footer">
+                      {node.options.slice(0,3).map((o,i) => (
+                        <span key={i} className="tree-node-option">{o.label}</span>
+                      ))}
+                      {node.options.length > 3 && (
+                        <span className="tree-node-option">+{node.options.length-3} more</span>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Resize handle — drag to change card size */}
                 <div className="tree-node-resize-handle"
@@ -2793,7 +2807,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   return <rect key={n.id}
                     x={p.x * sc + ox} y={p.y * sc + oy}
                     width={Math.max(2, s.w * sc)} height={Math.max(1.5, s.h * sc)}
-                    fill={col.bg} stroke={n.id === selected ? '#c8880a' : col.border} strokeWidth="0.5" />;
+                    fill="#fdf8ec" stroke={n.id === selected ? '#c8880a' : col.border} strokeWidth="0.5" />;
                 })}
                 <rect x={vpX} y={vpY} width={vpW} height={vpH}
                   fill="none" stroke="rgba(200,136,10,0.4)" strokeWidth="1" />
@@ -3581,7 +3595,7 @@ function ShortcutsModal({ onClose }) {
             <div style={{color:'var(--text-dim)',fontSize:'10px',letterSpacing:'0.1em',marginBottom:6,textTransform:'uppercase'}}>{g.title}</div>
             {g.rows.map(([key, desc]) => (
               <div key={key} style={{display:'flex',gap:10,padding:'3px 0',fontSize:'11px'}}>
-                <span style={{minWidth:150,flexShrink:0,fontFamily:'monospace',color:'var(--bone)',background:'rgba(255,255,255,0.05)',borderRadius:3,padding:'1px 6px'}}>{key}</span>
+                <span style={{minWidth:150,flexShrink:0,fontFamily:'monospace',color:'var(--bone)',background:'rgba(0,0,0,0.06)',borderRadius:3,padding:'1px 6px'}}>{key}</span>
                 <span style={{color:'var(--bone-dim)'}}>{desc}</span>
               </div>
             ))}

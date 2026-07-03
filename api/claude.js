@@ -37,6 +37,7 @@ When the user asks you to write a scene, create dialogue, design a quest, or bui
   "nodes": [{
     "id": "unique_node_id",
     "type": "NARRATION|CHOICE|CONDITION|VAR_SET|ATTITUDE_BRANCH|CONSCIOUSNESS_GATE|SCENE_TRANSITION|SECTION_LABEL|ANCHOR_USE",
+    "speaker": "npc|player|inner|check|system",
     "text": "Node text here",
     "media": null,
     "next": "next_node_id"
@@ -54,6 +55,15 @@ Node type specs:
 - SCENE_TRANSITION: target_scene, text
 - SECTION_LABEL: label, next
 - ANCHOR_USE: anchor_type, calm_gain, next
+
+Speaker field (who is "speaking" — drives node color in the design tool):
+- "npc"    — a character speaking aloud (waitress, cop, mother...)
+- "player" — a player-facing choice (CHOICE defaults to this)
+- "inner"  — narration / the protagonist's internal voice (NARRATION default)
+- "check"  — skill/state gates (CONDITION and gates default to this)
+- "system" — mechanical bookkeeping (VAR_SET, transitions, labels default)
+Set "speaker": "npc" explicitly whenever a NARRATION node is a character
+speaking aloud; otherwise the type defaults are fine and it can be omitted.
 
 If the user is just discussing ideas, respond in natural language only — no JSON block needed.`;
 

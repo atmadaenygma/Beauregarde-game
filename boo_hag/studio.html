@@ -147,6 +147,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .badge-playable { background: #1a2a1a; color: var(--green); }
 .badge-draft    { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
 .badge-canon    { background: #2a1a0a; color: var(--amber); }
+.badge-loc      { background: rgba(58,88,120,0.14); color: var(--steel); border: 1px solid rgba(58,88,120,0.35); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── CHAT MAIN ─────────────────────────────────────── */
 .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -716,15 +717,32 @@ const INITIAL_VARS = {
   face_seen_count:{ type: 'int',  initial: 0,     range: [0, 99],  value: 0     },
 };
 
+// Locations = the "levels": the places dialogue plays out in. Scenes are
+// assigned a location; Claude gets the registry as context so it writes
+// location-aware dialogue.
+const INITIAL_LOCATIONS = [
+  {
+    id: 'rural_road', name: 'Rural Road & Diner', region: 'Rural Louisiana',
+    description: 'Two-lane country road at night — the crash site, the farmhouses, and the roadside diner where the cold open ends.',
+    ambient: 'crickets, fluorescent hum, grease smell, occasional trucks', media: null,
+  },
+  {
+    id: 'highway_outskirts', name: 'Highway → Beauregarde Outskirts', region: 'Approach to Beauregarde',
+    description: 'Highway shoulder before dawn: the overpass, the tree line, the abandoned gas station — then the city rising out of the flat.',
+    ambient: 'highway drone, dawn birds, distant sirens fading', media: null,
+  },
+];
+
 const INITIAL_SCENES = [
-  { id: 'cold_open',    name: 'Cold Open',      branch: 'shared', type: 'playable', status: 'in_progress', nodes: [], wires: [] },
-  { id: 'scene_2_shed', name: 'Scene 2 — Shed', branch: 'shed',   type: 'playable', status: 'in_progress', nodes: [], wires: [] },
+  { id: 'cold_open',    name: 'Cold Open',      branch: 'shared', type: 'playable', status: 'in_progress', locationId: 'rural_road',        nodes: [], wires: [] },
+  { id: 'scene_2_shed', name: 'Scene 2 — Shed', branch: 'shed',   type: 'playable', status: 'in_progress', locationId: 'highway_outskirts', nodes: [], wires: [] },
 ];
 
 const DEFAULT_STORE = {
   variables: JSON.parse(JSON.stringify(INITIAL_VARS)),
   consequences: [],
   scenes: INITIAL_SCENES,
+  locations: JSON.parse(JSON.stringify(INITIAL_LOCATIONS)),
   canon: [],
   importedDocs: [],
   checkpoints: [],
@@ -751,6 +769,17 @@ function loadStore() {
     if (!stored.consequences) stored.consequences = [];
     if (!stored.importedDocs) stored.importedDocs = [];
     if (!stored.checkpoints) stored.checkpoints = [];
+    if (!stored.locations) {
+      // First run after the locations feature: seed the registry and give
+      // the two original scenes their obvious homes.
+      stored.locations = JSON.parse(JSON.stringify(INITIAL_LOCATIONS));
+      (stored.scenes || []).forEach(sc => {
+        if (sc.locationId === undefined) {
+          sc.locationId = sc.id === 'cold_open' ? 'rural_road'
+                        : sc.id === 'scene_2_shed' ? 'highway_outskirts' : null;
+        }
+      });
+    }
     return stored;
   } catch { return JSON.parse(JSON.stringify(DEFAULT_STORE)); }
 }
@@ -840,7 +869,7 @@ function applyNodeJson(store, nj) {
   if (nj.nodes && nj.scene) {
     let scene = next.scenes.find(s => s.id === nj.scene);
     if (!scene && nj.action === 'create_scene') {
-      scene = { id: nj.scene, name: nj.scene, branch: 'shared', type: 'playable', status: 'draft', nodes: [], wires: [] };
+      scene = { id: nj.scene, name: nj.scene, branch: 'shared', type: 'playable', status: 'draft', locationId: null, nodes: [], wires: [] };
       next.scenes.push(scene);
     }
     if (scene) {
@@ -886,7 +915,24 @@ function buildGameContext(store) {
     }).join('\n\n');
   }
 
-  return `Active Scene: ${scene ? scene.name : '(none)'} — ${scene?.type || ''} — ${scene?.status || ''}
+  // Locations — where dialogue plays out; active scene's location in full,
+  // the rest of the registry as one-liners
+  const locs = store.locations || [];
+  const activeLoc = locs.find(l => l.id === scene?.locationId);
+  let locText = '';
+  if (activeLoc) {
+    locText = `\nLOCATION (active scene): ${activeLoc.name} — ${activeLoc.region || ''}
+${activeLoc.description || ''}${activeLoc.ambient ? `\nAmbient: ${activeLoc.ambient}` : ''}`;
+  }
+  if (locs.length) {
+    const others = locs.filter(l => l !== activeLoc).map(l => {
+      const scenesHere = store.scenes.filter(s => s.locationId === l.id).map(s => s.name).join(', ');
+      return `• ${l.name}${l.region ? ` (${l.region})` : ''}${scenesHere ? ` — scenes: ${scenesHere}` : ''}`;
+    }).join('\n').slice(0, 600);
+    if (others) locText += `\nOTHER LOCATIONS:\n${others}`;
+  }
+
+  return `Active Scene: ${scene ? scene.name : '(none)'} — ${scene?.type || ''} — ${scene?.status || ''}${locText}
 PROTAGONIST:
 • Forms: skinless (boo hag) / the face (girl, symbiotic — calm breeds control)
 • Consciousness: ${tier} | Calm: ${v.calm?.value ?? 10}/100
@@ -1051,6 +1097,136 @@ function ConsequencesTab({ consequences, store, onStoreChange }) {
       <button className="edit-btn" style={{background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',boxShadow:'none'}}
         onClick={addConsequence}>
         + Add Consequence
+      </button>
+    </div>
+  );
+}
+
+// ── LOCATIONS TAB ─────────────────────────────────────────────────────
+// The "levels" registry: the places dialogue plays out in. Scenes get
+// assigned to a location; Claude receives the registry as context.
+function LocationsTab({ store, onStoreChange }) {
+  const [expanded, setExpanded] = useState({});
+  const fileRefs = useRef({});
+  const locs = store.locations || [];
+
+  const addLocation = () => {
+    const name = prompt('Location name (e.g. "Diner", "Beauregarde docks"):');
+    if (!name || !name.trim()) return;
+    const base = name.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'location';
+    let id = base, n = 2;
+    while (locs.some(l => l.id === id)) { id = `${base}_${n}`; n++; }
+    const next = JSON.parse(JSON.stringify(store));
+    next.locations.push({ id, name: name.trim(), region: '', description: '', ambient: '', media: null });
+    onStoreChange(next, `Added location: ${name.trim()}`);
+    setExpanded(x => ({ ...x, [id]: true }));
+  };
+
+  const updateLoc = (id, field, value) => {
+    const next = JSON.parse(JSON.stringify(store));
+    const loc = next.locations.find(l => l.id === id);
+    if (!loc) return;
+    loc[field] = value;
+    onStoreChange(next, null);
+  };
+
+  const deleteLoc = (id, e) => {
+    e.stopPropagation();
+    const loc = locs.find(l => l.id === id);
+    const used = store.scenes.filter(s => s.locationId === id);
+    if (!confirm(`Delete location "${loc?.name}"?${used.length ? ` ${used.length} scene(s) will lose their location.` : ''}`)) return;
+    const next = JSON.parse(JSON.stringify(store));
+    next.locations = next.locations.filter(l => l.id !== id);
+    next.scenes.forEach(s => { if (s.locationId === id) s.locationId = null; });
+    onStoreChange(next, `Deleted location: ${loc?.name}`);
+  };
+
+  const uploadMedia = (id, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => updateLoc(id, 'media', ev.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const setActiveScene = (sceneId) => {
+    const next = JSON.parse(JSON.stringify(store));
+    next.activeScene = sceneId;
+    onStoreChange(next, null);
+  };
+
+  return (
+    <div>
+      {locs.length === 0 && (
+        <div style={{color:'var(--text-dim)',fontSize:'11px',lineHeight:1.6,marginBottom:10}}>
+          No locations yet. Locations are the places dialogue happens in —
+          the diner, the highway shoulder, the docks. Scenes get assigned to one.
+        </div>
+      )}
+      {locs.map(loc => {
+        const open = expanded[loc.id];
+        const scenesHere = store.scenes.filter(s => s.locationId === loc.id);
+        return (
+          <div key={loc.id} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:5,marginBottom:8,overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',cursor:'pointer'}}
+              onClick={() => setExpanded(x => ({ ...x, [loc.id]: !x[loc.id] }))}>
+              <span style={{color:'var(--steel)',fontSize:'11px',fontWeight:'bold',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{loc.name}</span>
+              <span style={{color:'var(--text-dim)',fontSize:'9px',flexShrink:0}}>{scenesHere.length} scene{scenesHere.length !== 1 ? 's' : ''}</span>
+              <span style={{color:'var(--text-dim)',fontSize:'9px',flexShrink:0}}>{open ? '▲' : '▼'}</span>
+              <button onClick={e => deleteLoc(loc.id, e)}
+                style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'12px',cursor:'pointer',lineHeight:1,padding:'0 2px',flexShrink:0}}>✕</button>
+            </div>
+            {open && (
+              <div style={{padding:'0 10px 10px'}}>
+                {loc.media && (
+                  <div style={{position:'relative',marginBottom:6}}>
+                    <img src={loc.media} style={{width:'100%',maxHeight:70,objectFit:'cover',borderRadius:4}} alt="" />
+                    <button onClick={() => updateLoc(loc.id, 'media', null)}
+                      style={{position:'absolute',top:3,right:3,background:'rgba(0,0,0,0.7)',border:'none',color:'#fff',borderRadius:3,padding:'1px 5px',cursor:'pointer',fontSize:'10px'}}>✕</button>
+                  </div>
+                )}
+                <div className="edit-field-label" style={{marginTop:4}}>Name</div>
+                <input className="edit-next-input" style={{width:'100%'}} value={loc.name}
+                  onChange={e => updateLoc(loc.id, 'name', e.target.value)} />
+                <div className="edit-field-label">Region</div>
+                <input className="edit-next-input" style={{width:'100%'}} value={loc.region || ''}
+                  onChange={e => updateLoc(loc.id, 'region', e.target.value)} placeholder="Rural Louisiana / Beauregarde…" />
+                <div className="edit-field-label">Description</div>
+                <textarea className="edit-textarea" style={{minHeight:52,fontSize:'10px'}} rows={3}
+                  value={loc.description || ''} onChange={e => updateLoc(loc.id, 'description', e.target.value)}
+                  placeholder="What the place looks and feels like…" />
+                <div className="edit-field-label">Ambient</div>
+                <input className="edit-next-input" style={{width:'100%'}} value={loc.ambient || ''}
+                  onChange={e => updateLoc(loc.id, 'ambient', e.target.value)} placeholder="sounds, smells, weather…" />
+                {!loc.media && (
+                  <button className="edit-btn" style={{marginTop:8,background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',boxShadow:'none'}}
+                    onClick={() => fileRefs.current[loc.id]?.click()}>
+                    + Background image
+                  </button>
+                )}
+                <input ref={el => { fileRefs.current[loc.id] = el; }} type="file" accept="image/*" style={{display:'none'}}
+                  onChange={e => uploadMedia(loc.id, e)} />
+                {scenesHere.length > 0 && (
+                  <>
+                    <div className="edit-field-label" style={{marginTop:10}}>Scenes here</div>
+                    {scenesHere.map(s => (
+                      <div key={s.id} onClick={() => setActiveScene(s.id)}
+                        style={{fontSize:'10px',color:'var(--amber-dim)',cursor:'pointer',lineHeight:1.8}}
+                        title="Set as active scene">
+                        › {s.name}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button className="edit-btn" style={{background:'none',border:'1px dashed var(--border)',color:'var(--text-dim)',boxShadow:'none'}}
+        onClick={addLocation}>
+        + New Location
       </button>
     </div>
   );
@@ -1303,6 +1479,15 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon, onJumpToNode }) {
     onStoreChange(next, null);
   }, [store, onStoreChange]);
 
+  const setSceneLocation = useCallback((sceneId, locationId) => {
+    const next = JSON.parse(JSON.stringify(store));
+    const sc = next.scenes.find(s => s.id === sceneId);
+    if (!sc) return;
+    sc.locationId = locationId;
+    const loc = next.locations.find(l => l.id === locationId);
+    onStoreChange(next, `Scene "${sc.name}" location → ${loc ? loc.name : 'none'}`);
+  }, [store, onStoreChange]);
+
   const cycleStatus = useCallback((id, e) => {
     e.stopPropagation();
     const cycle = ['draft','in_progress','canon'];
@@ -1337,7 +1522,7 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon, onJumpToNode }) {
   return (
     <div className="bible-sidebar">
       <div className="bible-tabs">
-        {['SCENES','VARS','FX','CANON','DOCS','CHAR'].map(t => (
+        {['SCENES','LOC','VARS','FX','CANON','DOCS','CHAR'].map(t => (
           <button key={t} className={`bible-tab${tab===t?' active':''}`} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
@@ -1366,10 +1551,26 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon, onJumpToNode }) {
                       {s.nodes.length} nodes
                     </span>
                   </div>
+                  {(store.locations || []).length > 0 && (
+                    <select
+                      value={s.locationId || ''}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => setSceneLocation(s.id, e.target.value || null)}
+                      title="Location this scene plays in"
+                      style={{width:'100%',marginTop:5,background:'var(--surface)',border:'1px solid var(--border)',
+                        color: s.locationId ? 'var(--steel)' : 'var(--text-dim)',
+                        fontFamily:'inherit',fontSize:'9px',padding:'2px 4px',borderRadius:3,outline:'none'}}>
+                      <option value="">⌖ no location</option>
+                      {store.locations.map(l => <option key={l.id} value={l.id}>⌖ {l.name}</option>)}
+                    </select>
+                  )}
                 </div>
               </div>
             ))}
           </>
+        )}
+        {tab === 'LOC' && (
+          <LocationsTab store={store} onStoreChange={onStoreChange} />
         )}
         {tab === 'VARS' && (
           <VariablesTab variables={store.variables} scenes={store.scenes} onSet={setVar} onAdd={addVariable} onJumpToNode={onJumpToNode} />
@@ -1977,6 +2178,7 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
     target_scene: node.target_scene || '',
     calm_gain:    node.calm_gain   ?? 5,
     label:        node.label       || '',
+    note:         node.note        || '',
   }));
   const setE = (field, val) => setExtra(x => ({ ...x, [field]: val }));
   const fileRef = useRef(null);
@@ -2052,6 +2254,7 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
     if (idx >= 0) {
       const updated = { ...sc.nodes[idx], text, type };
       if (speaker) updated.speaker = speaker; else delete updated.speaker;
+      if (extra.note && extra.note.trim()) updated.note = extra.note.trim(); else delete updated.note;
       updated.next = nextId || null;
       if (type === 'CHOICE') { updated.options = options; }
       if (type === 'CONDITION') {
@@ -2156,6 +2359,11 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
 
         <div className="edit-field-label">Text</div>
         <textarea className="edit-textarea" value={text} onChange={e => setText(e.target.value)} rows={4} />
+
+        <div className="edit-field-label">Design Note (not shown to player)</div>
+        <textarea className="edit-textarea" style={{minHeight: 44, fontSize: '10px', color: 'var(--text-dim)'}}
+          value={extra.note} onChange={e => setE('note', e.target.value)} rows={2}
+          placeholder="stage directions, camera notes, reminders…" />
 
         <div className="edit-field-label">Next Node ID</div>
         <div className="edit-next-field">
@@ -3089,7 +3297,7 @@ function StoryView({ store, onStoreChange, onSwitchTab }) {
     let id = base, n = 2;
     while (existingIds.has(id)) { id = `${base}_${n}`; n++; }
     const next = JSON.parse(JSON.stringify(store));
-    next.scenes.push({ id, name, branch, type: 'playable', status: 'draft', nodes: [], wires: [] });
+    next.scenes.push({ id, name, branch, type: 'playable', status: 'draft', locationId: null, nodes: [], wires: [] });
     onStoreChange(next, `Added scene: ${name}`);
   };
 
@@ -3151,6 +3359,10 @@ function StoryView({ store, onStoreChange, onSwitchTab }) {
                         <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>
                         <span className={`scene-badge badge-${s.type}`}>{s.type}</span>
                         <span className={`scene-badge badge-${s.status}`}>{s.status}</span>
+                        {(() => {
+                          const loc = (store.locations || []).find(l => l.id === s.locationId);
+                          return loc ? <span className="scene-badge badge-loc" title={loc.description || loc.name}>⌖ {loc.name}</span> : null;
+                        })()}
                       </div>
                       <div className="story-card-stats">
                         {s.nodes.length} nodes · {s.nodes.filter(n=>n.media).length} media
@@ -3339,6 +3551,492 @@ function VarsInkModal({ store, onClose }) {
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
         <pre className="ink-modal-pre">{ink}</pre>
+      </div>
+    </div>
+  );
+}
+
+// ── INK IMPORT ────────────────────────────────────────────────────────
+// Parses the subset of Ink used by this project's hand-written scripts
+// (ink/cold_open.ink, ink/scene_2_shed.ink) into studio nodes:
+//   === knots === / = stitches   → addressable entry points (with stitch
+//                                   fallthrough inside a knot, per Ink)
+//   plain text                   → NARRATION (paragraphs joined)
+//   ~ var = value / += / -= /
+//   ~ var = var + n              → option sets or VAR_SET chain nodes
+//   * [label] + indented body    → CHOICE with per-option body chains
+//   { expr: ... - else: ... }    → CONDITION with branch sub-chains that
+//                                   fall through past the block if undiverted
+//   -> target                    → links; unknown targets become
+//                                   SCENE_TRANSITION nodes (cross-file)
+//   // comments                  → design notes on the next node; ALL-CAPS
+//                                   banner lines become SECTION_LABELs
+
+function inkParseValue(raw) {
+  const t = raw.trim();
+  if (t === 'true') return true;
+  if (t === 'false') return false;
+  const n = Number(t);
+  return isNaN(n) ? t.replace(/^"|"$/g, '') : n;
+}
+
+function inkParseExpr(expr) {
+  const m = expr.match(/^(\w+)\s*(>=|<=|==|=|>|<)\s*(.+)$/);
+  if (m) {
+    const raw = m[3].trim();
+    const num = raw === 'true' ? 1 : raw === 'false' ? 0 : Number(raw);
+    return { variable: m[1], operator: m[2] === '=' ? '==' : m[2], threshold: isNaN(num) ? raw : num };
+  }
+  return { variable: expr.trim(), operator: '==', threshold: 1 };
+}
+
+function inkTokenize(lines, ctx) {
+  const items = [];
+  let i = 0;
+  while (i < lines.length) {
+    const L = lines[i];
+    if (L.note !== undefined) { items.push({ kind: 'note', note: L.note }); i++; continue; }
+    const t = L.t;
+    let m;
+
+    // Choice group — consume sibling * choices with their indented bodies
+    if (/^\*+\s*\[/.test(t)) {
+      const choices = [];
+      while (i < lines.length) {
+        const C = lines[i];
+        if (C.note !== undefined) {
+          if (choices.length) { choices[choices.length - 1].body.push(C); i++; continue; }
+          i++; continue;
+        }
+        const cm = C.t.match(/^\*+\s*\[([^\]]*)\]\s*(.*)$/);
+        if (!cm) break;
+        const base = C.indent;
+        const ch = { label: cm[1].trim(), trailing: cm[2].trim(), body: [] };
+        i++;
+        while (i < lines.length) {
+          const B = lines[i];
+          if (B.note !== undefined) {
+            if (B.indent > base) { ch.body.push(B); i++; continue; }
+            break;
+          }
+          if (B.indent > base) { ch.body.push(B); i++; continue; }
+          break;
+        }
+        choices.push(ch);
+      }
+      items.push({ kind: 'choices', choices });
+      continue;
+    }
+
+    // Variable operation
+    if ((m = t.match(/^~\s*(\w+)\s*(\+=|-=|=)\s*(.+)$/))) {
+      const v = m[1];
+      const expr = m[3].split('//')[0].trim();
+      let op = 'set', val;
+      if (m[2] === '+=') { op = 'add'; val = inkParseValue(expr); }
+      else if (m[2] === '-=') { op = 'subtract'; val = inkParseValue(expr); }
+      else {
+        const em = expr.match(new RegExp('^' + v + '\\s*([+\\-])\\s*(\\d+)$'));
+        if (em) { op = em[1] === '+' ? 'add' : 'subtract'; val = Number(em[2]); }
+        else val = inkParseValue(expr);
+      }
+      items.push({ kind: 'set', variable: v, op, value: val });
+      i++; continue;
+    }
+
+    // Divert
+    if ((m = t.match(/^->\s*([\w.]+)/))) {
+      items.push({ kind: 'divert', target: m[1] });
+      i++; continue;
+    }
+
+    // Single-line conditional divert (the studio's own export format)
+    if ((m = t.match(/^\{\s*(.+?):\s*->\s*([\w.]+)\s*-\s*else\s*:\s*->\s*([\w.]+)\s*\}$/))) {
+      items.push({
+        kind: 'cond', ...inkParseExpr(m[1]),
+        trueItems: [{ kind: 'divert', target: m[2] }],
+        falseItems: [{ kind: 'divert', target: m[3] }],
+      });
+      i++; continue;
+    }
+
+    // Multiline conditional block
+    if ((m = t.match(/^\{\s*(.+?):\s*$/))) {
+      const inner = [];
+      let depth = 1;
+      i++;
+      while (i < lines.length && depth > 0) {
+        const B = lines[i];
+        const bt = B.note !== undefined ? null : B.t;
+        if (bt && /^\{.*:\s*$/.test(bt)) depth++;
+        else if (bt === '}') { depth--; if (depth === 0) { i++; break; } }
+        inner.push(B); i++;
+      }
+      const elseIdx = inner.findIndex(B => B.note === undefined && /^-\s*else\s*:/.test(B.t));
+      const trueLines = elseIdx >= 0 ? inner.slice(0, elseIdx) : inner;
+      const falseLines = elseIdx >= 0 ? inner.slice(elseIdx + 1) : [];
+      items.push({
+        kind: 'cond', ...inkParseExpr(m[1]),
+        trueItems: inkTokenize(trueLines, ctx),
+        falseItems: inkTokenize(falseLines, ctx),
+      });
+      continue;
+    }
+
+    if (/^-\s*else\s*:/.test(t) || t === '}') {
+      ctx.warnings.push(`Stray "${t}" ignored`);
+      i++; continue;
+    }
+
+    items.push({ kind: 'text', text: t });
+    i++;
+  }
+  return items;
+}
+
+// Builds a node chain from tokenized items. Returns { entry, tails }:
+// entry = id/name of the first thing in the chain (or null if empty);
+// tails = setters for dangling ends that should link to whatever follows.
+function inkBuildBody(items, ctx) {
+  let entry = null;
+  let tails = [];
+  let textBuf = [], noteBuf = [];
+
+  const connect = (ref) => {
+    if (entry === null) entry = ref;
+    tails.forEach(fn => fn(ref));
+    tails = [];
+  };
+  const addNode = (node) => {
+    if (noteBuf.length) { node.note = noteBuf.join('\n'); noteBuf = []; }
+    ctx.nodes.push(node);
+    connect(node.id);
+  };
+  const flushText = () => {
+    if (!textBuf.length) return;
+    const node = { id: ctx.nextId(), type: 'NARRATION', text: textBuf.join('\n\n'), media: null, next: null };
+    textBuf = [];
+    addNode(node);
+    tails = [ref => { node.next = ref; }];
+  };
+
+  for (const it of items) {
+    if (it.kind === 'note') noteBuf.push(it.note);
+    else if (it.kind === 'text') textBuf.push(it.text);
+    else if (it.kind === 'set') {
+      flushText();
+      const node = { id: ctx.nextId(), type: 'VAR_SET', variable: it.variable, operation: it.op, value: it.value, text: '', media: null, next: null };
+      addNode(node);
+      tails = [ref => { node.next = ref; }];
+    }
+    else if (it.kind === 'divert') {
+      flushText();
+      connect(it.target);
+    }
+    else if (it.kind === 'cond') {
+      flushText();
+      const node = { id: ctx.nextId(), type: 'CONDITION', variable: it.variable, operator: it.operator, threshold: it.threshold, text: '', media: null, true_next: null, false_next: null };
+      addNode(node);
+      tails = [];
+      const tb = inkBuildBody(it.trueItems, ctx);
+      const fb = inkBuildBody(it.falseItems, ctx);
+      if (tb.entry !== null) node.true_next = tb.entry; else tails.push(ref => { node.true_next = ref; });
+      if (fb.entry !== null) node.false_next = fb.entry; else tails.push(ref => { node.false_next = ref; });
+      tails.push(...tb.tails, ...fb.tails);
+    }
+    else if (it.kind === 'choices') {
+      const node = { id: ctx.nextId(), type: 'CHOICE', text: textBuf.join('\n\n'), media: null, options: [] };
+      textBuf = [];
+      addNode(node);
+      tails = [];
+      for (const ch of it.choices) {
+        const bodyItems = inkTokenize(ch.body, ctx);
+        if (ch.trailing) bodyItems.unshift({ kind: 'text', text: ch.trailing });
+        // Literal `~ var = value` sets ride on the option itself; expression
+        // forms (calm = calm + 18) become VAR_SET nodes in the body chain.
+        const sets = {};
+        const rest = [];
+        bodyItems.forEach(bi => {
+          if (bi.kind === 'set' && bi.op === 'set') sets[bi.variable] = bi.value;
+          else rest.push(bi);
+        });
+        const cb = inkBuildBody(rest, ctx);
+        const opt = { label: ch.label, next: cb.entry !== null ? cb.entry : '' };
+        if (Object.keys(sets).length) opt.sets = sets;
+        if (cb.tails.length) {
+          cb.tails.forEach(fn => fn(null));
+          ctx.warnings.push(`Choice "${ch.label.slice(0, 32)}" body ends without a divert`);
+        }
+        if (cb.entry === null && !cb.tails.length) {
+          ctx.warnings.push(`Choice "${ch.label.slice(0, 32)}" has no destination`);
+        }
+        node.options.push(opt);
+      }
+      // Choices own all their exits — nothing falls through past them.
+    }
+  }
+  flushText();
+  return { entry, tails };
+}
+
+function parseInk(source, baseId) {
+  const warnings = [];
+  const vars = [];
+  const rawLines = source.split(/\r?\n/);
+
+  // ── Pass 1: group into knots/stitches, harvest VARs and banner comments
+  const knots = [];
+  let curKnot = null, curSeg = null;
+  let pendingComments = [];
+  const isDecor = (s) => /^[═─=\-\s]*$/.test(s);
+  const stripDecor = (s) => s.replace(/^[═─=\-\s]+|[═─=\-\s]+$/g, '');
+
+  for (const raw of rawLines) {
+    const t = raw.trim();
+    if (!t) continue;
+    const indent = raw.length - raw.replace(/^\s+/, '').length;
+
+    if (t.startsWith('//')) {
+      const c = stripDecor(t.slice(2).trim());
+      if (c) pendingComments.push(c);
+      continue;
+    }
+    let m;
+    if ((m = t.match(/^VAR\s+(\w+)\s*=\s*(.+)$/))) {
+      vars.push({ name: m[1], value: inkParseValue(m[2].split('//')[0]) });
+      pendingComments = [];
+      continue;
+    }
+    if (/^INCLUDE\s/.test(t)) {
+      warnings.push(`Ignored: ${t} (variables come from the shared registry)`);
+      pendingComments = [];
+      continue;
+    }
+    if ((m = t.match(/^===\s*(\w+)\s*=*\s*$/))) {
+      // Banner title: last mostly-uppercase short comment line before the knot
+      const isTitle = (s) => {
+        const up = (s.match(/[A-Z]/g) || []).length;
+        const lo = (s.match(/[a-z]/g) || []).length;
+        return up > 0 && s.length <= 48 && up / (up + lo || 1) >= 0.8;
+      };
+      const titles = pendingComments.filter(isTitle);
+      const label = titles.length ? titles[titles.length - 1] : null;
+      const note = pendingComments.filter(c => c !== label).join('\n') || null;
+      curKnot = { name: m[1], label, note, segments: [] };
+      curSeg = { name: m[1], lines: [] };
+      curKnot.segments.push(curSeg);
+      knots.push(curKnot);
+      pendingComments = [];
+      continue;
+    }
+    if ((m = t.match(/^=\s*(\w+)\s*$/))) {
+      if (!curKnot) { warnings.push(`Stitch outside a knot: ${t}`); pendingComments = []; continue; }
+      curSeg = { name: m[1], lines: [] };
+      curKnot.segments.push(curSeg);
+      if (pendingComments.length) {
+        curSeg.lines.push({ note: pendingComments.join('\n'), indent: 0 });
+        pendingComments = [];
+      }
+      continue;
+    }
+    if (!curSeg) { warnings.push(`Content before first knot ignored: "${t.slice(0, 40)}"`); continue; }
+    if (pendingComments.length) {
+      curSeg.lines.push({ note: pendingComments.join('\n'), indent });
+      pendingComments = [];
+    }
+    curSeg.lines.push({ raw, t, indent });
+  }
+
+  if (!knots.length) throw new Error('No knots (=== name ===) found — is this an Ink file?');
+
+  // ── Pass 2: build node chains per segment, with stitch fallthrough
+  const ctx = { nodes: [], warnings, used: new Set(), counter: 0, prefix: '' };
+  knots.forEach(k => k.segments.forEach(s => ctx.used.add(s.name)));
+  ctx.nextId = () => {
+    let id;
+    do { id = `${ctx.prefix}_${++ctx.counter}`; } while (ctx.used.has(id));
+    ctx.used.add(id);
+    return id;
+  };
+
+  const alias = {};
+  knots.forEach(k => {
+    let labelNode = null;
+    if (k.label) {
+      const lid = `${k.name}_label`;
+      ctx.used.add(lid);
+      labelNode = { id: lid, type: 'SECTION_LABEL', label: k.label, text: '', media: null, next: null };
+      if (k.note) labelNode.note = k.note;
+      ctx.nodes.push(labelNode);
+    }
+    const segResults = k.segments.map(seg => {
+      ctx.prefix = seg.name;
+      const items = inkTokenize(seg.lines, ctx);
+      return { seg, ...inkBuildBody(items, ctx) };
+    });
+    segResults.forEach((r, idx) => {
+      const nextName = segResults[idx + 1] ? segResults[idx + 1].seg.name : null;
+      if (r.tails.length) {
+        if (nextName) r.tails.forEach(fn => fn(nextName));           // stitch fallthrough
+        else {
+          r.tails.forEach(fn => fn(null));
+          warnings.push(`Knot "${k.name}" ends without a divert`);
+        }
+      }
+      alias[r.seg.name] = r.entry !== null ? r.entry : (nextName || null);
+    });
+    if (labelNode) {
+      labelNode.next = alias[k.name];
+      alias[k.name] = labelNode.id;
+    }
+  });
+
+  // ── Pass 3: resolve every link — alias names → node ids; unknown names
+  // become SCENE_TRANSITION nodes (cross-file diverts like -> scene_2_shed)
+  const idSet = new Set(ctx.nodes.map(n => n.id));
+  const resolve = (ref, d = 0) => {
+    if (!ref) return null;
+    if (ref === 'END') return 'END';
+    if (idSet.has(ref)) return ref;
+    const r = ref.includes('.') ? ref.split('.').pop() : ref;
+    if (r !== ref && idSet.has(r)) return r;
+    if (alias[r] !== undefined && d < 25) {
+      const a = alias[r];
+      return a === null ? null : resolve(a, d + 1);
+    }
+    const tid = `goto_${r}`;
+    if (!idSet.has(tid)) {
+      ctx.nodes.push({ id: tid, type: 'SCENE_TRANSITION', target_scene: r, text: '', media: null, next: null });
+      idSet.add(tid);
+      warnings.push(`Divert "${r}" not found in this file — created a scene transition`);
+    }
+    return tid;
+  };
+  ctx.nodes.forEach(n => {
+    ['next', 'true_next', 'false_next', 'pass_next', 'fail_next'].forEach(f => {
+      if (n[f]) n[f] = resolve(n[f]);
+    });
+    (n.options || []).forEach(o => { if (o.next) o.next = resolve(o.next); });
+  });
+
+  const title = baseId.split(/[_\-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const branch = /shed/.test(baseId) ? 'shed' : /run/.test(baseId) ? 'run' : /go/.test(baseId) ? 'go' : 'shared';
+  return { baseId, title, branch, nodes: ctx.nodes, vars, warnings };
+}
+
+function InkImportModal({ store, onStoreChange, onClose, onImported }) {
+  const [fileName, setFileName] = useState(null);
+  const [parsed, setParsed] = useState(null);
+  const [error, setError] = useState(null);
+  const fileRef = useRef(null);
+
+  const loadSource = (name, source) => {
+    setError(null);
+    setFileName(name);
+    try {
+      setParsed(parseInk(source, name.replace(/\.ink$/i, '').replace(/[^a-z0-9_]/gi, '_').toLowerCase()));
+    } catch (err) {
+      setParsed(null);
+      setError(err.message);
+    }
+  };
+
+  const quickLoad = (name) => {
+    fetch('ink/' + name)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
+      .then(text => loadSource(name, text))
+      .catch(err => { setError(`Couldn't fetch ink/${name} (${err.message}) — use the file picker instead.`); });
+  };
+
+  const onFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => loadSource(file.name, ev.target.result);
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const doImport = () => {
+    if (!parsed) return;
+    const next = JSON.parse(JSON.stringify(store));
+    let id = parsed.baseId;
+    while (next.scenes.some(s => s.id === id)) id += '_ink';
+    parsed.vars.forEach(v => {
+      if (!next.variables[v.name]) {
+        next.variables[v.name] = typeof v.value === 'boolean'
+          ? { type: 'bool', initial: v.value, value: v.value }
+          : { type: 'int', initial: v.value, value: v.value, range: [0, Math.max(100, Number(v.value) || 0)] };
+      }
+    });
+    next.scenes.push({
+      id, name: parsed.title + (id !== parsed.baseId ? ' (Ink)' : ''),
+      branch: parsed.branch, type: 'playable', status: 'draft', locationId: null,
+      nodes: parsed.nodes, wires: [],
+    });
+    next.activeScene = id;
+    onStoreChange(next, `Imported ink: ${fileName} (${parsed.nodes.length} nodes)`);
+    onImported && onImported();
+    onClose();
+  };
+
+  const typeCounts = parsed
+    ? parsed.nodes.reduce((acc, n) => { acc[n.type] = (acc[n.type] || 0) + 1; return acc; }, {})
+    : {};
+
+  return (
+    <div className="ink-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ink-modal" style={{width: 560}}>
+        <div className="ink-modal-header">
+          <h3>IMPORT — .ink → tree</h3>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div style={{padding: 16, overflowY: 'auto'}}>
+          <div style={{display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14}}>
+            <button className="topbar-btn" onClick={() => fileRef.current?.click()}>⬆ Choose .ink file…</button>
+            <button className="topbar-btn" onClick={() => quickLoad('cold_open.ink')}>Load project: cold_open.ink</button>
+            <button className="topbar-btn" onClick={() => quickLoad('scene_2_shed.ink')}>Load project: scene_2_shed.ink</button>
+            <input ref={fileRef} type="file" accept=".ink,.txt" style={{display: 'none'}} onChange={onFile} />
+          </div>
+
+          {error && (
+            <div style={{color: '#c0392b', fontSize: 11, marginBottom: 10, lineHeight: 1.5}}>{error}</div>
+          )}
+
+          {parsed && (
+            <>
+              <div style={{fontSize: 12, color: 'var(--bone)', marginBottom: 6}}>
+                <strong>{fileName}</strong> → scene "{parsed.title}" ({parsed.branch})
+              </div>
+              <div style={{fontSize: 11, color: 'var(--bone-dim)', marginBottom: 10}}>
+                {parsed.nodes.length} nodes: {Object.entries(typeCounts).map(([t, c]) => `${c} ${t}`).join(' · ')}
+                {parsed.vars.length > 0 && <><br/>{parsed.vars.length} VAR declarations (new ones added to the registry)</>}
+              </div>
+              {parsed.warnings.length > 0 && (
+                <div style={{maxHeight: 140, overflowY: 'auto', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 4, padding: '8px 10px', marginBottom: 12}}>
+                  <div style={{fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.08em', marginBottom: 4}}>
+                    {parsed.warnings.length} WARNING{parsed.warnings.length !== 1 ? 'S' : ''}
+                  </div>
+                  {parsed.warnings.map((w, i) => (
+                    <div key={i} style={{fontSize: 10, color: 'var(--bone-dim)', lineHeight: 1.6}}>· {w}</div>
+                  ))}
+                </div>
+              )}
+              <button className="edit-btn" onClick={doImport}>
+                Import as new scene{store.scenes.some(s => s.id === parsed.baseId) ? ` (id "${parsed.baseId}" taken — will suffix _ink)` : ''}
+              </button>
+            </>
+          )}
+
+          {!parsed && !error && (
+            <div style={{fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.7}}>
+              Pick an .ink file, or load one of the project's scripts straight from the repo.
+              Knots, stitches, choices, diverts, variable ops, conditionals, and comments
+              (as design notes) all come across; the import is always added as a NEW scene —
+              nothing existing is overwritten.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -3656,6 +4354,18 @@ function PlayView({ store, onStoreChange }) {
                 <div style={{textAlign:'center',marginTop:20}}>
                   <div style={{color:'var(--text-dim)',fontSize:'11px',marginBottom:14,letterSpacing:'0.06em'}}>
                     → {node.target_scene || node.text || 'next scene'}
+                    {(() => {
+                      const locs = store.locations || [];
+                      const fromLoc = locs.find(l => l.id === scene?.locationId);
+                      const targetScene = store.scenes.find(s => s.id === (node.target_scene || node.next));
+                      const toLoc = locs.find(l => l.id === targetScene?.locationId);
+                      if (!fromLoc && !toLoc) return null;
+                      return (
+                        <div style={{marginTop:6,fontSize:'10px',color:'var(--steel)'}}>
+                          ⌖ {fromLoc ? fromLoc.name : '?'} → {toLoc ? toLoc.name : '?'}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <button className="play-continue-btn" onClick={() => {
                     const targetId = node.target_scene || node.next;
@@ -3797,6 +4507,7 @@ function App() {
   const [showHistory, setShowHistory]       = useState(false);
   const [showExport, setShowExport]         = useState(false);
   const [showVarsExport, setShowVarsExport] = useState(false);
+  const [showInkImport, setShowInkImport]   = useState(false);
   const [pendingNodeContext, setPendingNodeContext] = useState(null);
   const [treeCenterTrigger, setTreeCenterTrigger] = useState(0);
   const [jumpToNode, setJumpToNode] = useState(null);
@@ -3910,6 +4621,7 @@ function App() {
           <span className="topbar-title">BOO HAG ◆ STUDIO</span>
           <div className="topbar-right">
             <button className="topbar-btn" onClick={() => setShowHistory(true)}>⟳ History ({history.snapshots.length})</button>
+            <button className="topbar-btn" onClick={() => setShowInkImport(true)}>⬆ Import .ink</button>
             <button className="topbar-btn" onClick={() => setShowExport(true)}>⬇ Scene .ink</button>
             <button className="topbar-btn" onClick={() => setShowVarsExport(true)}>⬇ variables.ink</button>
             <button className="topbar-btn" onClick={() => {
@@ -3987,6 +4699,14 @@ function App() {
       )}
       {showVarsExport && (
         <VarsInkModal store={store} onClose={() => setShowVarsExport(false)} />
+      )}
+      {showInkImport && (
+        <InkImportModal
+          store={store}
+          onStoreChange={onStoreChange}
+          onClose={() => setShowInkImport(false)}
+          onImported={() => { setTab('TREE'); setTreeCenterTrigger(t => t + 1); }}
+        />
       )}
       {showShortcuts && (
         <ShortcutsModal onClose={() => setShowShortcuts(false)} />

@@ -1993,6 +1993,8 @@ function ChatView({ store, onStoreChange, history, onSwitchToTree, pendingNodeCo
 const NODE_COLORS = {
   NARRATION:          { bg: '#2a2820', border: '#4a4438', header: '#3a3628', text: '#e8e0d4' },
   CHOICE:             { bg: '#2a1e08', border: '#7a5206', header: '#3a2808', text: '#e8a820' },
+  HUB:                { bg: '#2a1e08', border: '#7a5206', header: '#3a2808', text: '#e8a820' },
+  CHECK:              { bg: '#0e1e1c', border: '#1a7870', header: '#122420', text: '#40c8b8' },
   CONDITION:          { bg: '#0e1e1c', border: '#1a7870', header: '#122420', text: '#40c8b8' },
   VAR_SET:            { bg: '#121e10', border: '#4a7840', header: '#182818', text: '#90c870' },
   ATTITUDE_BRANCH:    { bg: '#1a0e22', border: '#6a3a8a', header: '#220e2e', text: '#c080e0' },
@@ -2025,9 +2027,9 @@ const SPEAKERS = {
 function speakerOf(node) {
   if (node.speaker && SPEAKERS[node.speaker]) return node.speaker;
   switch (node.type) {
-    case 'CHOICE': case 'ANCHOR_USE':
+    case 'CHOICE': case 'HUB': case 'ANCHOR_USE':
       return 'player';
-    case 'CONDITION': case 'CONSCIOUSNESS_GATE': case 'ATTITUDE_BRANCH':
+    case 'CONDITION': case 'CHECK': case 'CONSCIOUSNESS_GATE': case 'ATTITUDE_BRANCH':
       return 'check';
     case 'VAR_SET': case 'SCENE_TRANSITION': case 'SECTION_LABEL':
       return 'system';
@@ -2064,8 +2066,16 @@ function hexToRgba(hex, alpha) {
 }
 
 function nodePreview(node) {
+  if (node.type === 'CHECK') {
+    const dot = node.check_kind === 'red' ? '●' : '○';
+    return `${dot} ${node.variable || '?'} vs ${node.difficulty ?? 10}${node.text ? ' — ' + node.text.slice(0, 60) : ''}`;
+  }
   if (node.text) return node.text.length > 110 ? node.text.slice(0, 110) + '…' : node.text;
   switch (node.type) {
+    case 'HUB': {
+      const n = (node.options || []).length;
+      return `⟳ hub — ${n} option${n !== 1 ? 's' : ''}`;
+    }
     case 'CONDITION':
       if (node.variable) return `${node.variable} ${node.operator || '>='} ${node.threshold ?? 0}`;
       break;
@@ -2153,6 +2163,7 @@ function getNextIds(node) {
   if (node.branches) Object.values(node.branches).forEach(id => { if (id && id !== 'END') ids.push(id); });
   if (node.pass_next) ids.push(node.pass_next);
   if (node.fail_next) ids.push(node.fail_next);
+  if (node.success_next) ids.push(node.success_next);
   return [...new Set(ids)];
 }
 
@@ -2179,6 +2190,9 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
     calm_gain:    node.calm_gain   ?? 5,
     label:        node.label       || '',
     note:         node.note        || '',
+    check_kind:   node.check_kind  || 'white',
+    difficulty:   node.difficulty  ?? 10,
+    success_next: node.success_next || '',
   }));
   const setE = (field, val) => setExtra(x => ({ ...x, [field]: val }));
   const fileRef = useRef(null);
@@ -2256,7 +2270,14 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
       if (speaker) updated.speaker = speaker; else delete updated.speaker;
       if (extra.note && extra.note.trim()) updated.note = extra.note.trim(); else delete updated.note;
       updated.next = nextId || null;
-      if (type === 'CHOICE') { updated.options = options; }
+      if (type === 'CHOICE' || type === 'HUB') { updated.options = options; }
+      if (type === 'CHECK') {
+        updated.check_kind = extra.check_kind;
+        updated.variable = extra.variable;
+        updated.difficulty = Number(extra.difficulty);
+        updated.success_next = extra.success_next || null;
+        updated.fail_next = extra.fail_next || null;
+      }
       if (type === 'CONDITION') {
         updated.variable = extra.variable; updated.operator = extra.operator;
         updated.threshold = Number(extra.threshold);
@@ -2402,9 +2423,9 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
         )}
         <input ref={fileRef} type="file" accept="image/*,video/webm,video/mp4" style={{display:'none'}} onChange={uploadMedia} />
 
-        {type === 'CHOICE' && (
+        {(type === 'CHOICE' || type === 'HUB') && (
           <>
-            <div className="edit-field-label">Options</div>
+            <div className="edit-field-label">{type === 'HUB' ? 'Hub Options (loop back until exhausted)' : 'Options'}</div>
             {options.map((o, i) => (
               <div key={i} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:4,padding:'6px',marginBottom:4}}>
                 <div style={{display:'flex',gap:4,marginBottom:4}}>
@@ -2441,6 +2462,22 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
                   style={{background:'none',border:'none',color:'var(--text-dim)',fontFamily:'inherit',fontSize:'9px',cursor:'pointer',padding:'3px 0 0',textAlign:'left'}}>
                   + set var
                 </button>
+                {type === 'HUB' && (
+                  <div style={{display:'flex',gap:12,marginTop:5,paddingTop:5,borderTop:'1px solid var(--border)'}}>
+                    <label style={{display:'flex',alignItems:'center',gap:4,fontSize:'9px',color:'var(--text-dim)',cursor:'pointer'}}
+                      title="Grays out after being picked once">
+                      <input type="checkbox" checked={o.once !== false}
+                        onChange={e => updateOption(i, 'once', e.target.checked ? true : false)} />
+                      once
+                    </label>
+                    <label style={{display:'flex',alignItems:'center',gap:4,fontSize:'9px',color:'var(--text-dim)',cursor:'pointer'}}
+                      title="Choosing this leaves the hub for good (no return)">
+                      <input type="checkbox" checked={!!o.exit}
+                        onChange={e => updateOption(i, 'exit', e.target.checked)} />
+                      exit
+                    </label>
+                  </div>
+                )}
               </div>
             ))}
             <button className="edit-btn"
@@ -2448,8 +2485,39 @@ function EditPanel({ node, store, onStoreChange, onClose, onAskClaude, onJumpToN
               onClick={() => setOptions(opts => [...opts, { label:'New option', next:'' }])}>
               + Add Option
             </button>
+            {type === 'HUB' && (
+              <div style={{fontSize:'9px',color:'var(--text-dim)',lineHeight:1.6,marginBottom:4}}>
+                Branches that dead-end return to this hub automatically.
+                "Next Node ID" above = where flow goes once every once-option is used up.
+              </div>
+            )}
           </>
         )}
+
+        {/* ── CHECK (Disco Elysium skill check) ── */}
+        {type === 'CHECK' && (<>
+          <div className="edit-field-label">Check Kind</div>
+          <select className="edit-select" value={extra.check_kind} onChange={e => setE('check_kind', e.target.value)}>
+            <option value="white">○ White — retryable (re-rolls each visit)</option>
+            <option value="red">● Red — one-shot (result is locked in)</option>
+          </select>
+          <div className="edit-field-label">Variable (rolled: variable + 2d6)</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="check-var-list" value={extra.variable} onChange={e => setE('variable', e.target.value)} placeholder="calm / consciousness…" />
+          <datalist id="check-var-list">{allVarKeys.map(k => <option key={k} value={k} />)}</datalist>
+          <div className="edit-field-label">Difficulty (roll must reach this)</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}} type="number"
+            value={extra.difficulty} onChange={e => setE('difficulty', e.target.value)} />
+          <div className="edit-field-label">Success → Node</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="check-succ-list" value={extra.success_next} onChange={e => setE('success_next', e.target.value)} placeholder="node_id" />
+          <datalist id="check-succ-list">{allIds.map(id => <option key={id} value={id} />)}</datalist>
+          <div className="edit-field-label">Failure → Node</div>
+          <input className="edit-select" style={{height:'auto',padding:'4px 6px'}}
+            list="check-fail-list" value={extra.fail_next} onChange={e => setE('fail_next', e.target.value)} placeholder="node_id" />
+          <datalist id="check-fail-list">{allIds.map(id => <option key={id} value={id} />)}</datalist>
+          <CrossSceneRefs varName={extra.variable} />
+        </>)}
 
         {/* ── CONDITION ── */}
         {type === 'CONDITION' && (<>
@@ -2582,6 +2650,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
   const [resizingNode, setResizingNode] = useState(null); // { id, startW, startH, startMX, startMY }
   const [manualPos, setManualPos] = useState({});
   const [manualSize, setManualSize] = useState({});
+  const [collapsed, setCollapsed] = useState(() => new Set()); // node ids whose subtrees are hidden
   const [fontSize, setFontSize] = useState(11);
   const [search, setSearch]     = useState('');
   const [drawingWire, setDrawingWire] = useState(null); // { fromId, curX, curY } world coords
@@ -2610,6 +2679,56 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     if (selected === id) return manualSize[id] || { w: NODE_W, h: NODE_H };
     return { w: pillWOf(n), h: PILL_H };
   }, [nodeMapMemo, selected, manualSize]);
+
+  // Collapsed subtrees: hidden = nodes reachable from the roots ONLY through
+  // a collapsed node. Computed as (reachable ignoring collapse) minus
+  // (reachable stopping at collapsed nodes); orphans/cycles outside the
+  // reachable set are never hidden.
+  const hiddenIds = useMemo(() => {
+    if (!collapsed.size) return new Set();
+    const inDeg = {};
+    nodes.forEach(n => { inDeg[n.id] = 0; });
+    nodes.forEach(n => getNextIds(n).forEach(id => { if (inDeg[id] !== undefined) inDeg[id]++; }));
+    const roots = nodes.filter(n => inDeg[n.id] === 0).map(n => n.id);
+    const startIds = roots.length ? roots : (nodes[0] ? [nodes[0].id] : []);
+    const walk = (stopAtCollapsed) => {
+      const seen = new Set();
+      const queue = [...startIds];
+      while (queue.length) {
+        const id = queue.pop();
+        if (seen.has(id) || !nodeMapMemo[id]) continue;
+        seen.add(id);
+        if (stopAtCollapsed && collapsed.has(id)) continue;
+        getNextIds(nodeMapMemo[id]).forEach(nid => queue.push(nid));
+      }
+      return seen;
+    };
+    const full = walk(false);
+    const vis = walk(true);
+    const hidden = new Set();
+    full.forEach(id => { if (!vis.has(id)) hidden.add(id); });
+    return hidden;
+  }, [collapsed, nodes, nodeMapMemo]);
+
+  const collapsedCountOf = useCallback((id) => {
+    const seen = new Set();
+    const queue = getNextIds(nodeMapMemo[id]);
+    while (queue.length) {
+      const nid = queue.pop();
+      if (seen.has(nid) || nid === id || !nodeMapMemo[nid]) continue;
+      seen.add(nid);
+      getNextIds(nodeMapMemo[nid]).forEach(x => queue.push(x));
+    }
+    return seen.size;
+  }, [nodeMapMemo]);
+
+  const toggleCollapse = useCallback((id) => {
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
 
   const centerCanvas = useCallback(() => {
     if (!wrapRef.current) return;
@@ -2645,10 +2764,11 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     return () => ro.disconnect();
   }, [centerCanvas]);
 
-  // Clear positions + selection when scene changes
+  // Clear positions + selection + collapse when scene changes
   useEffect(() => {
     setManualPos({});
     setSelected(null);
+    setCollapsed(new Set());
   }, [store.activeScene]);
 
   // Center view when requested externally (e.g. "View in Tree" from chat banner)
@@ -2673,13 +2793,19 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     return () => clearTimeout(t);
   }, [jumpToNode, nodes, getPos, zoom]);
 
-  // Keyboard shortcuts: Delete=remove node, Escape=deselect, Ctrl+D=duplicate
+  // Keyboard shortcuts: Delete=remove node, Escape=deselect, Ctrl+D=duplicate,
+  // C=collapse/expand subtree
   useEffect(() => {
     const handler = (e) => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'Escape') { setSelected(null); return; }
       if (!selected) return;
+      if (e.key === 'c' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        toggleCollapse(selected);
+        return;
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         const next = JSON.parse(JSON.stringify(store));
@@ -2706,7 +2832,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selected, store, onStoreChange, getPos]);
+  }, [selected, store, onStoreChange, getPos, toggleCollapse]);
 
   // Wheel zoom at cursor — must be non-passive to call preventDefault
   useEffect(() => {
@@ -2787,9 +2913,13 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
         const sc = next.scenes.find(s => s.id === next.activeScene);
         const src = sc?.nodes.find(n => n.id === drawingWire.fromId);
         if (src) {
-          if (src.type === 'CHOICE') {
+          if (src.type === 'CHOICE' || src.type === 'HUB') {
             if (!src.options) src.options = [];
             src.options.push({ label: 'Option ' + (src.options.length + 1), next: target.id });
+          } else if (src.type === 'CHECK') {
+            if (!src.success_next) src.success_next = target.id;
+            else if (!src.fail_next) src.fail_next = target.id;
+            else src.success_next = target.id;
           } else if (src.type === 'CONDITION') {
             if (!src.true_next) src.true_next = target.id;
             else if (!src.false_next) src.false_next = target.id;
@@ -2856,6 +2986,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
     const paths = [];
     const R = 8; // corner radius
     nodes.forEach(node => {
+      if (hiddenIds.has(node.id) || collapsed.has(node.id)) return;
       const from = getPos(node.id);
       const fs = getVis(node.id);
       const fx = from.x + fs.w;
@@ -2865,13 +2996,14 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
 
       const addWire = (toId, label) => {
         if (!toId || toId === 'END') return;
+        if (hiddenIds.has(toId)) return;
         const toNode = nodes.find(n => n.id === toId);
         if (!toNode) return;
         const to = getPos(toId);
         const ts = getVis(toId);
         const tx = to.x;
         const ty = to.y + ts.h / 2;
-        let d, lx, ly;
+        let d, lx, ly, dash = false;
         if (tx - fx >= R * 2 + 12) {
           // Forward elbow — horizontal, rounded turn, vertical, rounded turn,
           // horizontal into the target. Fan siblings apart at the bend.
@@ -2885,27 +3017,30 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
             lx = mx; ly = (fy + ty) / 2;
           }
         } else {
-          // Backward / same-column edge — smooth return arc
+          // Backward / same-column edge — dashed return arc (hub loop-backs)
           d = `M${fx},${fy} C${fx + 80},${fy} ${tx - 80},${ty} ${tx},${ty}`;
           lx = (fx + tx) / 2; ly = Math.min(fy, ty) - 10;
+          dash = true;
         }
         outIdx++;
-        paths.push({ d, col, key: `${node.id}→${toId}${label ? '-'+label : ''}`, label, lx, ly });
+        paths.push({ d, col, key: `${node.id}→${toId}${label ? '-'+label : ''}`, label, lx, ly, dash });
       };
 
       if (node.options) {
         node.options.forEach(o => addWire(o.next, o.label));
+        if (node.type === 'HUB') addWire(node.next, 'when exhausted');
       } else {
         addWire(node.next, null);
         addWire(node.true_next, 'TRUE');
         addWire(node.false_next, 'FALSE');
         addWire(node.pass_next, 'PASS');
-        addWire(node.fail_next, 'FAIL');
+        addWire(node.fail_next, node.type === 'CHECK' ? 'FAIL ✗' : 'FAIL');
+        addWire(node.success_next, 'PASS ✓');
         if (node.branches) Object.entries(node.branches).forEach(([k,v]) => addWire(v, k));
       }
     });
     return paths;
-  }, [nodes, manualPos, autoPos, getPos, getVis]);
+  }, [nodes, manualPos, autoPos, getPos, getVis, hiddenIds, collapsed]);
 
   return (
     <div className="tree-layout">
@@ -2924,8 +3059,10 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
             setSearch(q);
             if (!q) return;
             const hit = nodes.find(n =>
-              n.id.toLowerCase().includes(q.toLowerCase()) ||
-              (n.text || '').toLowerCase().includes(q.toLowerCase())
+              !hiddenIds.has(n.id) && (
+                n.id.toLowerCase().includes(q.toLowerCase()) ||
+                (n.text || '').toLowerCase().includes(q.toLowerCase())
+              )
             );
             if (hit) {
               const pos = getPos(hit.id);
@@ -3000,6 +3137,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
             {wires.map(w => (
               <g key={w.key}>
                 <path d={w.d} fill="none" stroke={w.col} strokeWidth="1.5" opacity="0.6"
+                  strokeDasharray={w.dash ? '5 4' : undefined}
                   markerEnd="url(#arrowhead)" />
                 {w.label && (
                   <text x={w.lx} y={w.ly} fontSize="9" fill={w.col} textAnchor="middle" opacity="0.9"
@@ -3036,33 +3174,37 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
             const nodeIdSet = new Set(nodes.map(n => n.id));
             const isBroken = (id) => id && id !== 'END' && !nodeIdSet.has(id);
             return nodes.map((node, seqIdx) => {
+            if (hiddenIds.has(node.id)) return null;
             const pos = getPos(node.id);
             const vis = getVis(node.id);
             const spk = SPEAKERS[speakerOf(node)];
             const isSelected = selected === node.id;
+            const isCollapsed = collapsed.has(node.id);
             const isBeingMoved = (draggingNode && draggingNode.id === node.id) || (resizingNode && resizingNode.id === node.id);
-            const targets = [node.next, node.true_next, node.false_next, node.pass_next, node.fail_next,
+            const targets = [node.next, node.true_next, node.false_next, node.pass_next, node.fail_next, node.success_next,
               ...(node.options || []).map(o => o.next),
               ...Object.values(node.branches || {})].filter(Boolean);
             const hasBrokenLink = targets.some(isBroken);
             const h = hashStr(node.id);
             const squiggleFilter = isBeingMoved ? 'none' : `url(#squiggle-filter-${h % 3})`;
+            const isRedCheck = node.type === 'CHECK' && node.check_kind === 'red';
             return (
               <div
                 key={node.id}
                 className={`tree-node${isSelected ? ' selected' : ' pill'}`}
-                title={isSelected ? undefined : `${node.type} · ${spk.label}`}
+                title={isSelected ? undefined : `${node.type} · ${spk.label} · double-click: collapse/expand subtree`}
                 style={{
                   left: pos.x,
                   top:  pos.y,
                   width: vis.w,
                   height: vis.h,
-                  borderColor: isSelected ? 'var(--amber)' : spk.border,
+                  borderColor: isSelected ? 'var(--amber)' : (isRedCheck ? '#8a1a10' : spk.border),
                   background: isSelected ? '#fdf8ec' : spk.fill,
                   zIndex: isSelected ? 6 : undefined,
                   '--squiggle-filter': squiggleFilter,
                 }}
                 onClick={() => setSelected(isSelected ? null : node.id)}
+                onDoubleClick={e => { e.stopPropagation(); toggleCollapse(node.id); }}
                 onMouseDown={e => {
                   if (!e.target.closest('.tree-node-ask') && !e.target.closest('button'))
                     startDragNode(e, node.id);
@@ -3087,6 +3229,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   <div className="tree-pill-label" style={{color: spk.text}}>
                     {node.media && <span className="tree-pill-media">▣</span>}
                     {pillLabelOf(node) || <em style={{opacity:0.6}}>empty</em>}
+                    {isCollapsed && <span style={{marginLeft:6,fontWeight:'bold',opacity:0.85}} title="Subtree collapsed">▸{collapsedCountOf(node.id)}</span>}
                     {hasBrokenLink && <span style={{color:'#c0392b',marginLeft:5}}>⚠</span>}
                   </div>
                 ) : (
@@ -3180,6 +3323,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
             }}>
               <svg width={MM_W} height={MM_H}>
                 {nodes.map(n => {
+                  if (hiddenIds.has(n.id)) return null;
                   const p = getPos(n.id);
                   const s = getVis(n.id);
                   const spk = SPEAKERS[speakerOf(n)];
@@ -3214,7 +3358,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
             <div style={{padding:'3px 12px 5px',color:'var(--text-dim)',fontSize:'9px',letterSpacing:'0.1em',borderBottom:'1px solid var(--border)'}}>
               ADD NODE
             </div>
-            {['NARRATION','CHOICE','CONDITION','VAR_SET','SECTION_LABEL','SCENE_TRANSITION','ANCHOR_USE'].map(t => (
+            {['NARRATION','CHOICE','HUB','CHECK','CONDITION','VAR_SET','SECTION_LABEL','SCENE_TRANSITION','ANCHOR_USE'].map(t => (
               <div key={t} className="tree-ctx-item" onClick={() => addNodeAt(t, ctxMenu.wx, ctxMenu.wy)}>
                 <span className="tree-ctx-dot" style={{background: SPEAKERS[speakerOf({ type: t })].fill, border: `1px solid ${SPEAKERS[speakerOf({ type: t })].border}`}} />
                 {t}
@@ -3420,6 +3564,24 @@ function exportToInk(scene) {
           c += `  -> ${o.next || 'END'}\n`;
         });
         break;
+      case 'HUB':
+        // Hub: * options are once-only in ink, + options are sticky.
+        // Dead-ended branches divert back here; when exhausted -> n.next.
+        if (n.text) c += `${n.text}\n`;
+        (n.options || []).forEach(o => {
+          c += `${o.once === false || o.exit ? '+' : '*'} [${o.label || 'Option'}]\n`;
+          if (o.sets) Object.entries(o.sets).forEach(([k,v]) => { c += `  ~ ${k} = ${JSON.stringify(v)}\n`; });
+          c += `  -> ${o.next || 'END'}\n`;
+        });
+        if (n.next && n.next !== 'END') c += `- -> ${n.next}  // when hub exhausted\n`;
+        break;
+      case 'CHECK': {
+        // Disco-style skill check: variable + 2d6 vs difficulty.
+        const kind = n.check_kind === 'red' ? 'red (one-shot)' : 'white (retryable)';
+        c += `// CHECK ${kind}: ${n.variable} + 2d6 vs ${n.difficulty ?? 10}\n`;
+        c += `{ ${n.variable} + RANDOM(2, 12) >= ${n.difficulty ?? 10}: -> ${n.success_next || 'END'} - else: -> ${n.fail_next || 'END'} }\n`;
+        break;
+      }
       case 'VAR_SET': {
         const op = n.operation === 'add' ? '+=' : n.operation === 'subtract' ? '-=' : '=';
         c += `~ ${n.variable} ${op} ${JSON.stringify(n.value ?? 0)}\n-> ${n.next || 'END'}\n`;
@@ -3599,8 +3761,9 @@ function inkTokenize(lines, ctx) {
     const t = L.t;
     let m;
 
-    // Choice group — consume sibling * choices with their indented bodies
-    if (/^\*+\s*\[/.test(t)) {
+    // Choice group — consume sibling choices with their indented bodies.
+    // * = once-only, + = sticky (revisitable — marks the option once:false)
+    if (/^[*+]+\s*\[/.test(t)) {
       const choices = [];
       while (i < lines.length) {
         const C = lines[i];
@@ -3608,10 +3771,10 @@ function inkTokenize(lines, ctx) {
           if (choices.length) { choices[choices.length - 1].body.push(C); i++; continue; }
           i++; continue;
         }
-        const cm = C.t.match(/^\*+\s*\[([^\]]*)\]\s*(.*)$/);
+        const cm = C.t.match(/^([*+])[*+]*\s*\[([^\]]*)\]\s*(.*)$/);
         if (!cm) break;
         const base = C.indent;
-        const ch = { label: cm[1].trim(), trailing: cm[2].trim(), body: [] };
+        const ch = { label: cm[2].trim(), trailing: cm[3].trim(), sticky: cm[1] === '+', body: [] };
         i++;
         while (i < lines.length) {
           const B = lines[i];
@@ -3762,6 +3925,7 @@ function inkBuildBody(items, ctx) {
         });
         const cb = inkBuildBody(rest, ctx);
         const opt = { label: ch.label, next: cb.entry !== null ? cb.entry : '' };
+        if (ch.sticky) opt.once = false;
         if (Object.keys(sets).length) opt.sets = sets;
         if (cb.tails.length) {
           cb.tails.forEach(fn => fn(null));
@@ -3913,7 +4077,7 @@ function parseInk(source, baseId) {
     return tid;
   };
   ctx.nodes.forEach(n => {
-    ['next', 'true_next', 'false_next', 'pass_next', 'fail_next'].forEach(f => {
+    ['next', 'true_next', 'false_next', 'pass_next', 'fail_next', 'success_next'].forEach(f => {
       if (n[f]) n[f] = resolve(n[f]);
     });
     (n.options || []).forEach(o => { if (o.next) o.next = resolve(o.next); });
@@ -4060,6 +4224,9 @@ function PlayView({ store, onStoreChange }) {
   const [showVars, setShowVars] = useState(true);
   const [flashedVar, setFlashedVar] = useState(null);
   const [showCheckpoints, setShowCheckpoints] = useState(false);
+  const [hubVisited, setHubVisited] = useState({});   // { hubId: [optionIdx…] }
+  const [hubStack, setHubStack] = useState([]);       // active conversation hubs
+  const [checkResults, setCheckResults] = useState({}); // { checkNodeId: bool } — red checks lock in
   const checkpointMenuRef = useRef(null);
 
   const scene = store.scenes.find(s => s.id === playSceneId) || store.scenes.find(s => s.id === store.activeScene);
@@ -4076,6 +4243,9 @@ function PlayView({ store, onStoreChange }) {
     setVars(v);
     setPath([]);
     setFlash(null);
+    setHubVisited({});
+    setHubStack([]);
+    setCheckResults({});
   }, [store.activeScene]);
 
   // Set initial node once scene is known
@@ -4087,16 +4257,33 @@ function PlayView({ store, onStoreChange }) {
 
   const node = nodes.find(n => n.id === currentId);
 
+  // Entering a HUB puts it on the conversation stack — dead-ended branches
+  // return here until the hub is exhausted or an exit option is taken.
+  useEffect(() => {
+    if (node?.type === 'HUB') {
+      setHubStack(s => (s[s.length - 1] === node.id ? s : [...s, node.id]));
+    }
+  }, [currentId]);
+
   const showFlash = (msg) => {
     setFlash(msg);
     setTimeout(() => setFlash(null), 2000);
   };
 
   const goto = useCallback((id, msg) => {
-    if (msg) showFlash(msg);
+    // A dead end (null/undefined next) inside an active hub conversation
+    // returns to the hub instead of ending the scene. Explicit 'END' still
+    // ends: authors opt out of the loop-back by diverting to END.
+    let target = id;
+    let note = msg;
+    if (!target && target !== 'END' && hubStack.length) {
+      target = hubStack[hubStack.length - 1];
+      note = note || '↩ back to the conversation';
+    }
+    if (note) showFlash(note);
     setPath(p => currentId ? [...p, currentId] : p);
-    setCurrentId(id || null);
-  }, [currentId]);
+    setCurrentId(target === 'END' ? null : (target || null));
+  }, [currentId, hubStack]);
 
   const applyVar = (variable, operation, value) => {
     setVars(v => {
@@ -4175,6 +4362,9 @@ function PlayView({ store, onStoreChange }) {
     setVars(v);
     setPath([]);
     setFlash(null);
+    setHubVisited({});
+    setHubStack([]);
+    setCheckResults({});
   };
 
   // Close checkpoint dropdown on outside click
@@ -4329,13 +4519,17 @@ function PlayView({ store, onStoreChange }) {
                 </div>
               )}
 
-              {node.type === 'NARRATION' && (
-                <button className="play-continue-btn"
-                  onClick={() => goto(node.next, null)}
-                  disabled={!node.next || node.next === 'END'}>
-                  {(!node.next || node.next === 'END') ? '[ END OF SCENE ]' : 'Continue ▶'}
-                </button>
-              )}
+              {node.type === 'NARRATION' && (() => {
+                const deadEnd = !node.next || node.next === 'END';
+                const returnsToHub = deadEnd && node.next !== 'END' && hubStack.length > 0;
+                return (
+                  <button className="play-continue-btn"
+                    onClick={() => goto(node.next, null)}
+                    disabled={deadEnd && !returnsToHub}>
+                    {returnsToHub ? '↩ Return to conversation' : deadEnd ? '[ END OF SCENE ]' : 'Continue ▶'}
+                  </button>
+                );
+              })()}
 
               {node.type === 'CHOICE' && node.options && (
                 <div className="play-choices">
@@ -4349,6 +4543,75 @@ function PlayView({ store, onStoreChange }) {
                   ))}
                 </div>
               )}
+
+              {node.type === 'HUB' && (() => {
+                const visited = hubVisited[node.id] || [];
+                const opts = node.options || [];
+                const isUsedUp = (o, i) => visited.includes(i) && o.once !== false && !o.exit;
+                const exhausted = opts.every((o, i) => o.exit ? false : isUsedUp(o, i));
+                const pickOption = (o, i) => {
+                  setHubVisited(v => ({ ...v, [node.id]: [...(v[node.id] || []), i] }));
+                  if (o.sets) Object.entries(o.sets).forEach(([k, val]) => applyVar(k, 'set', val));
+                  if (o.exit) setHubStack(s => s.filter(id => id !== node.id));
+                  goto(o.next, null);
+                };
+                return (
+                  <div className="play-choices">
+                    {opts.map((o, i) => {
+                      const used = isUsedUp(o, i);
+                      return (
+                        <button key={i} className="play-choice-btn" disabled={used}
+                          style={used ? {opacity: 0.35, textDecoration: 'line-through', cursor: 'default'} : (o.exit ? {borderColor: 'var(--amber-dim)'} : undefined)}
+                          onClick={() => !used && pickOption(o, i)}>
+                          {o.exit ? '➤ ' : ''}{o.label}
+                        </button>
+                      );
+                    })}
+                    {exhausted && node.next && node.next !== 'END' && (
+                      <button className="play-continue-btn" style={{alignSelf: 'stretch'}}
+                        onClick={() => { setHubStack(s => s.filter(id => id !== node.id)); goto(node.next, 'conversation exhausted'); }}>
+                        Continue ▶
+                      </button>
+                    )}
+                    {exhausted && (!node.next || node.next === 'END') && !opts.some(o => o.exit) && (
+                      <div style={{color: 'var(--text-dim)', fontSize: '10px', textAlign: 'center'}}>
+                        [ conversation exhausted — no exit wired ]
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {node.type === 'CHECK' && (() => {
+                const kind = node.check_kind === 'red' ? 'red' : 'white';
+                const locked = kind === 'red' && checkResults[node.id] !== undefined;
+                const attempt = () => {
+                  let success;
+                  const v = Number(vars[node.variable]) || 0;
+                  if (locked) {
+                    success = checkResults[node.id];
+                    showFlash(`● red check already ${success ? 'passed' : 'failed'} — result stands`);
+                  } else {
+                    const d1 = 1 + Math.floor(Math.random() * 6);
+                    const d2 = 1 + Math.floor(Math.random() * 6);
+                    const total = v + d1 + d2;
+                    success = total >= Number(node.difficulty ?? 10);
+                    if (kind === 'red') setCheckResults(r => ({ ...r, [node.id]: success }));
+                    showFlash(`${kind === 'red' ? '●' : '○'} ${node.variable} ${v} + 🎲${d1}+${d2} = ${total} vs ${node.difficulty ?? 10} → ${success ? 'SUCCESS' : 'FAILURE'}`);
+                  }
+                  setTimeout(() => goto(success ? node.success_next : node.fail_next, null), 650);
+                };
+                return (
+                  <div className="play-choices">
+                    <button className="play-choice-btn"
+                      style={{borderColor: kind === 'red' ? 'var(--red)' : 'var(--teal)'}}
+                      onClick={attempt}>
+                      {kind === 'red' ? '●' : '○'} {kind.toUpperCase()} CHECK — {node.variable || '?'} + 2d6 vs {node.difficulty ?? 10}
+                      {locked ? ' (locked)' : ''}
+                    </button>
+                  </div>
+                );
+              })()}
 
               {node.type === 'SCENE_TRANSITION' && (
                 <div style={{textAlign:'center',marginTop:20}}>
@@ -4376,6 +4639,8 @@ function PlayView({ store, onStoreChange }) {
                       setCurrentId(newScene.nodes[0]?.id || null);
                       setPath([]);
                       setFlash(null);
+                      setHubVisited({});
+                      setHubStack([]);
                     }
                   }}>
                     Enter Scene ▶
@@ -4464,6 +4729,8 @@ function ShortcutsModal({ onClose }) {
       ['Drag ● (node bottom)', 'Connect to another node'],
       ['Right-click canvas', 'Add a node at cursor'],
       ['Click node', 'Select / open edit panel'],
+      ['Double-click node', 'Collapse / expand its subtree'],
+      ['C', 'Collapse / expand selected node\'s subtree'],
       ['Delete / Backspace', 'Delete selected node'],
       ['Ctrl+D', 'Duplicate selected node'],
       ['Escape', 'Deselect'],

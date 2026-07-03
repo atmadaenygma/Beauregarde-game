@@ -36,7 +36,7 @@ When the user asks you to write a scene, create dialogue, design a quest, or bui
   }],
   "nodes": [{
     "id": "unique_node_id",
-    "type": "NARRATION|CHOICE|CONDITION|VAR_SET|ATTITUDE_BRANCH|CONSCIOUSNESS_GATE|SCENE_TRANSITION|SECTION_LABEL|ANCHOR_USE",
+    "type": "NARRATION|CHOICE|HUB|CHECK|CONDITION|VAR_SET|ATTITUDE_BRANCH|CONSCIOUSNESS_GATE|SCENE_TRANSITION|SECTION_LABEL|ANCHOR_USE",
     "speaker": "npc|player|inner|check|system",
     "text": "Node text here",
     "media": null,
@@ -48,6 +48,15 @@ When the user asks you to write a scene, create dialogue, design a quest, or bui
 Node type specs:
 - NARRATION: text, media, next
 - CHOICE: text, media, options: [{label, sets:{var:val}, next}]
+- HUB: text, options: [{label, next, once, exit, sets}], next — a Disco
+  Elysium conversation hub. Options gray out after being picked (unless
+  once:false); branches that dead-end return to the hub automatically;
+  mark the option that leaves the conversation with exit:true; "next" =
+  where flow continues once every once-option is used up.
+- CHECK: check_kind ("white" = retryable | "red" = one-shot), variable,
+  difficulty, success_next, fail_next — a skill check rolled as
+  variable + 2d6 vs difficulty. Use white checks for things worth
+  retrying, red checks for irreversible moments.
 - CONDITION: variable, operator, threshold, true_next, false_next
 - VAR_SET: variable, operation (set|add|subtract), value, next
 - ATTITUDE_BRANCH: branches:{reticence:id, anger:id, curiosity:id, joy:id, greed:id}

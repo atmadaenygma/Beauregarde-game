@@ -256,86 +256,116 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .tree-canvas-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .tree-svg-layer { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
 
-/* Drafting-card node: cream paper, ink border, very slight idle wiggle */
+/* Node card — same dark palette as the rest of the studio, sitting on the
+   graph-paper canvas. Content stays perfectly still; a separate echo layer
+   (::before) traces the border and does the slight wiggle, so text never
+   moves while reading. */
 @keyframes tree-node-wiggle {
-  0%, 100% { transform: rotate(-0.45deg); }
-  50%      { transform: rotate(0.45deg); }
+  0%, 100% { transform: rotate(-0.6deg); }
+  50%      { transform: rotate(0.6deg); }
 }
 .tree-node {
   position: absolute; width: 210px;
   display: flex; flex-direction: column; overflow: hidden;
-  border-radius: 3px;
-  border: 1.5px solid #3c4a5c;
-  background: #fdf8ec;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--surface2);
   cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 2px 4px rgba(0,0,0,0.6),
+    0 6px 16px rgba(0,0,0,0.5);
+  transition: box-shadow 0.12s, transform 0.08s;
+}
+.tree-node:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 4px 8px rgba(0,0,0,0.7),
+    0 10px 28px rgba(0,0,0,0.5);
+  transform: translateY(-1px);
+}
+.tree-node.selected {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 0 0 2px var(--amber),
+    0 6px 20px rgba(200,136,10,0.2),
+    0 10px 28px rgba(0,0,0,0.5);
+}
+/* Border-echo wiggle layer */
+.tree-node::before {
+  content: '';
+  position: absolute; inset: -2px;
+  border: inherit;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.6;
   transform-origin: 50% 50%;
   animation-name: tree-node-wiggle;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
-  box-shadow: 2px 2px 0 rgba(60,74,92,0.16), 0 2px 6px rgba(0,0,0,0.15);
-  transition: box-shadow 0.12s;
+  animation-duration: var(--wiggle-duration, 6.5s);
+  animation-delay: var(--wiggle-delay, 0s);
+  animation-play-state: var(--wiggle-play, running);
 }
-.tree-node:hover {
-  box-shadow: 3px 3px 0 rgba(60,74,92,0.22), 0 4px 12px rgba(0,0,0,0.2);
-  animation-play-state: paused;
-}
-.tree-node.selected {
-  box-shadow: 0 0 0 2px var(--amber), 3px 3px 0 rgba(60,74,92,0.22), 0 4px 12px rgba(0,0,0,0.2);
-}
+.tree-node:hover::before, .tree-node.selected::before { animation-play-state: paused; }
 .tree-node-seq {
-  position: absolute; top: -9px; left: -9px;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: #fdf8ec; border: 1.5px solid #3c4a5c;
-  font-size: 9px; line-height: 17px;
+  position: absolute; top: -8px; left: -8px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 9px; line-height: 16px;
   text-align: center; font-weight: bold; z-index: 2;
 }
 .tree-node-header {
   flex: 0 0 auto;
   padding: 7px 10px 6px;
   display: flex; align-items: center; gap: 6px;
+  border-bottom: 1px solid rgba(0,0,0,0.3);
 }
 .tree-node-type { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: bold; }
 .tree-node-body {
   flex: 1 1 auto; overflow-y: auto; min-height: 0;
-  padding: 8px 10px 9px; font-size: 10px; line-height: 1.6; color: #2c3540;
+  padding: 8px 10px 9px; font-size: 10px; line-height: 1.6; color: var(--bone-dim);
   word-break: break-word;
 }
 .tree-node-media-zone {
   flex: 0 0 auto;
-  margin: 0 10px 8px; border: 1px dashed rgba(60,74,92,0.35); border-radius: 4px;
+  margin: 0 10px 8px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 4px;
   height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: rgba(60,74,92,0.6); font-size: 9px; transition: border-color 0.15s, background 0.15s;
+  color: var(--text-dim); font-size: 9px; transition: border-color 0.15s, background 0.15s;
   overflow: hidden; position: relative;
 }
-.tree-node-media-zone:hover { border-color: var(--amber-dim); background: rgba(200,136,10,0.06); }
+.tree-node-media-zone:hover { border-color: var(--amber-dim); background: rgba(200,136,10,0.04); }
 .tree-node-media-zone img, .tree-node-media-zone video {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 3px;
 }
 .tree-node-footer {
   flex: 0 0 auto;
-  padding: 5px 10px 7px; border-top: 1px solid rgba(60,74,92,0.2);
+  padding: 5px 10px 7px; border-top: 1px solid rgba(0,0,0,0.3);
   display: flex; gap: 4px; flex-wrap: wrap;
 }
 .tree-node-option {
-  font-size: 9px; color: #3c4a5c; background: rgba(60,74,92,0.08);
-  border: 1px solid rgba(60,74,92,0.2); padding: 2px 6px; border-radius: 10px;
+  font-size: 9px; color: var(--text-dim); background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 10px;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tree-node-ask {
-  background: none; border: none; color: rgba(60,74,92,0.4); font-family: inherit;
+  background: none; border: none; color: rgba(255,255,255,0.2); font-family: inherit;
   font-size: 9px; padding: 0 4px; cursor: pointer; margin-left: auto; line-height: 1;
 }
-.tree-node-ask:hover { color: var(--amber-dim); }
+.tree-node-ask:hover { color: var(--amber); }
 .tree-node-resize-handle {
   position: absolute; right: 0; bottom: 0; width: 15px; height: 15px;
   cursor: nwse-resize; z-index: 5;
-  background: linear-gradient(135deg, transparent 0 45%, rgba(60,74,92,0.5) 45% 55%, transparent 55% 100%),
-              linear-gradient(135deg, transparent 0 65%, rgba(60,74,92,0.5) 65% 75%, transparent 75% 100%);
+  background: linear-gradient(135deg, transparent 0 45%, rgba(255,255,255,0.25) 45% 55%, transparent 55% 100%),
+              linear-gradient(135deg, transparent 0 65%, rgba(255,255,255,0.25) 65% 75%, transparent 75% 100%);
 }
 .node-conn-out {
   position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
   width: 13px; height: 13px; border-radius: 50%; z-index: 4;
-  background: #fdf8ec; border: 2px solid #3c4a5c;
+  background: var(--surface); border: 2px solid var(--border);
   cursor: crosshair; transition: border-color 0.12s, background 0.12s;
 }
 .node-conn-out:hover { border-color: var(--amber); background: rgba(200,136,10,0.3); }
@@ -1751,14 +1781,6 @@ function hashStr(s) {
   return Math.abs(h);
 }
 
-function hexToRgba(hex, alpha) {
-  const h = (hex || '#4a4438').replace('#', '');
-  const r = parseInt(h.substring(0, 2), 16) || 0;
-  const g = parseInt(h.substring(2, 4), 16) || 0;
-  const b = parseInt(h.substring(4, 6), 16) || 0;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
 function nodePreview(node) {
   if (node.text) return node.text.length > 110 ? node.text.slice(0, 110) + '…' : node.text;
   switch (node.type) {
@@ -2655,9 +2677,10 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   width: size.w,
                   height: size.h,
                   borderColor: isSelected ? 'var(--amber)' : col.border,
-                  animationDelay: `${wiggleDelay}s`,
-                  animationDuration: `${wiggleDuration}s`,
-                  animationPlayState: (isSelected || isBeingMoved) ? 'paused' : 'running',
+                  background: col.bg,
+                  '--wiggle-delay': `${wiggleDelay}s`,
+                  '--wiggle-duration': `${wiggleDuration}s`,
+                  '--wiggle-play': isBeingMoved ? 'paused' : 'running',
                 }}
                 onClick={() => setSelected(isSelected ? null : node.id)}
                 onMouseDown={e => {
@@ -2680,11 +2703,11 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   title="Drag to connect → next node"
                 />
 
-                <div className="tree-node-header" style={{background: hexToRgba(col.border, 0.12), borderBottom: `1px solid ${hexToRgba(col.border, 0.3)}`}}>
-                  <span className="tree-node-type" style={{color: col.border}}>{node.type}</span>
+                <div className="tree-node-header" style={{background: col.header}}>
+                  <span className="tree-node-type" style={{color: col.text}}>{node.type}</span>
                   {hasBrokenLink && (
                     <span title="Points to a node that doesn't exist"
-                      style={{color:'#c0392b',fontSize:'10px',marginLeft:4,lineHeight:1}}>⚠</span>
+                      style={{color:'#e05040',fontSize:'10px',marginLeft:4,lineHeight:1}}>⚠</span>
                   )}
                   <button className="tree-node-ask"
                     onClick={e => { e.stopPropagation(); onNodeContext && onNodeContext(node); }}>
@@ -2770,7 +2793,7 @@ function TreeView({ store, onStoreChange, onSwitchToChat, onNodeContext, centerT
                   return <rect key={n.id}
                     x={p.x * sc + ox} y={p.y * sc + oy}
                     width={Math.max(2, s.w * sc)} height={Math.max(1.5, s.h * sc)}
-                    fill="#fdf8ec" stroke={n.id === selected ? '#c8880a' : col.border} strokeWidth="0.5" />;
+                    fill={col.bg} stroke={n.id === selected ? '#c8880a' : col.border} strokeWidth="0.5" />;
                 })}
                 <rect x={vpX} y={vpY} width={vpW} height={vpH}
                   fill="none" stroke="rgba(200,136,10,0.4)" strokeWidth="1" />

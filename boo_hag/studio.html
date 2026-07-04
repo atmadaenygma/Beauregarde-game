@@ -148,6 +148,28 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .badge-draft    { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
 .badge-canon    { background: #2a1a0a; color: var(--amber); }
 .badge-loc      { background: rgba(58,88,120,0.14); color: var(--steel); border: 1px solid rgba(58,88,120,0.35); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge-alt      { background: rgba(106,58,138,0.12); color: var(--purple); border: 1px solid rgba(106,58,138,0.35); }
+
+/* PLAY versions bar — switch / fork / compare scene variants */
+.play-family-bar {
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 5px 12px; background: #14100e; border-bottom: 1px solid #2e2a28;
+}
+.play-family-label { color: #786e66; font-size: 9px; letter-spacing: 0.12em; }
+.play-family-pill {
+  background: #1a1918; border: 1px solid #2e2a28; color: #9a9088;
+  font-family: inherit; font-size: 10px; padding: 3px 10px; cursor: pointer;
+  border-radius: 999px; transition: color 0.12s, border-color 0.12s;
+}
+.play-family-pill:hover { color: var(--amber); border-color: var(--amber-dim); }
+.play-family-pill.active { background: var(--amber); border-color: var(--amber); color: #1a1512; font-weight: bold; }
+.play-family-stats { color: #786e66; font-size: 9px; letter-spacing: 0.03em; }
+.play-compare-half { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.play-compare-head {
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+  padding: 5px 12px; background: #14100e; border-bottom: 1px solid #2e2a28;
+  color: var(--amber); font-size: 10px; letter-spacing: 0.05em;
+}
 
 /* ── CHAT MAIN ─────────────────────────────────────── */
 .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -543,7 +565,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   --text-dim:  #786e66;
 }
 .play-ctrl-bar {
-  flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   padding: 6px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
 }
 .play-scene-title { color: var(--amber); font-size: 11px; letter-spacing: 0.06em; }
@@ -1058,7 +1080,17 @@ ${activeLoc.description || ''}${activeLoc.ambient ? `\nAmbient: ${activeLoc.ambi
     }).join('\n');
   }
 
-  return `Active Scene: ${scene ? scene.name : '(none)'} — ${scene?.type || ''} — ${scene?.status || ''}${locText}
+  // Variant note — so Claude knows it's editing an alternate take
+  let variantText = '';
+  if (scene?.variantOf) {
+    const root = store.scenes.find(s => s.id === scene.variantOf);
+    variantText = ` [ALTERNATE VERSION of "${root ? root.name : scene.variantOf}" — an experimental take; the original is untouched]`;
+  } else if (scene) {
+    const alts = store.scenes.filter(s => s.variantOf === scene.id);
+    if (alts.length) variantText = ` [has ${alts.length} alternate version${alts.length !== 1 ? 's' : ''}: ${alts.map(a => a.name).join(', ')}]`;
+  }
+
+  return `Active Scene: ${scene ? scene.name : '(none)'} — ${scene?.type || ''} — ${scene?.status || ''}${variantText}${locText}
 PROTAGONIST:
 • Forms: skinless (boo hag) / the face (girl, symbiotic — calm breeds control)
 • Consciousness: ${tier} | Calm: ${v.calm?.value ?? 10}/100
@@ -1751,6 +1783,12 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon, onJumpToNode }) {
     onStoreChange(next, `Scene "${sc.name}" location → ${loc ? loc.name : 'none'}`);
   }, [store, onStoreChange]);
 
+  const createVariant = useCallback((sceneId, e) => {
+    if (e) e.stopPropagation();
+    const r = createVariantStore(store, sceneId);
+    if (r) onStoreChange(r.next, `Created alternate: ${r.name} (from ${r.srcName})`);
+  }, [store, onStoreChange]);
+
   const cycleStatus = useCallback((id, e) => {
     e.stopPropagation();
     const cycle = ['draft','in_progress','canon'];
@@ -1794,16 +1832,21 @@ function GameBibleSidebar({ store, onStoreChange, onAddCanon, onJumpToNode }) {
           <>
             {store.scenes.map(s => (
               <div key={s.id} className={`scene-item${s.id===store.activeScene?' active-scene':''}`}
+                style={s.variantOf ? {marginLeft:12,borderLeft:'2px solid rgba(106,58,138,0.4)'} : undefined}
                 onClick={() => setActiveScene(s.id)}>
                 <div style={{flex:1}}>
                   <div style={{display:'flex',alignItems:'center',gap:4}}>
                     <div className="scene-name" style={{flex:1}}>{s.name}</div>
+                    <button onClick={e => createVariant(s.id, e)}
+                      title="Create an alternate version (independent copy — original untouched)"
+                      style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'11px',cursor:'pointer',padding:'0 2px',lineHeight:1,opacity:0.6}}>⑂</button>
                     <button onClick={e => { e.stopPropagation(); renameScene(s.id); }}
                       title="Rename" style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'11px',cursor:'pointer',padding:'0 2px',lineHeight:1,opacity:0.6}}>✎</button>
                     <button onClick={e => deleteScene(s.id, e)}
                       title="Delete" style={{background:'none',border:'none',color:'var(--text-dim)',fontSize:'12px',cursor:'pointer',padding:'0 2px',lineHeight:1,opacity:0.6}}>✕</button>
                   </div>
                   <div style={{display:'flex',gap:4,marginTop:5,flexWrap:'wrap',alignItems:'center'}}>
+                    {s.variantOf && <span className="scene-badge badge-alt" title={`Alternate of ${store.scenes.find(x=>x.id===s.variantOf)?.name || s.variantOf}`}>ALT</span>}
                     <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>
                     <span className={`scene-badge badge-${s.type}`}>{s.type}</span>
                     <span className={`scene-badge badge-${s.status}`} style={{cursor:'pointer'}}
@@ -2431,6 +2474,63 @@ function getNextIds(node) {
   if (node.fail_next) ids.push(node.fail_next);
   if (node.success_next) ids.push(node.success_next);
   return [...new Set(ids)];
+}
+
+// ── SCENE VARIANTS ────────────────────────────────────────────────────
+// A variant is a full independent copy of a scene (variantOf → the root
+// original's id) for trying an alternate take without touching the
+// original. The "family" = the root plus all its variants, in scene order.
+function variantRootId(store, sceneId) {
+  const sc = store.scenes.find(s => s.id === sceneId);
+  return sc ? (sc.variantOf || sc.id) : sceneId;
+}
+
+function variantFamily(store, sceneId) {
+  const root = variantRootId(store, sceneId);
+  return store.scenes.filter(s => s.id === root || s.variantOf === root);
+}
+
+// Builds the next store with a new variant cloned from sceneId; returns
+// { next, id, name, srcName } or null. Caller passes next to onStoreChange.
+function createVariantStore(store, sceneId) {
+  const src = store.scenes.find(s => s.id === sceneId);
+  if (!src) return null;
+  const root = src.variantOf || src.id;
+  const rootScene = store.scenes.find(s => s.id === root) || src;
+  const family = store.scenes.filter(s => s.id === root || s.variantOf === root);
+  let n = family.length;
+  let id = `${root}_alt${n}`;
+  while (store.scenes.some(s => s.id === id)) { n++; id = `${root}_alt${n}`; }
+  const next = JSON.parse(JSON.stringify(store));
+  const clone = JSON.parse(JSON.stringify(src));
+  clone.id = id;
+  clone.name = `${rootScene.name} — alt ${n}`;
+  clone.variantOf = root;
+  clone.status = 'draft';
+  // Insert right after the family's last member so versions stay together
+  const lastIdx = Math.max(...family.map(f => next.scenes.findIndex(s => s.id === f.id)));
+  next.scenes.splice(lastIdx + 1, 0, clone);
+  next.activeScene = id;
+  return { next, id, name: clone.name, srcName: src.name };
+}
+
+// Quick structural playability stats for comparing versions
+function sceneStats(scene) {
+  const ns = scene?.nodes || [];
+  let endings = 0;
+  ns.forEach(n => {
+    const links = [n.next, n.true_next, n.false_next, n.pass_next, n.fail_next, n.success_next,
+      ...(n.options || []).map(o => o.next),
+      ...Object.values(n.branches || {})].filter(Boolean);
+    if (links.includes('END') || links.length === 0) endings++;
+  });
+  return {
+    nodes: ns.length,
+    choices: ns.filter(n => n.type === 'CHOICE' || n.type === 'HUB').length,
+    checks: ns.filter(n => n.type === 'CHECK').length,
+    endings,
+    words: ns.reduce((a, n) => a + ((n.text || '').split(/\s+/).filter(Boolean).length), 0),
+  };
 }
 
 // ── EDIT PANEL ────────────────────────────────────────────────────────
@@ -3982,6 +4082,7 @@ function StoryView({ store, onStoreChange, onSwitchTab }) {
                       )}
                       <div className="story-card-name">{s.name}</div>
                       <div className="story-card-badges">
+                        {s.variantOf && <span className="scene-badge badge-alt" title={`Alternate of ${store.scenes.find(x=>x.id===s.variantOf)?.name || s.variantOf}`}>ALT</span>}
                         <span className={`scene-badge badge-${s.branch}`}>{s.branch}</span>
                         <span className={`scene-badge badge-${s.type}`}>{s.type}</span>
                         <span className={`scene-badge badge-${s.status}`}>{s.status}</span>
@@ -4691,10 +4792,13 @@ function InkImportModal({ store, onStoreChange, onClose, onImported }) {
 // ── PLAY VIEW ─────────────────────────────────────────────────────────
 const CONSCIOUSNESS_LABELS = ['FERAL', 'WAKING', 'CLEAR', 'GRIOTTE'];
 
-function PlayView({ store, onStoreChange }) {
-  // playSceneId is independent of store.activeScene so scene transitions
-  // during play don't reset vars (vars are local play state, not design state)
-  const [playSceneId, setPlaySceneId] = useState(store.activeScene);
+// One independent scene runner. sceneId = which scene to run; compact = the
+// side-by-side compare rendering (vars panel starts hidden). The PlayView
+// wrapper below owns the versions bar and compare split.
+function PlayRunner({ store, onStoreChange, sceneId, compact }) {
+  // playSceneId is independent of sceneId so scene transitions during play
+  // don't reset vars (vars are local play state, not design state)
+  const [playSceneId, setPlaySceneId] = useState(sceneId);
   const [currentId, setCurrentId] = useState(null);
   const [vars, setVars] = useState(() => {
     const v = {};
@@ -4703,7 +4807,7 @@ function PlayView({ store, onStoreChange }) {
   });
   const [path, setPath] = useState([]);
   const [flash, setFlash] = useState(null);
-  const [showVars, setShowVars] = useState(true);
+  const [showVars, setShowVars] = useState(!compact);
   const [flashedVar, setFlashedVar] = useState(null);
   const [showCheckpoints, setShowCheckpoints] = useState(false);
   const [hubVisited, setHubVisited] = useState({});   // { hubId: [optionIdx…] }
@@ -4712,14 +4816,14 @@ function PlayView({ store, onStoreChange }) {
   const [visitedRefs, setVisitedRefs] = useState([]); // "sceneId:nodeId" — drives the quest log
   const checkpointMenuRef = useRef(null);
 
-  const scene = store.scenes.find(s => s.id === playSceneId) || store.scenes.find(s => s.id === store.activeScene);
+  const scene = store.scenes.find(s => s.id === playSceneId) || store.scenes.find(s => s.id === sceneId);
   const nodes = scene?.nodes || [];
 
-  // When user navigates to a different scene externally (not via SCENE_TRANSITION),
-  // reset play state fully
+  // When the runner is pointed at a different scene externally (not via
+  // SCENE_TRANSITION), reset play state fully
   useEffect(() => {
-    setPlaySceneId(store.activeScene);
-    const sc = store.scenes.find(s => s.id === store.activeScene);
+    setPlaySceneId(sceneId);
+    const sc = store.scenes.find(s => s.id === sceneId);
     setCurrentId(sc?.nodes?.[0]?.id || null);
     const v = {};
     Object.entries(store.variables).forEach(([k, vv]) => { v[k] = vv.value !== undefined ? vv.value : vv; });
@@ -4730,7 +4834,7 @@ function PlayView({ store, onStoreChange }) {
     setHubStack([]);
     setCheckResults({});
     setVisitedRefs([]);
-  }, [store.activeScene]);
+  }, [sceneId]);
 
   // Set initial node once scene is known
   useEffect(() => {
@@ -4845,8 +4949,8 @@ function PlayView({ store, onStoreChange }) {
   };
 
   const reset = () => {
-    setPlaySceneId(store.activeScene);
-    const sc = store.scenes.find(s => s.id === store.activeScene);
+    setPlaySceneId(sceneId);
+    const sc = store.scenes.find(s => s.id === sceneId);
     setCurrentId(sc?.nodes?.[0]?.id || null);
     const v = {};
     Object.entries(store.variables).forEach(([k, vv]) => { v[k] = vv.value !== undefined ? vv.value : vv; });
@@ -5249,6 +5353,104 @@ function PlayView({ store, onStoreChange }) {
   );
 }
 
+// PLAY wrapper — owns scene-variant switching and the side-by-side compare.
+// Each pane is a fully independent PlayRunner with its own vars/path/hubs.
+function PlayView({ store, onStoreChange }) {
+  const family = variantFamily(store, store.activeScene);
+  const hasVariants = family.length > 1;
+
+  const [singleId, setSingleId] = useState(store.activeScene);
+  const [compare, setCompare] = useState(false);
+  const [leftId, setLeftId] = useState(family[0]?.id || store.activeScene);
+  const [rightId, setRightId] = useState(family[1]?.id || family[0]?.id || store.activeScene);
+
+  // Follow sidebar/story scene selection while in single mode
+  useEffect(() => {
+    setSingleId(store.activeScene);
+    const fam = variantFamily(store, store.activeScene);
+    setLeftId(fam[0]?.id || store.activeScene);
+    setRightId(fam[1]?.id || fam[0]?.id || store.activeScene);
+  }, [store.activeScene]);
+
+  const fork = () => {
+    const base = compare ? rightId : singleId;
+    const r = createVariantStore(store, base);
+    if (!r) return;
+    onStoreChange(r.next, `Created alternate: ${r.name} (from ${r.srcName})`);
+    // Drop the new variant into the right pane so you can compare immediately
+    if (compare) setRightId(r.id); else { setCompare(true); setLeftId(base); setRightId(r.id); }
+  };
+
+  const VersionPill = ({ s, active, onClick }) => (
+    <button className={`play-family-pill${active ? ' active' : ''}`} onClick={onClick}
+      title={s.variantOf ? 'alternate version' : 'original'}>
+      {s.variantOf ? '⑂ ' : '★ '}{s.name}
+    </button>
+  );
+
+  const PaneSelect = ({ value, onChange }) => (
+    <select value={value} onChange={e => onChange(e.target.value)}
+      style={{background:'#1a1918',border:'1px solid #2e2a28',color:'var(--amber)',fontFamily:'inherit',
+        fontSize:'10px',padding:'2px 6px',borderRadius:4,outline:'none',maxWidth:220}}>
+      {family.map(s => <option key={s.id} value={s.id}>{s.variantOf ? '⑂ ' : '★ '}{s.name}</option>)}
+    </select>
+  );
+
+  return (
+    <div className="play-layout" style={{background:'#0d0c0b'}}>
+      <div className="play-family-bar">
+        <span className="play-family-label">VERSIONS</span>
+        {!compare && family.map(s => (
+          <VersionPill key={s.id} s={s} active={s.id === singleId} onClick={() => setSingleId(s.id)} />
+        ))}
+        {compare && <span style={{color:'#9a9088',fontSize:'10px'}}>comparing two versions side by side</span>}
+        <button className="play-family-pill" onClick={fork} style={{marginLeft:'auto'}}
+          title="Create an alternate version — an independent copy; the original is never changed">
+          ⑂ Fork alt
+        </button>
+        <button className={`play-family-pill${compare ? ' active' : ''}`}
+          disabled={!hasVariants}
+          style={!hasVariants ? {opacity:0.4,cursor:'default'} : undefined}
+          title={hasVariants ? 'Toggle side-by-side compare of two versions' : 'Fork an alternate first to compare'}
+          onClick={() => hasVariants && setCompare(c => !c)}>
+          ⊟ Compare
+        </button>
+      </div>
+
+      {!compare ? (
+        <PlayRunner key={singleId} store={store} onStoreChange={onStoreChange} sceneId={singleId} />
+      ) : (
+        <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+          <div className="play-compare-half" style={{borderRight:'2px solid #2e2a28'}}>
+            <div className="play-compare-head">
+              <span>A</span>
+              <PaneSelect value={leftId} onChange={setLeftId} />
+              {(() => { const st = sceneStats(store.scenes.find(s => s.id === leftId)); return (
+                <span className="play-family-stats" style={{marginLeft:'auto'}}>
+                  {st.nodes}n · {st.choices}ch · {st.checks}✓ · {st.endings} ends · {st.words}w
+                </span>
+              ); })()}
+            </div>
+            <PlayRunner key={'L'+leftId} store={store} onStoreChange={onStoreChange} sceneId={leftId} compact />
+          </div>
+          <div className="play-compare-half">
+            <div className="play-compare-head">
+              <span>B</span>
+              <PaneSelect value={rightId} onChange={setRightId} />
+              {(() => { const st = sceneStats(store.scenes.find(s => s.id === rightId)); return (
+                <span className="play-family-stats" style={{marginLeft:'auto'}}>
+                  {st.nodes}n · {st.choices}ch · {st.checks}✓ · {st.endings} ends · {st.words}w
+                </span>
+              ); })()}
+            </div>
+            <PlayRunner key={'R'+rightId} store={store} onStoreChange={onStoreChange} sceneId={rightId} compact />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HowToUseModal({ onClose }) {
   const [section, setSection] = useState('overview');
 
@@ -5513,6 +5715,45 @@ function HowToUseModal({ onClose }) {
           <li><span className="howto-chip">📍 Checkpoint</span> — save your current position, variables, and path to a named checkpoint you can reload later from the same button's dropdown</li>
           <li><span className="howto-chip">⬇ Export Log</span> — downloads a text file of the exact path you took through the scene, useful for sharing a playtest</li>
         </ul>
+      </>
+    )},
+
+    { id: 'variants', title: 'Scene Variants & Compare', body: (
+      <>
+        <h4>Trying alternate takes without losing the original</h4>
+        <div className="howto-sub">Fork a scene, edit the copy freely, and run both versions side by side</div>
+        <p>
+          A <strong>variant</strong> is a complete, independent copy of a scene — an alternate
+          take you can rewrite, restructure, or hand to Claude, while the original stays exactly
+          as it was. Nothing is shared between them, so changes to one never touch the other.
+        </p>
+        <h5>Creating a variant</h5>
+        <ul>
+          <li>In the <span className="howto-chip">SCENES</span> sidebar, click the <span className="howto-chip">⑂</span> button on any scene to fork it. The copy appears indented right below, tagged <span className="howto-chip">ALT</span>, and becomes active so you can start editing it immediately.</li>
+          <li>Or, in <span className="howto-chip">PLAY</span>, use <span className="howto-chip">⑂ Fork alt</span> in the versions bar — this forks and drops the new copy straight into compare mode against its source.</li>
+          <li>Fork as many as you like — "alt 1", "alt 2"… all stay grouped with their original as a <strong>family</strong>.</li>
+        </ul>
+        <h5>Switching versions in PLAY</h5>
+        <p>
+          When a scene has variants, PLAY shows a <strong>VERSIONS</strong> bar across the top.
+          Each pill is one version (★ = the original, ⑂ = an alternate). Click a pill to run
+          that version. This is the quick way to feel how each take plays without any split screen.
+        </p>
+        <h5>Side-by-side compare</h5>
+        <p>
+          Click <span className="howto-chip">⊟ Compare</span> to split PLAY into two panes,
+          <strong> A</strong> and <strong>B</strong>. Each pane is a fully independent runner
+          with its own variables, path, hub state, and checkpoints — pick which version each
+          shows from its dropdown, then play them in parallel to compare pacing and branching.
+          Each pane's header shows quick stats: node count, choices, checks (✓), number of
+          endings, and word count.
+        </p>
+        <div className="howto-note">
+          Variants are just scenes with a hidden "variant of" link, so everything else works on
+          them normally — TREE editing, Claude (it's told it's editing an alternate take), Ink
+          export, quests, the works. When you settle on the take you want, delete the others, or
+          keep them around as saved alternatives.
+        </div>
       </>
     )},
 

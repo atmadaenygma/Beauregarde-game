@@ -171,6 +171,94 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   color: var(--amber); font-size: 10px; letter-spacing: 0.05em;
 }
 
+/* ── LEVEL BUILDER ─────────────────────────────────── */
+.level-layout { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.level-toolbar {
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 5px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); z-index: 10;
+}
+.level-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+.level-rail {
+  width: 180px; flex-shrink: 0; overflow-y: auto; padding: 10px;
+  background: var(--surface); border-right: 1px solid var(--border);
+}
+.level-rail-title { color: var(--text-dim); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; margin: 12px 0 6px; }
+.level-rail-title:first-child { margin-top: 0; }
+.level-palette { display: flex; flex-wrap: wrap; gap: 5px; }
+.level-pal-btn {
+  display: flex; align-items: center; gap: 5px; font-family: inherit; font-size: 10px;
+  padding: 5px 8px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--bone-dim);
+}
+.level-pal-btn:hover { border-color: var(--amber-dim); color: var(--bone); }
+.level-pal-btn.armed { border-color: var(--amber); color: var(--amber); background: rgba(200,136,10,0.08); }
+.level-pal-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.level-asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.level-asset {
+  position: relative; border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+  cursor: pointer; aspect-ratio: 1 / 1; background: #0d0c0b;
+}
+.level-asset.armed { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
+.level-asset img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.level-asset-name { position: absolute; bottom: 0; left: 0; right: 0; font-size: 8px; color: var(--bone-dim);
+  background: rgba(0,0,0,0.6); padding: 1px 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.level-asset-del { position: absolute; top: 1px; right: 1px; background: rgba(0,0,0,0.7); border: none;
+  color: #fff; font-size: 10px; line-height: 1; cursor: pointer; border-radius: 2px; padding: 0 3px; opacity: 0; }
+.level-asset:hover .level-asset-del { opacity: 1; }
+.level-canvas-wrap {
+  flex: 1; position: relative; overflow: hidden; min-width: 0;
+  background-color: #1b1815;
+  background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  cursor: grab; -webkit-user-select: none; user-select: none;
+}
+.level-canvas-wrap.panning { cursor: grabbing; }
+.level-canvas-wrap.testing { cursor: default; }
+.level-canvas-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.level-bounds {
+  position: absolute; top: 0; left: 0; border: 1.5px solid rgba(200,136,10,0.5);
+  background: rgba(0,0,0,0.15); pointer-events: none;
+}
+.level-bg-img, .level-fg-img { position: absolute; top: 0; left: 0; display: block; }
+.level-fg-img { pointer-events: none; opacity: 0.92; }
+.level-ent {
+  position: absolute; box-sizing: border-box; cursor: move;
+  display: flex; align-items: flex-start; justify-content: flex-start;
+}
+.level-ent.testing { cursor: pointer; }
+.level-ent.selected { outline: 2px solid var(--amber); outline-offset: 1px; z-index: 5; }
+.level-ent-label {
+  position: absolute; top: -15px; left: 0; font-size: 9px; white-space: nowrap;
+  padding: 0 4px; border-radius: 2px; background: rgba(0,0,0,0.6); color: #fff; pointer-events: none;
+}
+.level-ent img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.level-ent-resize {
+  position: absolute; right: -4px; bottom: -4px; width: 12px; height: 12px;
+  cursor: nwse-resize; background: var(--amber); border: 1px solid #1a1512; border-radius: 2px; z-index: 6;
+}
+/* per-type entity styling */
+.lent-spawn   { background: rgba(74,120,64,0.28);  border: 1.5px solid #4a7840; }
+.lent-npc     { background: rgba(58,88,120,0.30);  border: 1.5px solid #3a5878; }
+.lent-trigger { background: rgba(200,136,10,0.12); border: 1.5px dashed #a87820; }
+.lent-loot    { background: rgba(168,120,32,0.30); border: 1.5px solid #d8a830; }
+.lent-prop    { background: rgba(120,110,102,0.14);border: 1px solid rgba(154,144,136,0.4); }
+.lent-wall    { background: repeating-linear-gradient(45deg, rgba(138,26,16,0.32) 0 6px, rgba(138,26,16,0.12) 6px 12px);
+                border: 1.5px solid #8a1a10; }
+.level-inspector {
+  width: 250px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.level-insp-head { padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface2);
+  display: flex; align-items: center; justify-content: space-between; }
+.level-insp-head h4 { color: var(--amber); font-size: 11px; letter-spacing: 0.08em; }
+.level-insp-body { flex: 1; overflow-y: auto; padding: 14px; }
+.level-flash {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 30;
+  background: rgba(200,136,10,0.14); border: 1px solid var(--amber-dim); color: var(--amber);
+  font-size: 11px; padding: 6px 16px; border-radius: 5px; letter-spacing: 0.04em; pointer-events: none;
+}
+
 /* ── CHAT MAIN ─────────────────────────────────────── */
 .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -861,10 +949,18 @@ const DEFAULT_STORE = {
   canon: [],
   importedDocs: [],
   checkpoints: [],
+  assets: [],
   chatSessions: { default: { name: 'Main Session', messages: [] } },
   activeScene: 'cold_open',
   activeSession: 'default',
 };
+
+// A location's spatial level (the "level builder" data), created lazily the
+// first time you open the LEVEL view for a location.
+function makeDefaultLevel() {
+  return { width: 1920, height: 1080, grid: 32, bgAssetId: null, fgAssetId: null, entities: [] };
+}
+const LEVEL_ENTITY_TYPES = ['spawn', 'npc', 'trigger', 'loot', 'prop', 'wall'];
 
 // ── STORAGE HELPERS ───────────────────────────────────────────────────
 function loadStore() {
@@ -885,6 +981,7 @@ function loadStore() {
     if (!stored.importedDocs) stored.importedDocs = [];
     if (!stored.checkpoints) stored.checkpoints = [];
     if (!stored.quests) stored.quests = [];
+    if (!stored.assets) stored.assets = [];
     if (!stored.locations) {
       // First run after the locations feature: seed the registry and give
       // the two original scenes their obvious homes.
@@ -5451,6 +5548,463 @@ function PlayView({ store, onStoreChange }) {
   );
 }
 
+// ── LEVEL VIEW ────────────────────────────────────────────────────────
+// A spatial 2D editor for a location's level: set size / background /
+// foreground, and place spawn/npc/trigger/loot/prop/wall entities that link
+// back to dialogue scenes. Reuses the TreeView canvas approach (pan/zoom,
+// screenToWorld, translate/scale world div, drag ÷ zoom).
+const LEVEL_TYPE_COLORS = { spawn:'#4a7840', npc:'#3a5878', trigger:'#a87820', loot:'#d8a830', prop:'#9a9088', wall:'#8a1a10' };
+
+function LevelView({ store, onStoreChange, onLaunchScene }) {
+  const locations = store.locations || [];
+  const activeScene = store.scenes.find(s => s.id === store.activeScene);
+  const [locId, setLocId] = useState(activeScene?.locationId || locations[0]?.id || null);
+
+  // Follow the active scene's location while the tab is open
+  useEffect(() => {
+    const sc = store.scenes.find(s => s.id === store.activeScene);
+    if (sc?.locationId) setLocId(sc.locationId);
+  }, [store.activeScene]);
+
+  const location = locations.find(l => l.id === locId) || null;
+  const level = location?.level || makeDefaultLevel();
+  const assets = store.assets || [];
+  const assetById = (id) => assets.find(a => a.id === id);
+  const bg = level.bgAssetId ? assetById(level.bgAssetId) : null;
+  const fg = level.fgAssetId ? assetById(level.fgAssetId) : null;
+
+  const [offset, setOffset] = useState({ x: 60, y: 40 });
+  const [zoom, setZoom] = useState(0.4);
+  const [panning, setPanning] = useState(false);
+  const [panStart, setPanStart] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [drag, setDrag] = useState(null);   // { id, mode, ox,oy,ow,oh, startMX,startMY, curX,curY,curW,curH }
+  const [armed, setArmed] = useState(null);  // { kind:'entity', type } | { kind:'asset', assetId }
+  const [testing, setTesting] = useState(false);
+  const [flash, setFlash] = useState(null);
+  const wrapRef = useRef(null);
+  const fileRef = useRef(null);
+
+  const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(null), 1600); };
+  const snap = (v) => level.grid > 0 ? Math.round(v / level.grid) * level.grid : Math.round(v);
+
+  // Every level mutation goes through here; lazily creates location.level.
+  const mutate = (label, fn) => {
+    if (!locId) return;
+    const next = JSON.parse(JSON.stringify(store));
+    const loc = next.locations.find(l => l.id === locId);
+    if (!loc) return;
+    if (!loc.level) loc.level = makeDefaultLevel();
+    fn(loc.level, next);
+    onStoreChange(next, label);
+  };
+
+  const screenToWorld = (sx, sy) => {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return { wx: 0, wy: 0 };
+    return { wx: (sx - rect.left - offset.x) / zoom, wy: (sy - rect.top - offset.y) / zoom };
+  };
+
+  // Wheel-zoom at cursor (non-passive so preventDefault works)
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      setZoom(z => {
+        const nz = Math.min(3, Math.max(0.05, z * factor));
+        setOffset(o => ({ x: mx - (mx - o.x) * (nz / z), y: my - (my - o.y) * (nz / z) }));
+        return nz;
+      });
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
+
+  // Delete / Escape for the selected entity (ignored while typing)
+  useEffect(() => {
+    const handler = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 'Escape') { setSelected(null); setArmed(null); return; }
+      if (selected && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        mutate('Deleted entity', (lvl) => { lvl.entities = lvl.entities.filter(x => x.id !== selected); });
+        setSelected(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selected, store, locId]);
+
+  const addEntityAt = (type, wx, wy, assetId) => {
+    const a = assetId ? assetById(assetId) : null;
+    const w = a ? Math.min(a.w || 96, 400) : (type === 'trigger' || type === 'wall' ? 200 : 64);
+    const h = a ? Math.min(a.h || 96, 400) : (type === 'trigger' || type === 'wall' ? 120 : 64);
+    const id = `ent_${Date.now()}`;
+    mutate(`Placed ${type}`, (lvl) => {
+      lvl.entities.push({
+        id, type, x: snap(wx - w / 2), y: snap(wy - h / 2), w, h, label: '',
+        assetId: assetId || null, linkSceneId: null, linkNodeId: null, fire: 'interact',
+        setVar: '', setValue: true, spawnName: type === 'spawn' ? 'entry' : '',
+      });
+    });
+    setSelected(id);
+    setArmed(null);
+  };
+
+  const onCanvasMouseDown = (e) => {
+    if (testing || e.button !== 0) return;
+    if (e.target.closest('.level-ent')) return;
+    if (armed) {
+      const { wx, wy } = screenToWorld(e.clientX, e.clientY);
+      if (armed.kind === 'entity') addEntityAt(armed.type, wx, wy, null);
+      else if (armed.kind === 'asset') addEntityAt('prop', wx, wy, armed.assetId);
+      return;
+    }
+    setSelected(null);
+    setPanning(true);
+    setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+  };
+  const onCanvasMouseMove = (e) => {
+    if (panning && panStart) setOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+    if (drag) {
+      const dx = (e.clientX - drag.startMX) / zoom, dy = (e.clientY - drag.startMY) / zoom;
+      setDrag(d => d.mode === 'move'
+        ? { ...d, curX: d.ox + dx, curY: d.oy + dy }
+        : { ...d, curW: Math.max(8, d.ow + dx), curH: Math.max(8, d.oh + dy) });
+    }
+  };
+  const commitDrag = () => {
+    if (drag) {
+      const d = drag;
+      mutate(d.mode === 'move' ? 'Moved entity' : 'Resized entity', (lvl) => {
+        const ent = lvl.entities.find(x => x.id === d.id);
+        if (!ent) return;
+        if (d.mode === 'move') { ent.x = snap(d.curX); ent.y = snap(d.curY); }
+        else { ent.w = Math.max(8, snap(d.curW)); ent.h = Math.max(8, snap(d.curH)); }
+      });
+      setDrag(null);
+    }
+    setPanning(false);
+    setPanStart(null);
+  };
+
+  const fireEntity = (ent) => {
+    if (ent.type === 'npc' || ent.type === 'trigger') {
+      if (ent.linkSceneId && store.scenes.some(s => s.id === ent.linkSceneId)) {
+        showFlash(`launching "${store.scenes.find(s => s.id === ent.linkSceneId).name}"…`);
+        onLaunchScene(ent.linkSceneId);
+      } else showFlash(`${ent.type} "${ent.label || ent.id}" — no linked scene`);
+    } else if (ent.type === 'loot') {
+      showFlash(ent.setVar ? `would set ${ent.setVar} = ${String(ent.setValue)}` : `loot "${ent.label || ent.id}" — no variable set`);
+    } else if (ent.type === 'spawn') {
+      showFlash(`spawn point: ${ent.spawnName || ent.label || ent.id}`);
+    } else {
+      showFlash(`${ent.type}: ${ent.label || ent.id}`);
+    }
+  };
+
+  const onUploadAsset = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
+      const img = new Image();
+      img.onload = () => {
+        const next = JSON.parse(JSON.stringify(store));
+        if (!next.assets) next.assets = [];
+        next.assets.push({ id: `asset_${Date.now()}`, name: file.name.replace(/\.[^.]+$/, ''), kind: 'image', data: dataUrl, w: img.naturalWidth, h: img.naturalHeight });
+        onStoreChange(next, `Added asset: ${file.name}`);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+  const deleteAsset = (id, e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this asset? Placements using it lose their image.')) return;
+    const next = JSON.parse(JSON.stringify(store));
+    next.assets = (next.assets || []).filter(a => a.id !== id);
+    onStoreChange(next, 'Deleted asset');
+  };
+
+  const setLevelField = (field, value) => mutate(null, (lvl) => { lvl[field] = value; });
+  const updateEnt = (field, value) => mutate(null, (lvl) => {
+    const ent = lvl.entities.find(x => x.id === selected);
+    if (ent) ent[field] = value;
+  });
+  const deleteEnt = () => { mutate('Deleted entity', (lvl) => { lvl.entities = lvl.entities.filter(x => x.id !== selected); }); setSelected(null); };
+
+  const selEnt = level.entities.find(x => x.id === selected) || null;
+  const linkScene = selEnt?.linkSceneId ? store.scenes.find(s => s.id === selEnt.linkSceneId) : null;
+  const labelFor = (ent) => {
+    const base = ent.label || ent.type;
+    if (ent.type === 'spawn' && ent.spawnName) return `⚑ ${ent.spawnName}`;
+    if ((ent.type === 'npc' || ent.type === 'trigger') && ent.linkSceneId) {
+      const sc = store.scenes.find(s => s.id === ent.linkSceneId);
+      return `${base} → ${sc ? sc.name : ent.linkSceneId}`;
+    }
+    return base;
+  };
+
+  if (!locations.length) {
+    return <div className="level-layout"><div className="play-empty" style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      Create a location in the <strong style={{margin:'0 4px'}}>LOC</strong> sidebar tab first — levels attach to locations.
+    </div></div>;
+  }
+
+  return (
+    <div className="level-layout">
+      {/* Toolbar */}
+      <div className="level-toolbar">
+        <button className="tree-ctrl-btn" onClick={() => setZoom(z => Math.min(3, z * 1.2))}>+</button>
+        <button className="tree-ctrl-btn" onClick={() => setZoom(z => Math.max(0.05, z * 0.85))}>−</button>
+        <button className="tree-ctrl-btn" onClick={() => { setOffset({ x: 60, y: 40 }); setZoom(0.4); }} title="Reset view">↺</button>
+        <span style={{color:'var(--text-dim)',fontSize:'10px',minWidth:34}}>{Math.round(zoom*100)}%</span>
+        <select value={locId || ''} onChange={e => { setLocId(e.target.value); setSelected(null); }}
+          style={{background:'var(--surface)',border:'1px solid var(--border)',color:'var(--bone-dim)',fontFamily:'inherit',fontSize:'10px',padding:'3px 6px',borderRadius:4,outline:'none'}}
+          title="Which location's level you're editing">
+          {locations.map(l => <option key={l.id} value={l.id}>⌖ {l.name}</option>)}
+        </select>
+        <button className={`play-family-pill${testing ? ' active' : ''}`}
+          onClick={() => { setTesting(t => !t); setArmed(null); }}
+          title="Test mode: click an entity to fire its link">
+          {testing ? '● Testing' : '▷ Test'}
+        </button>
+        <span style={{marginLeft:'auto',color:'var(--text-dim)',fontSize:'10px'}}>
+          {level.entities.length} entities · {level.width}×{level.height}
+        </span>
+      </div>
+
+      <div className="level-body">
+        {/* Left rail — palette + asset library */}
+        {!testing && (
+          <div className="level-rail">
+            <div className="level-rail-title">Place</div>
+            <div className="level-palette">
+              {LEVEL_ENTITY_TYPES.map(t => (
+                <button key={t} className={`level-pal-btn${armed?.kind === 'entity' && armed.type === t ? ' armed' : ''}`}
+                  onClick={() => setArmed(a => a?.kind === 'entity' && a.type === t ? null : { kind: 'entity', type: t })}>
+                  <span className="level-pal-dot" style={{background: LEVEL_TYPE_COLORS[t]}} />
+                  {t}
+                </button>
+              ))}
+            </div>
+            {armed && <div style={{fontSize:'9px',color:'var(--amber)',marginTop:6,lineHeight:1.5}}>Click on the level to place. Esc to cancel.</div>}
+
+            <div className="level-rail-title">Assets</div>
+            <button className="level-pal-btn" style={{width:'100%',justifyContent:'center',marginBottom:6}}
+              onClick={() => fileRef.current?.click()}>+ Upload image</button>
+            <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={onUploadAsset} />
+            <div className="level-asset-grid">
+              {assets.map(a => (
+                <div key={a.id} className={`level-asset${armed?.kind === 'asset' && armed.assetId === a.id ? ' armed' : ''}`}
+                  title={`${a.name} (${a.w}×${a.h}) — click to place as a prop`}
+                  onClick={() => setArmed(x => x?.kind === 'asset' && x.assetId === a.id ? null : { kind: 'asset', assetId: a.id })}>
+                  <img src={a.data} alt={a.name} />
+                  <span className="level-asset-name">{a.name}</span>
+                  <button className="level-asset-del" onClick={e => deleteAsset(a.id, e)}>✕</button>
+                </div>
+              ))}
+              {assets.length === 0 && <div style={{gridColumn:'1 / -1',color:'var(--text-dim)',fontSize:'9px',lineHeight:1.5}}>No assets yet. Upload images to use as backgrounds, sprites, and props.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* Canvas */}
+        <div className={`level-canvas-wrap${panning ? ' panning' : ''}${testing ? ' testing' : ''}`}
+          ref={wrapRef}
+          onMouseDown={onCanvasMouseDown}
+          onMouseMove={onCanvasMouseMove}
+          onMouseUp={commitDrag}
+          onMouseLeave={commitDrag}>
+          {flash && <div className="level-flash">{flash}</div>}
+          <div className="level-canvas-inner"
+            style={{ transform: `translate(${offset.x}px,${offset.y}px) scale(${zoom})`, transformOrigin: '0 0' }}>
+            <div className="level-bounds" style={{ width: level.width, height: level.height }} />
+            {bg && <img className="level-bg-img" src={bg.data} style={{ width: level.width, height: level.height }} alt="" draggable={false} />}
+            {level.grid > 0 && (
+              <div style={{ position:'absolute', top:0, left:0, width: level.width, height: level.height, pointerEvents:'none',
+                backgroundImage:'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
+                backgroundSize:`${level.grid}px ${level.grid}px` }} />
+            )}
+            {level.entities.map(ent => {
+              const d = drag && drag.id === ent.id ? drag : null;
+              const x = d && d.mode === 'move' ? d.curX : ent.x;
+              const y = d && d.mode === 'move' ? d.curY : ent.y;
+              const w = d && d.mode === 'resize' ? d.curW : ent.w;
+              const h = d && d.mode === 'resize' ? d.curH : ent.h;
+              const asset = ent.assetId ? assetById(ent.assetId) : null;
+              const isSel = selected === ent.id;
+              return (
+                <div key={ent.id}
+                  className={`level-ent lent-${ent.type}${isSel ? ' selected' : ''}${testing ? ' testing' : ''}`}
+                  style={{ left: x, top: y, width: w, height: h }}
+                  onMouseDown={e => {
+                    if (testing || e.button !== 0) return;
+                    e.stopPropagation();
+                    setSelected(ent.id); setArmed(null);
+                    setDrag({ id: ent.id, mode: 'move', ox: ent.x, oy: ent.y, startMX: e.clientX, startMY: e.clientY, curX: ent.x, curY: ent.y });
+                  }}
+                  onClick={() => { if (testing) fireEntity(ent); }}>
+                  {asset && <img src={asset.data} alt="" draggable={false} />}
+                  <div className="level-ent-label" style={{ background: LEVEL_TYPE_COLORS[ent.type] }}>{labelFor(ent)}</div>
+                  {isSel && !testing && (
+                    <div className="level-ent-resize"
+                      onMouseDown={e => { e.stopPropagation(); setDrag({ id: ent.id, mode: 'resize', ow: ent.w, oh: ent.h, startMX: e.clientX, startMY: e.clientY, curW: ent.w, curH: ent.h }); }} />
+                  )}
+                </div>
+              );
+            })}
+            {fg && <img className="level-fg-img" src={fg.data} style={{ width: level.width, height: level.height }} alt="" draggable={false} />}
+          </div>
+        </div>
+
+        {/* Inspector — entity fields when one is selected, else level settings */}
+        {!testing && (
+          <div className="level-inspector">
+            <div className="level-insp-head">
+              <h4>{selEnt ? `${selEnt.type.toUpperCase()}` : 'LEVEL SETTINGS'}</h4>
+              {selEnt && <button className="close-btn" onClick={() => setSelected(null)}>✕</button>}
+            </div>
+            <div className="level-insp-body">
+              {!selEnt ? (
+                <>
+                  <div className="edit-field-label">Location</div>
+                  <div style={{color:'var(--bone-dim)',fontSize:'11px',marginBottom:8}}>{location?.name}</div>
+                  <div style={{display:'flex',gap:6}}>
+                    <div style={{flex:1}}>
+                      <div className="edit-field-label">Width</div>
+                      <input className="edit-next-input" type="number" style={{width:'100%'}} value={level.width}
+                        onChange={e => setLevelField('width', Math.max(64, Number(e.target.value) || 0))} />
+                    </div>
+                    <div style={{flex:1}}>
+                      <div className="edit-field-label">Height</div>
+                      <input className="edit-next-input" type="number" style={{width:'100%'}} value={level.height}
+                        onChange={e => setLevelField('height', Math.max(64, Number(e.target.value) || 0))} />
+                    </div>
+                  </div>
+                  <div className="edit-field-label">Grid snap (0 = off)</div>
+                  <input className="edit-next-input" type="number" style={{width:'100%'}} value={level.grid}
+                    onChange={e => setLevelField('grid', Math.max(0, Number(e.target.value) || 0))} />
+                  <div className="edit-field-label">Background image</div>
+                  <select className="edit-select" value={level.bgAssetId || ''} onChange={e => setLevelField('bgAssetId', e.target.value || null)}>
+                    <option value="">— none —</option>
+                    {assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  <div className="edit-field-label">Foreground overlay</div>
+                  <select className="edit-select" value={level.fgAssetId || ''} onChange={e => setLevelField('fgAssetId', e.target.value || null)}>
+                    <option value="">— none —</option>
+                    {assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  <div style={{fontSize:'9px',color:'var(--text-dim)',marginTop:12,lineHeight:1.6}}>
+                    Pick an entity type or asset from the left rail, then click the level to place it. Select a placed entity to edit and link it.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="edit-field-label">Label</div>
+                  <input className="edit-next-input" style={{width:'100%'}} value={selEnt.label || ''}
+                    onChange={e => updateEnt('label', e.target.value)} placeholder={selEnt.type} />
+
+                  <div style={{display:'flex',gap:6}}>
+                    <div style={{flex:1}}><div className="edit-field-label">X</div>
+                      <input className="edit-next-input" type="number" style={{width:'100%'}} value={Math.round(selEnt.x)} onChange={e => updateEnt('x', Number(e.target.value) || 0)} /></div>
+                    <div style={{flex:1}}><div className="edit-field-label">Y</div>
+                      <input className="edit-next-input" type="number" style={{width:'100%'}} value={Math.round(selEnt.y)} onChange={e => updateEnt('y', Number(e.target.value) || 0)} /></div>
+                  </div>
+                  <div style={{display:'flex',gap:6}}>
+                    <div style={{flex:1}}><div className="edit-field-label">W</div>
+                      <input className="edit-next-input" type="number" style={{width:'100%'}} value={Math.round(selEnt.w)} onChange={e => updateEnt('w', Math.max(8, Number(e.target.value) || 0))} /></div>
+                    <div style={{flex:1}}><div className="edit-field-label">H</div>
+                      <input className="edit-next-input" type="number" style={{width:'100%'}} value={Math.round(selEnt.h)} onChange={e => updateEnt('h', Math.max(8, Number(e.target.value) || 0))} /></div>
+                  </div>
+
+                  {(selEnt.type === 'npc' || selEnt.type === 'prop') && (
+                    <>
+                      <div className="edit-field-label">Sprite / image</div>
+                      <select className="edit-select" value={selEnt.assetId || ''} onChange={e => updateEnt('assetId', e.target.value || null)}>
+                        <option value="">— none —</option>
+                        {assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </select>
+                    </>
+                  )}
+
+                  {(selEnt.type === 'npc' || selEnt.type === 'trigger') && (
+                    <>
+                      <div className="edit-field-label">Launch scene</div>
+                      <select className="edit-select" value={selEnt.linkSceneId || ''} onChange={e => { updateEnt('linkSceneId', e.target.value || null); updateEnt('linkNodeId', null); }}>
+                        <option value="">— none —</option>
+                        {store.scenes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                      {selEnt.linkSceneId && (
+                        <>
+                          <div className="edit-field-label">At node (optional)</div>
+                          <select className="edit-select" value={selEnt.linkNodeId || ''} onChange={e => updateEnt('linkNodeId', e.target.value || null)}>
+                            <option value="">start of scene</option>
+                            {(linkScene?.nodes || []).map(n => <option key={n.id} value={n.id}>{n.id}{n.text ? ` — ${n.text.slice(0,24)}` : ''}</option>)}
+                          </select>
+                        </>
+                      )}
+                      {selEnt.type === 'trigger' && (
+                        <>
+                          <div className="edit-field-label">Fires on</div>
+                          <select className="edit-select" value={selEnt.fire || 'interact'} onChange={e => updateEnt('fire', e.target.value)}>
+                            <option value="interact">interact</option>
+                            <option value="auto">auto (on enter)</option>
+                          </select>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {selEnt.type === 'loot' && (
+                    <>
+                      <div className="edit-field-label">On pickup, set variable</div>
+                      <select className="edit-select" value={selEnt.setVar || ''} onChange={e => updateEnt('setVar', e.target.value)}>
+                        <option value="">— none —</option>
+                        {Object.keys(store.variables || {}).map(k => <option key={k} value={k}>{k}</option>)}
+                      </select>
+                      {selEnt.setVar && (
+                        <>
+                          <div className="edit-field-label">Value</div>
+                          {store.variables[selEnt.setVar]?.type === 'bool' ? (
+                            <select className="edit-select" value={String(selEnt.setValue)} onChange={e => updateEnt('setValue', e.target.value === 'true')}>
+                              <option value="true">true</option>
+                              <option value="false">false</option>
+                            </select>
+                          ) : (
+                            <input className="edit-next-input" type="number" style={{width:'100%'}} value={selEnt.setValue} onChange={e => updateEnt('setValue', Number(e.target.value) || 0)} />
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {selEnt.type === 'spawn' && (
+                    <>
+                      <div className="edit-field-label">Spawn name (entry-point id)</div>
+                      <input className="edit-next-input" style={{width:'100%'}} value={selEnt.spawnName || ''} onChange={e => updateEnt('spawnName', e.target.value)} placeholder="entry" />
+                    </>
+                  )}
+
+                  <button className="edit-btn edit-btn-danger" style={{marginTop:12}} onClick={deleteEnt}>Delete Entity</button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function HowToUseModal({ onClose }) {
   const [section, setSection] = useState('overview');
 
@@ -5757,6 +6311,64 @@ function HowToUseModal({ onClose }) {
       </>
     )},
 
+    { id: 'level', title: 'Level Builder', body: (
+      <>
+        <h4>Building the physical spaces</h4>
+        <div className="howto-sub">A spatial 2D editor where dialogue's places become navigable levels</div>
+        <p>
+          The <span className="howto-chip">LEVEL</span> tab is a top-down/side canvas for laying
+          out the actual space a scene happens in — its size, background and foreground art, and
+          the things placed in it (spawn points, NPCs, trigger zones, loot, props, walls). A
+          level <strong>belongs to a location</strong>: because scenes already point to a location
+          (the <span className="howto-chip">LOC</span> tab and the per-scene location dropdown),
+          opening LEVEL edits the active scene's location — so the dialogue you wrote and the
+          space it happens in are automatically the same place.
+        </p>
+        <div className="howto-note">
+          This is the <em>authoring</em> side. Walking around with collision and a camera is the
+          job of the actual game runtime — the studio's LEVEL view is for placing things and
+          wiring their links, and for verifying those links fire.
+        </div>
+        <h5>Assets</h5>
+        <p>
+          The left rail has an <strong>Asset Library</strong> — upload images once (backgrounds,
+          sprites, props) and reuse them everywhere by reference. Assets are stored once and are
+          deliberately kept out of the undo history, so a level full of art won't blow your saved
+          storage. (Because of that, deleting an asset isn't undoable.)
+        </p>
+        <h5>Placing things</h5>
+        <ul>
+          <li>Click an entity type in the left palette (spawn / npc / trigger / loot / prop / wall) to arm it, then click the level to drop it. Esc cancels.</li>
+          <li>Or click an asset thumbnail to arm it, then click to place it as a prop.</li>
+          <li>Drag an entity to move it; drag its corner handle to resize; it snaps to the grid (set the grid size in Level Settings).</li>
+          <li>Select an entity to edit it in the right inspector; Delete removes it.</li>
+        </ul>
+        <h5>Level settings</h5>
+        <p>
+          With nothing selected, the right panel shows the level's width, height, grid snap, and
+          background / foreground image pickers (foreground draws above entities — no parallax).
+          The location dropdown in the toolbar switches which location's level you're editing.
+        </p>
+        <h5>Connecting to your scenes</h5>
+        <p>
+          This is the point of it. Select an <strong>NPC</strong> or <strong>trigger</strong> and
+          give it a <strong>Launch scene</strong> (and optionally a specific node); a trigger also
+          picks whether it fires on interact or automatically. <strong>Loot</strong> sets one of
+          your existing variables on pickup. <strong>Spawn points</strong> get a name so a future
+          entry can arrive there.
+        </p>
+        <h5>Testing the links</h5>
+        <p>
+          Hit <span className="howto-chip">▷ Test</span> in the toolbar. Now clicking an entity
+          fires its link: an NPC or trigger opens its linked scene right in <span className="howto-chip">PLAY</span>;
+          loot flashes the variable it would set; a spawn flashes its name. That's the full loop —
+          you built the dialogue, you built the space, and one click confirms they're wired
+          together. (PLAY starts a scene from its first node; a linked node is stored on the
+          entity for the game runtime.)
+        </p>
+      </>
+    )},
+
     { id: 'importexport', title: 'Import & Export', body: (
       <>
         <h4>Moving content in and out</h4>
@@ -5936,7 +6548,13 @@ function App() {
     saveStore(newStore);
     if (snapshotLabel) {
       setHistory(prev => {
-        const snaps = [...prev.snapshots, { timestamp: Date.now(), label: snapshotLabel, state: newStore }]
+        // Exclude the asset library from history snapshots — a level full of
+        // base64 images would otherwise be duplicated across all MAX_HISTORY
+        // snapshots and blow the localStorage quota. Assets live once in the
+        // main store save and are merged back on undo/restore; they are not
+        // themselves undoable (a media library isn't story state).
+        const snapState = { ...newStore, assets: [] };
+        const snaps = [...prev.snapshots, { timestamp: Date.now(), label: snapshotLabel, state: snapState }]
           .slice(-MAX_HISTORY);
         const h = { snapshots: snaps };
         saveHistory(h);
@@ -5956,15 +6574,17 @@ function App() {
         const snaps = history.snapshots;
         if (snaps.length > 1) {
           const prev = snaps[snaps.length - 2];
-          setStoreRaw(prev.state);
-          saveStore(prev.state);
+          // snapshots omit assets — keep the live asset library across undo
+          const restored = { ...prev.state, assets: store.assets };
+          setStoreRaw(restored);
+          saveStore(restored);
           setHistory(h => ({ snapshots: h.snapshots.slice(0, -1) }));
         }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [history]);
+  }, [history, store]);
 
   // "?" opens the shortcuts overlay — ignored while typing
   useEffect(() => {
@@ -5978,9 +6598,10 @@ function App() {
   }, []);
 
   const restoreSnapshot = useCallback((snap) => {
-    onStoreChange(snap.state, `Restored: ${snap.label}`);
+    // snapshots omit assets — keep the live asset library when restoring
+    onStoreChange({ ...snap.state, assets: store.assets }, `Restored: ${snap.label}`);
     setShowHistory(false);
-  }, [onStoreChange]);
+  }, [onStoreChange, store]);
 
   const injectNodeToChat = useCallback((node) => {
     const preview = (node.text || node.label || Object.values(node.branches || {})[0] || '').slice(0, 100);
@@ -5996,6 +6617,20 @@ function App() {
     }
     setTab('TREE');
     setJumpToNode({ sceneId, nodeId, ts: Date.now() });
+  }, [store, onStoreChange]);
+
+  // Launch a scene in PLAY (used by the level builder's Test mode: click an
+  // entity → open its linked dialogue scene). PLAY starts the scene at its
+  // first node — a linked node id is recorded on the entity for the game
+  // runtime but the studio's lightweight runner always begins at the start.
+  const onLaunchScene = useCallback((sceneId) => {
+    if (!store.scenes.some(s => s.id === sceneId)) return;
+    if (store.activeScene !== sceneId) {
+      const next = JSON.parse(JSON.stringify(store));
+      next.activeScene = sceneId;
+      onStoreChange(next, null);
+    }
+    setTab('PLAY');
   }, [store, onStoreChange]);
 
   return (
@@ -6052,10 +6687,10 @@ function App() {
           {/* DRAG HANDLE */}
           <div className={`resize-handle${resizing ? ' active' : ''}`} onMouseDown={startResize} />
 
-          {/* RIGHT — TREE / STORY / PLAY */}
+          {/* RIGHT — TREE / STORY / LEVEL / PLAY */}
           <div className="right-col">
             <div className="right-tabs">
-              {['TREE','STORY','PLAY'].map(t => (
+              {['TREE','STORY','LEVEL','PLAY'].map(t => (
                 <button key={t} className={`right-tab-btn${tab===t?' active':''}`} onClick={() => setTab(t)}>{t}</button>
               ))}
               <span style={{marginLeft:'auto',color:'var(--text-dim)',fontSize:'10px'}}>
@@ -6066,6 +6701,7 @@ function App() {
               {tab === 'TREE'  && <TreeView  store={store} onStoreChange={onStoreChange} onNodeContext={injectNodeToChat} centerTrigger={treeCenterTrigger} jumpToNode={jumpToNode} onJumpToNode={jumpToNodeInScene} />}
               {tab === 'PLAY'  && <PlayView  store={store} onStoreChange={onStoreChange} />}
               {tab === 'STORY' && <StoryView store={store} onStoreChange={onStoreChange} onSwitchTab={setTab} />}
+              {tab === 'LEVEL' && <LevelView store={store} onStoreChange={onStoreChange} onLaunchScene={onLaunchScene} />}
             </div>
           </div>
         </div>

@@ -1,0 +1,333 @@
+{
+  "people": [
+    {
+      "id": "c2",
+      "name": "RAYMOND",
+      "role": "store clerk",
+      "handle": "// network contact",
+      "status": "CONTACT",
+      "portrait": "../graphics/portraits/npc/raymond_portrait.png",
+      "info": "Runs the convenience store. Network operative. Gives food, information, warnings.",
+      "discovered": true,
+      "category": null,
+      "trust": 0,
+      "tags": [
+        "network"
+      ],
+      "alignment": "neutral",
+      "enemyType": "weak",
+      "hitPoints": 10,
+      "lootable": false,
+      "lootItems": [],
+      "pickpocketable": false,
+      "pickpocketDifficulty": "medium",
+      "pickpocketItems": [],
+      "caughtConsequence": ""
+    },
+    {
+      "id": "c3",
+      "name": "DIEGO",
+      "role": "street vendor",
+      "handle": "// 20 years in Veil",
+      "status": "CONTACT",
+      "portrait": "../graphics/portraits/npc/diego_portrait.png",
+      "info": "Street vendor, restaurant owner. Warm. Holds the computer password.",
+      "discovered": true,
+      "category": null,
+      "trust": 0,
+      "tags": [
+        "food"
+      ],
+      "alignment": "neutral",
+      "enemyType": "weak",
+      "hitPoints": 10,
+      "lootable": false,
+      "lootItems": [],
+      "pickpocketable": false,
+      "pickpocketDifficulty": "medium",
+      "pickpocketItems": [],
+      "caughtConsequence": ""
+    },
+    {
+      "id": "c4",
+      "name": "PHARMACIST",
+      "role": "network medic",
+      "handle": "// always open",
+      "status": "CONTACT",
+      "portrait": "../graphics/portraits/npc/pharmacist_portrait.png",
+      "info": "Safe space. No questions asked. Card for Dr. Chen.",
+      "discovered": true,
+      "category": null,
+      "trust": 0,
+      "tags": [
+        "safe space"
+      ],
+      "alignment": "neutral",
+      "enemyType": "weak",
+      "hitPoints": 10,
+      "lootable": false,
+      "lootItems": [],
+      "pickpocketable": false,
+      "pickpocketDifficulty": "medium",
+      "pickpocketItems": [],
+      "caughtConsequence": ""
+    },
+    {
+      "id": "c5",
+      "name": "DR. CHEN",
+      "role": "mod medic",
+      "handle": "// network clinic",
+      "status": "CONTACT",
+      "portrait": "",
+      "info": "Treats modifications. Network protected. Midnight clinic.",
+      "discovered": false,
+      "category": null,
+      "trust": 0,
+      "tags": [
+        "medical"
+      ],
+      "alignment": "neutral",
+      "enemyType": "weak",
+      "hitPoints": 10,
+      "lootable": false,
+      "lootItems": [],
+      "pickpocketable": false,
+      "pickpocketDifficulty": "medium",
+      "pickpocketItems": [],
+      "caughtConsequence": ""
+    },
+    {
+      "id": "c6",
+      "name": "COLLETTE",
+      "role": "missing person",
+      "handle": "// gone for years",
+      "status": "MISSING",
+      "portrait": "../graphics/portraits/npc/collette_portrait.png",
+      "info": "Community leader. Missing for years. The network was built around her disappearance.",
+      "discovered": true,
+      "category": null,
+      "trust": 0,
+      "tags": [
+        "mystery"
+      ],
+      "alignment": "neutral",
+      "enemyType": "weak",
+      "hitPoints": 10,
+      "lootable": false,
+      "lootItems": [],
+      "pickpocketable": false,
+      "pickpocketDifficulty": "medium",
+      "pickpocketItems": [],
+      "caughtConsequence": ""
+    },
+    {
+      "id": "c7",
+      "name": "CHARLIE",
+      "role": "archivist",
+      "handle": "// keeper of records",
+      "status": "CONTACT",
+      "portrait": "",
+      "info": "Archivist. Knows where to find things. Cautious.",
+      "discovered": false,
+      "category": null,
+      "trust": 0,
+      "tags": [
+        "info"
+      ],
+      "alignment": "neutral",
+      "enemyType": "weak",
+      "hitPoints": 10,
+      "lootable": false,
+      "lootItems": [],
+      "pickpocketable": false,
+      "pickpocketDifficulty": "medium",
+      "pickpocketItems": [],
+      "caughtConsequence": ""
+    }
+  ],
+  "quests": {
+    "major": [
+      {
+        "id": "q1",
+        "name": "The Signal",
+        "status": "ACTIVE",
+        "progress": "Following threads",
+        "info": "The network was built around her disappearance. Years missing. Someone has answers.",
+        "category": "mystery"
+      },
+      {
+        "id": "q3",
+        "name": "Collette's Trail",
+        "status": "ACTIVE",
+        "progress": "Intelligence gathering",
+        "info": "Follow every thread. Who built this network. Who is Collette.",
+        "category": "mystery"
+      }
+    ],
+    "minor": [
+      {
+        "id": "q2",
+        "name": "Find the Password",
+        "status": "ACTIVE",
+        "progress": "Asking around",
+        "info": "Desktop PC in the apartment is locked. Someone trusted with the password.",
+        "category": "task"
+      }
+    ]
+  },
+  "dialogue": {
+    "raymond__first_meeting": {
+      "id": "dt1",
+      "name": "Raymond — First Meeting",
+      "treeType": "quest",
+      "outfitCondition": "any",
+      "nodes": []
+    },
+    "diego__food_offer": {
+      "id": "dt2",
+      "name": "Diego — Food Offer",
+      "treeType": "quest",
+      "outfitCondition": "any",
+      "nodes": []
+    },
+    "pharmacist__safe_space": {
+      "id": "dt3",
+      "name": "Pharmacist — Safe Space",
+      "treeType": "quest",
+      "outfitCondition": "any",
+      "nodes": []
+    },
+    "new_tree": {
+      "id": "id_1780123976188_3",
+      "name": "New Tree",
+      "treeType": "quest",
+      "outfitCondition": "any",
+      "nodes": [
+        {
+          "id": "id_1780123994248_6",
+          "internal": true,
+          "voice": "FEAR",
+          "npc": "Man, this is the first time leaving the apartment.",
+          "opts": [
+            {
+              "t": "",
+              "next": "id_1780124022081_7"
+            }
+          ]
+        },
+        {
+          "id": "id_1780124022081_7",
+          "internal": true,
+          "voice": "DOUBT",
+          "npc": "I probably should equip my Hoodie, being out here leaves me very exposed.",
+          "opts": [
+            {
+              "t": "",
+              "next": "id_1780124062389_9"
+            }
+          ]
+        },
+        {
+          "id": "id_1780124062389_9",
+          "internal": true,
+          "voice": "RESOLVE",
+          "npc": "Not my problem, This is my world I can do what I want.",
+          "opts": [
+            {
+              "t": "",
+              "next": "id_1780124096997_11"
+            }
+          ]
+        },
+        {
+          "id": "id_1780124096997_11",
+          "npc": "",
+          "relDelta": "+0",
+          "opts": []
+        }
+      ]
+    }
+  },
+  "scenes": [
+    {
+      "id": "id_1780123843710_1",
+      "name": "fourth_floor_hallway",
+      "atmosphere": "",
+      "sceneType": "neutral",
+      "octaviaWorldX": 1035,
+      "elevatorFloor": null,
+      "chars": [
+        {
+          "charId": "c1",
+          "worldX": 0
+        }
+      ],
+      "storeItems": [],
+      "dialogueTrigger": {
+        "key": "new_tree",
+        "worldX": 904
+      }
+    }
+  ],
+  "spawns": [],
+  "outfits": [
+    {
+      "id": "cyber_octavia",
+      "label": "REGULAR",
+      "badge": "R",
+      "color": "#40c080",
+      "locked": true
+    },
+    {
+      "id": "hoodie",
+      "label": "HOODIE",
+      "badge": "H",
+      "color": "#4ab8d0",
+      "locked": true
+    }
+  ],
+  "audio": [
+    {
+      "id": "au1",
+      "label": "The Veil — Daytime",
+      "file": "veil_day.mp3",
+      "type": "music",
+      "loop": true
+    },
+    {
+      "id": "au2",
+      "label": "The Veil — Night",
+      "file": "veil_night.mp3",
+      "type": "music",
+      "loop": true
+    },
+    {
+      "id": "au3",
+      "label": "Corner Store Ambient",
+      "file": "corner_store.mp3",
+      "type": "ambient",
+      "loop": true
+    },
+    {
+      "id": "au4",
+      "label": "Tense Underscore",
+      "file": "tense.mp3",
+      "type": "music",
+      "loop": true
+    },
+    {
+      "id": "au5",
+      "label": "Notification Ping",
+      "file": "notification.wav",
+      "type": "sfx",
+      "loop": false
+    },
+    {
+      "id": "au6",
+      "label": "Door",
+      "file": "door.wav",
+      "type": "sfx",
+      "loop": false
+    }
+  ]
+}

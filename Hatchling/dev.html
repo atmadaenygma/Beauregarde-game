@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HATCHLING — Dev Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #060402;
+      color: #e8d2a0;
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+    .title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      color: #d4a020;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: #3a2808;
+    }
+    .divider {
+      width: 320px;
+      height: 1px;
+      background: #1a1208;
+      margin: 20px auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      max-width: 860px;
+      width: 100%;
+    }
+
+    .card {
+      background: #0a0805;
+      border: 1px solid #1a1208;
+      padding: 20px 20px 16px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color .15s, background .15s;
+      display: block;
+      position: relative;
+    }
+    .card:hover {
+      border-color: #5a3a18;
+      background: #0e0b07;
+    }
+    .card:hover .card-arrow { color: #d4a020; }
+
+    .card-tag {
+      font-size: 7px;
+      letter-spacing: 2px;
+      color: #5a3a18;
+      margin-bottom: 10px;
+    }
+    .card-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e8d2a0;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .card-desc {
+      font-size: 9px;
+      color: #7a6040;
+      line-height: 1.8;
+      letter-spacing: .5px;
+    }
+    .card-arrow {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-size: 12px;
+      color: #3a2808;
+      transition: color .15s;
+    }
+    .card-shortcuts {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid #110d07;
+      font-size: 8px;
+      color: #3a2808;
+      letter-spacing: 1px;
+    }
+    .card-shortcuts span {
+      color: #5a3a18;
+      margin-right: 6px;
+    }
+
+    .section-label {
+      max-width: 860px;
+      width: 100%;
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: #3a2808;
+      margin-bottom: 10px;
+      margin-top: 28px;
+    }
+    .section-label:first-of-type { margin-top: 0; }
+
+    .footer {
+      margin-top: 52px;
+      font-size: 7px;
+      letter-spacing: 2px;
+      color: #1a1208;
+      text-align: center;
+    }
+    .shortcut-hint {
+      margin-top: 32px;
+      max-width: 860px;
+      width: 100%;
+      background: #0a0805;
+      border: 1px solid #110d07;
+      padding: 12px 16px;
+      font-size: 8px;
+      color: #3a2808;
+      letter-spacing: 1px;
+      line-height: 2;
+    }
+    .shortcut-hint b { color: #5a3a18; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="title">HATCHLING — DEV HUB</div>
+    <div class="divider"></div>
+    <div class="subtitle">INTERNAL TOOLS &nbsp;·&nbsp; NOT FOR RELEASE</div>
+  </div>
+
+  <div class="section-label">GAME</div>
+  <div class="grid">
+    <a class="card" href="Hatchling Quest 1.html">
+      <div class="card-arrow">↗</div>
+      <div class="card-tag">PRIMARY</div>
+      <div class="card-name">Hatchling Quest I</div>
+      <div class="card-desc">Main playable build. Press TAB in-game to toggle the debug overlay. Ctrl+Shift+E to open editor, Ctrl+Shift+D to return here.</div>
+      <div class="card-shortcuts"><span>TAB</span>debug overlay &nbsp;<span>CTRL+SHIFT+E</span>editor &nbsp;<span>CTRL+SHIFT+D</span>dev hub</div>
+    </a>
+  </div>
+
+  <div class="section-label">EDITORS</div>
+  <div class="grid">
+    <a class="card" href="Hatchling Quest Editor.html">
+      <div class="card-arrow">↗</div>
+      <div class="card-tag">EDITOR</div>
+      <div class="card-name">Quest Editor</div>
+      <div class="card-desc">Quests, characters, dialogue, places, thoughts. MAP tab: drag-and-drop location canvas with world coordinates. TREE tab: node-graph dialogue tree builder.</div>
+    </a>
+    <a class="card" href="Hatchling Threads.html">
+      <div class="card-arrow">↗</div>
+      <div class="card-tag">VIEWER</div>
+      <div class="card-name">Threads Viewer</div>
+      <div class="card-desc">Investigation thread browser. Read-only view of all active threads, their categories, and connection states.</div>
+    </a>
+  </div>
+
+  <div class="section-label">DESIGN DOCS</div>
+  <div class="grid">
+    <a class="card" href="DESIGN_DOCUMENTATION.md">
+      <div class="card-arrow">↗</div>
+      <div class="card-tag">DOC</div>
+      <div class="card-name">Design Documentation</div>
+      <div class="card-desc">Color palettes, HUD sizing, animations, inventory items, app layouts, 16 voice channels.</div>
+    </a>
+    <a class="card" href="ITEMS_AND_LOCATIONS.md">
+      <div class="card-arrow">↗</div>
+      <div class="card-tag">DOC</div>
+      <div class="card-name">Items &amp; Locations</div>
+      <div class="card-desc">Item definitions, restore values, location access rules.</div>
+    </a>
+    <a class="card" href="md_Files/HATCHLING_ADDENDUMS.md">
+      <div class="card-arrow">↗</div>
+      <div class="card-tag">DOC</div>
+      <div class="card-name">Addendums</div>
+      <div class="card-desc">All post-launch design addendums and system changes.</div>
+    </a>
+    <a class="card" href="md_Files/HATCHLING_THOUGHT_SYSTEM.md">
+      <div class="card-arrow">↗</div>
+      <div class="card-tag">DOC</div>
+      <div class="card-name">Thought System</div>
+      <div class="card-desc">Internal monologue system, voice channels, trigger conditions, frequency.</div>
+    </a>
+  </div>
+
+  <div class="shortcut-hint">
+    <b>IN-GAME SHORTCUTS</b> &nbsp;·&nbsp;
+    <b>TAB</b> toggle debug overlay &nbsp;·&nbsp;
+    <b>CTRL+SHIFT+E</b> open Quest Editor &nbsp;·&nbsp;
+    <b>CTRL+SHIFT+D</b> open Dev Hub &nbsp;·&nbsp;
+    <b>I</b> open device HUD (requires phone)
+  </div>
+
+  <div class="footer">HATCHLING INTERACTIVE © 2026 &nbsp;·&nbsp; INTERNAL ONLY</div>
+
+</body>
+</html>

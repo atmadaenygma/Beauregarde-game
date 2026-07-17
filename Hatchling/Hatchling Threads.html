@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HATCHLING — Threads</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }
+#scale-wrap { width:1280px; height:720px; position:relative; transform-origin:top left; }
+</style>
+</head>
+<body>
+<div id="scale-wrap"><div id="root"></div></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+const { useState } = React;
+
+// ── PALETTE ───────────────────────────────────────────────────
+const C = {
+  bg:     '#080604',
+  card:   '#1c1610',
+  chrome: '#241c10',
+  hi:     '#2e2418',
+  text:   '#d4b882',
+  dim:    '#7a6040',
+  dimmer: '#4a3820',
+  red:    '#c43028',
+  gold:   '#d4a020',
+  border: '#4a3418',
+  bright: '#e8d2a0',
+  locked: '#3a2c18',
+};
+
+// ── THREAD DATA ────────────────────────────────────────────────
+const CATS = [
+  { id:'personal',  label:'PERSONAL THREADS',      count:2 },
+  { id:'community', label:'COMMUNITY THREADS',      count:4 },
+  { id:'institute', label:'INSTITUTIONAL THREADS',  count:1 },
+  { id:'locations', label:'LOCATIONS',              count:3 },
+  { id:'people',    label:'PEOPLE',                 count:2 },
+];
+
+const ENTRIES = {
+  personal: [
+    { id:'p1', handle:'@nightmare-01', name:'FIRST NIGHTMARE', status:'FRAGMENT', updated:'3 WKS AGO',
+      locked:false, priority:true,
+      connected:['Miss Delphine','The Drain','Bureau Program'],
+      fragments:4,
+      sources:[
+        {label:'FIRST EXPERIENCED',time:'3 wks ago',locked:false,
+          text:'Stone walls. Cold. Hands holding me down. A voice saying "neural integration at 87%." I couldn\'t scream.'},
+        {label:'RECURRING DETAIL',time:'2 wks ago',locked:false,
+          text:'The masked face. Eyes above the mask. Clinical. Cold. "Valuable property." Those words again.'},
+        {label:'ANALYSIS',time:'LOCKED',locked:true,text:''},
+      ]},
+    { id:'p2', handle:'@gap-week-00', name:'THE MISSING WEEK', status:'FRAGMENT', updated:'ONGOING',
+      locked:false, priority:false,
+      connected:['Unknown Benefactor','Bureau Program'],
+      fragments:2,
+      sources:[
+        {label:'WHAT SHE KNOWS',time:'Day 1',locked:false,
+          text:'Seven days. She was unconscious for seven days. Someone left water. Food. Bandages. She doesn\'t know who.'},
+        {label:'WHAT SHE DOESN\'T',time:'LOCKED',locked:true,text:''},
+      ]},
+  ],
+  community: [
+    { id:'c1', handle:'@marcus.bellamy', name:'MARCUS BELLAMY', status:'MISSING', updated:'3 WKS AGO',
+      locked:false, priority:true,
+      connected:['Miss Delphine','Market Supply Chain','Corner Store Regulars'],
+      fragments:4,
+      sources:[
+        {label:'FIRST HEARD',time:'Day 2',locked:false,
+          text:'Overheard at the corner store. A name. Marcus. Someone said he was taken. Middle of the night. No warning.'},
+        {label:'COMMUNITY KNOWLEDGE',time:'Day 4',locked:false,
+          text:'Miss Delphine: "Marcus worked supply chains. He knew too much. They came in the night three weeks ago."'},
+        {label:'MARKET SOURCE',time:'Day 6',locked:false,
+          text:'Market vendor: "Marcus came in asking about modifications. Three days later, he disappeared."'},
+        {label:'INSTITUTIONAL RECORD',time:'LOCKED',locked:true,text:''},
+      ]},
+    { id:'c2', handle:'@veil-disappear', name:'THE DISAPPEARANCES', status:'ONGOING', updated:'ONGOING',
+      locked:false, priority:false,
+      connected:['Marcus Bellamy','Bureau Program','The Drain'],
+      fragments:3,
+      sources:[
+        {label:'PATTERN OBSERVED',time:'Day 3',locked:false,
+          text:'People disappear. The block knows. Nobody asks questions out loud. It\'s become normal here. That\'s wrong.'},
+        {label:'COMMUNITY RESPONSE',time:'Day 5',locked:false,
+          text:'They protect each other by not talking. Silence is survival. Information shared only within trust.'},
+        {label:'SCOPE',time:'LOCKED',locked:true,text:''},
+      ]},
+  ],
+  institute: [
+    { id:'i1', handle:'@bureau-program', name:'THE PROGRAM', status:'CONFIRMED', updated:'UNKNOWN',
+      locked:false, priority:true,
+      connected:['The Drain','Marcus Bellamy','Her Modifications'],
+      fragments:1,
+      sources:[
+        {label:'WHAT SHE KNOWS',time:'Day 1',locked:false,
+          text:'It\'s real. It was done to her. Modifications without consent. She is evidence. Her arms. Her balance. All of it.'},
+        {label:'HOW IT WORKS',time:'LOCKED',locked:true,text:''},
+        {label:'WHO RUNS IT',time:'LOCKED',locked:true,text:''},
+      ]},
+  ],
+  locations: [
+    { id:'l1', handle:'@the-veil', name:'THE VEIL', status:'HOME', updated:'NOW',
+      locked:false, priority:false,
+      connected:['Corner Store','The Church','Miss Delphine'],
+      fragments:0,
+      sources:[
+        {label:'ORIENTATION',time:'Day 1',locked:false,
+          text:'Warm colors. Jazz. People who know her. Fog boundary at the edge — but not for her. She can cross.'},
+      ]},
+    { id:'l2', handle:'@corner-store', name:'CORNER STORE', status:'KNOWN', updated:'DAY 2',
+      locked:false, priority:false,
+      connected:['Mr. Tatum','Community Threads'],
+      fragments:0,
+      sources:[
+        {label:'FIRST VISIT',time:'Day 1',locked:false,
+          text:'Mr. Tatum\'s store. He noticed she was back. "Take care of yourself." It sounded like a warning.'},
+      ]},
+    { id:'l3', handle:'@the-drain', name:'THE DRAIN', status:'LOCKED', updated:'UNKNOWN',
+      locked:true, priority:true,
+      connected:['The Program','Marcus Bellamy'],
+      fragments:0,
+      sources:[
+        {label:'WHAT SHE KNOWS',time:'LOCKED',locked:true,text:''},
+      ]},
+  ],
+  people: [
+    { id:'np1', handle:'@mr-tatum', name:'MR. TATUM', status:'TRUSTED', updated:'DAY 2',
+      locked:false, priority:false,
+      connected:['Corner Store','Community Threads'],
+      fragments:0,
+      sources:[
+        {label:'RELATIONSHIP',time:'Day 1',locked:false,
+          text:'Store owner. He\'s known her before. Kept the door unlocked while she was gone. Careful with his words.'},
+      ]},
+    { id:'np2', handle:'@miss-delphine', name:'MISS DELPHINE', status:'TRUSTED', updated:'DAY 4',
+      locked:false, priority:false,
+      connected:['Marcus Bellamy','Community Threads'],
+      fragments:0,
+      sources:[
+        {label:'RELATIONSHIP',time:'Day 2',locked:false,
+          text:'Neighbor. She noticed. She didn\'t push. She knew Marcus. She will share more if trust deepens.'},
+      ]},
+  ],
+};
+
+// ── COMPONENTS ────────────────────────────────────────────────
+const mono = { fontFamily:"'Space Mono',monospace" };
+
+function StatusBadge({status}) {
+  const col = status==='MISSING'?C.red : status==='LOCKED'?C.dimmer : status==='CONFIRMED'?C.red : status==='TRUSTED'?C.gold : status==='HOME'?C.gold : C.dim;
+  return (
+    <span style={{...mono,fontSize:8,letterSpacing:2,color:col,
+      border:`1px solid ${col}66`,padding:'1px 6px',textShadow:status==='MISSING'?`0 0 6px ${C.red}`:undefined}}>
+      {status}
+    </span>
+  );
+}
+
+function FragmentThumb({idx,total}) {
+  const lit = idx < total;
+  return (
+    <div style={{width:68,height:54,background:lit?C.hi:C.chrome,border:`1px solid ${lit?C.border:C.dimmer}`,
+      position:'relative',overflow:'hidden',cursor:lit?'pointer':'default'}}>
+      {lit && <>
+        {/* Glitchy fragment placeholder */}
+        <div style={{position:'absolute',inset:0,background:`linear-gradient(135deg,#1a1208,#2a1e10,#140e07)`}}/>
+        <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000020 3px,#00000020 4px)'}}/>
+        <div style={{position:'absolute',top:'30%',left:'20%',width:'60%',height:1,background:`${C.gold}40`}}/>
+        <div style={{position:'absolute',top:'55%',left:'10%',width:'40%',height:1,background:`${C.gold}25`}}/>
+        <div style={{position:'absolute',bottom:3,right:4,color:C.dimmer,fontSize:6,...mono}}>FRAG</div>
+        <div style={{position:'absolute',top:3,left:4,color:`${C.gold}60`,fontSize:6,...mono}}>//{String(idx+1).padStart(3,'0')}</div>
+      </>}
+      {!lit && <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',color:C.dimmer,fontSize:8,...mono}}>—</div>}
+    </div>
+  );
+}
+
+function SourceCard({src}) {
+  return (
+    <div style={{border:`1px solid ${src.locked?C.dimmer:C.border}`,background:src.locked?C.chrome:C.hi,marginBottom:6}}>
+      <div style={{borderBottom:`1px solid ${src.locked?C.dimmer:C.border}`,padding:'5px 10px',
+        display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{...mono,fontSize:8,letterSpacing:2,color:src.locked?C.dimmer:C.text}}>{src.label}</span>
+        <span style={{...mono,fontSize:7,color:src.locked?C.dimmer:C.dim}}>{src.time}</span>
+      </div>
+      {src.locked
+        ? <div style={{padding:'8px 10px',color:C.dimmer,...mono,fontSize:8,letterSpacing:1,fontStyle:'italic'}}>
+            cannot access without more information.
+          </div>
+        : <div style={{padding:'8px 10px',color:`${C.text}cc`,...mono,fontSize:9,lineHeight:1.7}}>
+            {src.text}
+          </div>
+      }
+    </div>
+  );
+}
+
+function EntryCard({entry,selected,onSelect}) {
+  return (
+    <div onClick={()=>onSelect(entry)} style={{
+      padding:'8px 12px',marginBottom:2,cursor:'pointer',
+      borderLeft:selected?`3px solid ${entry.locked?C.dimmer:C.red}`:'3px solid transparent',
+      background:selected?C.hi:C.card,
+      display:'flex',flexDirection:'column',gap:4,
+    }}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:6}}>
+        <span style={{...mono,fontSize:9,letterSpacing:1,color:entry.locked?C.dimmer:C.bright,fontWeight:700}}>
+          {entry.locked?'[LOCKED]':entry.name}
+        </span>
+        {entry.priority&&!entry.locked&&<span style={{...mono,fontSize:7,color:C.red}}>●</span>}
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{...mono,fontSize:7,color:C.dimmer}}>{entry.locked?'——':entry.handle}</span>
+        <StatusBadge status={entry.status}/>
+      </div>
+      <div style={{...mono,fontSize:7,color:C.dimmer,letterSpacing:1}}>UPDATED: {entry.updated}</div>
+    </div>
+  );
+}
+
+// ── CARRD-STYLE DETAIL VIEW ───────────────────────────────────
+function DetailView({entry}) {
+  if(!entry) return (
+    <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12}}>
+      <svg width={24} height={24} viewBox="0 0 24 24"><circle cx={12} cy={12} r={10} stroke={C.border} strokeWidth={1} fill="none"/><line x1={12} y1={7} x2={12} y2={13} stroke={C.border} strokeWidth={1.5}/><circle cx={12} cy={16} r={1} fill={C.border}/></svg>
+      <span style={{...mono,fontSize:9,letterSpacing:3,color:C.dimmer}}>SELECT AN ENTRY</span>
+      <span style={{...mono,fontSize:8,letterSpacing:1,color:`${C.dimmer}66`}}>listen. observe. remember.</span>
+    </div>
+  );
+
+  const [now] = useState(() => { const d = new Date(); return `${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getDate()).padStart(2,'0')}`; });
+  const totalFrags = 8;
+
+  return (
+    <div style={{height:'100%',display:'flex',flexDirection:'column',overflowY:'auto'}}>
+
+      {/* ── CARRD WINDOW CHROME ── */}
+      <div style={{background:C.chrome,borderBottom:`1px solid ${C.border}`,
+        padding:'0 10px',height:32,display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:12,flex:1}}>
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <svg width={10} height={10} viewBox="0 0 10 10"><rect width={10} height={10} fill="none" stroke={C.dimmer} strokeWidth={.8}/><path d="M1 1L9 9M9 1L1 9" stroke={C.dimmer} strokeWidth={.8}/></svg>
+            <span style={{...mono,fontSize:7,color:C.dimmer,letterSpacing:1}}>DAY 09</span>
+          </div>
+          <div style={{width:1,height:14,background:C.border}}/>
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <svg width={10} height={10} viewBox="0 0 10 10"><circle cx={5} cy={5} r={4} fill="none" stroke={C.dimmer} strokeWidth={.8}/><path d="M5 2.5V5L7 6" stroke={C.dimmer} strokeWidth={.8} fill="none"/></svg>
+            <span style={{...mono,fontSize:7,color:C.dimmer,letterSpacing:1}}>UPDATED {entry.updated}</span>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:5,alignItems:'center'}}>
+          {[entry.locked?C.dimmer:C.red, C.gold, C.border].map((col,i)=>(
+            <div key={i} style={{width:9,height:9,borderRadius:'50%',background:col,border:`1px solid ${col}88`}}/>
+          ))}
+        </div>
+      </div>
+
+      {/* ── PROFILE HEADER ── */}
+      <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:12,display:'grid',
+        gridTemplateColumns:'88px 1fr 160px',gap:10,flexShrink:0}}>
+        {/* Photo placeholder */}
+        <div style={{width:88,height:88,background:C.chrome,border:`1px solid ${C.border}`,
+          position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          {entry.fragments>0
+            ? <>
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,#1c1208,#2a1810)'}}/>
+                <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000020 3px,#00000020 4px)'}}/>
+                <svg style={{position:'relative'}} width={28} height={40} viewBox="0 0 28 40">
+                  <circle cx={14} cy={10} r={9} fill={`${C.dim}80`}/>
+                  <rect x={5} y={22} width={18} height={18} rx={2} fill={`${C.dim}60`}/>
+                </svg>
+              </>
+            : <span style={{...mono,fontSize:7,color:C.dimmer,textAlign:'center',padding:4,lineHeight:1.4}}>NO IMAGE</span>
+          }
+        </div>
+        {/* Info */}
+        <div style={{display:'flex',flexDirection:'column',gap:5}}>
+          <div style={{...mono,fontSize:16,color:entry.locked?C.dimmer:C.bright,fontWeight:700,letterSpacing:1,lineHeight:1}}>
+            {entry.locked?'[LOCKED ENTRY]':entry.name}
+          </div>
+          <div style={{...mono,fontSize:8,color:C.gold,letterSpacing:1}}>{entry.handle}</div>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
+            <span style={{...mono,fontSize:8,color:C.dim,letterSpacing:1}}>STATUS:</span>
+            <StatusBadge status={entry.status}/>
+          </div>
+          <div style={{...mono,fontSize:8,color:C.dim,letterSpacing:1}}>
+            LAST UPDATE: <span style={{color:C.text}}>{entry.updated}</span>
+          </div>
+        </div>
+        {/* Connections panel */}
+        <div style={{border:`1px solid ${C.border}`,background:C.chrome}}>
+          <div style={{borderBottom:`1px solid ${C.border}`,padding:'4px 8px'}}>
+            <span style={{...mono,fontSize:8,color:C.dim,letterSpacing:2}}>CONNECTED TO ...</span>
+          </div>
+          {entry.connected.map((c,i)=>(
+            <div key={i} style={{display:'flex',gap:6,padding:'3px 8px',borderBottom:i<entry.connected.length-1?`1px solid ${C.border}22`:undefined}}>
+              <span style={{...mono,fontSize:7,color:C.dimmer}}>{i+1}</span>
+              <span style={{...mono,fontSize:8,color:C.text}}>{c}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── ACTION BUTTONS ── */}
+      <div style={{display:'flex',gap:0,borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+        {[
+          {icon:'◉',label:'INVESTIGATE FURTHER',active:!entry.locked},
+          {icon:'◈',label:'MARK AS PRIORITY',active:!entry.locked&&!entry.priority},
+        ].map(({icon,label,active},i)=>(
+          <div key={i} style={{flex:1,padding:'8px 0',display:'flex',alignItems:'center',justifyContent:'center',
+            gap:6,cursor:active?'pointer':'default',
+            background:i===0?C.hi:C.card,
+            borderRight:i===0?`1px solid ${C.border}`:undefined}}>
+            <span style={{color:active?C.gold:C.dimmer,fontSize:12}}>{icon}</span>
+            <span style={{...mono,fontSize:8,letterSpacing:2,color:active?C.text:C.dimmer}}>{label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── TWO COLUMN BODY ── */}
+      <div style={{display:'grid',gridTemplateColumns:'155px 1fr',flex:1,overflow:'hidden'}}>
+
+        {/* Left: fragment thumbs + source list */}
+        <div style={{borderRight:`1px solid ${C.border}`,background:C.chrome,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          {/* Fragment grid */}
+          <div style={{padding:8,borderBottom:`1px solid ${C.border}`}}>
+            <div style={{...mono,fontSize:7,color:C.dim,letterSpacing:2,marginBottom:6}}>MEMORY FRAGMENTS</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}}>
+              {Array.from({length:4},(_,i)=><FragmentThumb key={i} idx={i} total={entry.fragments}/>)}
+            </div>
+          </div>
+          {/* Action row */}
+          <div style={{display:'flex',borderBottom:`1px solid ${C.border}`}}>
+            {[['▶','FRAGMENT'],['＋','COLLECT']].map(([ic,lb],i)=>(
+              <div key={i} style={{flex:1,padding:'5px 0',display:'flex',alignItems:'center',justifyContent:'center',
+                gap:4,cursor:'pointer',borderRight:i===0?`1px solid ${C.border}`:undefined,
+                background:C.card}}>
+                <span style={{color:C.gold,fontSize:9}}>{ic}</span>
+                <span style={{...mono,fontSize:7,letterSpacing:1,color:C.dim}}>{lb}</span>
+              </div>
+            ))}
+          </div>
+          {/* Source index */}
+          <div style={{padding:'6px 0',overflowY:'auto',flex:1}}>
+            <div style={{...mono,fontSize:7,color:C.dim,letterSpacing:2,padding:'0 8px',marginBottom:4}}># SOURCE</div>
+            {entry.sources.map((src,i)=>(
+              <div key={i} style={{display:'flex',gap:6,padding:'3px 8px',borderBottom:`1px solid ${C.border}22`}}>
+                <span style={{...mono,fontSize:7,color:C.dimmer}}>{i+1}.</span>
+                <span style={{...mono,fontSize:7,color:src.locked?C.dimmer:C.text,flex:1,lineHeight:1.4}}>
+                  {src.locked?'[LOCKED]':src.label.slice(0,14)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: source cards (forum-post style) */}
+        <div style={{overflowY:'auto',padding:10,background:C.card,display:'flex',flexDirection:'column',gap:0}}>
+          {entry.sources.map((src,i)=><SourceCard key={i} src={src}/>)}
+          {/* Research progress at bottom */}
+          <div style={{marginTop:'auto',paddingTop:10,borderTop:`1px solid ${C.border}33`}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
+              <span style={{...mono,fontSize:7,letterSpacing:2,color:C.dim}}>RESEARCH PROGRESS</span>
+              <span style={{...mono,fontSize:7,color:C.dim}}>
+                {Math.round(entry.sources.filter(s=>!s.locked).length/entry.sources.length*100)}%
+              </span>
+            </div>
+            <div style={{height:3,background:`${C.border}40`,position:'relative'}}>
+              <div style={{position:'absolute',left:0,top:0,height:'100%',background:C.red,
+                width:`${entry.sources.filter(s=>!s.locked).length/entry.sources.length*100}%`,
+                transition:'width .4s'}}/>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────
+function ThreadsApp() {
+  const [activeCat,setActiveCat]  = useState('community');
+  const [selected,setSelected]    = useState(ENTRIES['community'][0]);
+  const [activeTab,setActiveTab]  = useState('THREADS');
+
+  const entries = ENTRIES[activeCat] || [];
+  const tabs = ['MAP','STATUS','EQUIPMENT','THREADS','PEOPLE'];
+
+  return (
+    <div style={{width:1280,height:720,background:C.bg,position:'relative',overflow:'hidden',
+      display:'flex',flexDirection:'column'}}>
+      <style>{`
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:${C.border}; }
+        @keyframes flicker{0%,90%,100%{opacity:1}91%{opacity:.55}94%{opacity:.85}97%{opacity:.45}}
+      `}</style>
+
+      {/* ── TOP NAV ── */}
+      <div style={{height:44,background:'#0c0a07',borderBottom:`1px solid ${C.border}`,
+        display:'flex',alignItems:'center',flexShrink:0}}>
+        {tabs.map((t,i)=>(
+          <div key={i} onClick={()=>setActiveTab(t)} style={{
+            padding:'0 22px',height:44,display:'flex',alignItems:'center',
+            color:t===activeTab?C.bright:C.dim,fontSize:10,letterSpacing:3,...mono,
+            background:t===activeTab?'#1a120a':'transparent',
+            borderRight:`1px solid ${C.border}`,cursor:'pointer',
+          }}>{t}</div>
+        ))}
+        <div style={{flex:1}}/>
+        {/* Hatchling tag */}
+        <div style={{padding:'0 20px',height:44,display:'flex',alignItems:'center',gap:8,borderLeft:`1px solid ${C.border}`}}>
+          <span style={{...mono,fontSize:7,color:C.dimmer,letterSpacing:2}}>HATCHLING</span>
+          <div style={{width:8,height:8,borderRadius:'50%',background:C.red,boxShadow:`0 0 6px ${C.red}`}}/>
+        </div>
+      </div>
+
+      {/* ── BODY (3-column) ── */}
+      <div style={{flex:1,display:'grid',gridTemplateColumns:'186px 280px 1fr',overflow:'hidden'}}>
+
+        {/* Col 1: Category sidebar */}
+        <div style={{borderRight:`1px solid ${C.border}`,background:'#0a0806',
+          display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <div style={{padding:'10px 0',flex:1,overflowY:'auto'}}>
+            {CATS.map(c=>(
+              <div key={c.id} onClick={()=>{setActiveCat(c.id);setSelected(ENTRIES[c.id]?.[0]||null);}} style={{
+                padding:'10px 14px',cursor:'pointer',marginBottom:1,
+                borderLeft:activeCat===c.id?`3px solid ${C.red}`:'3px solid transparent',
+                background:activeCat===c.id?'#180e08':'transparent',
+              }}>
+                <div style={{...mono,fontSize:9,letterSpacing:2,
+                  color:activeCat===c.id?C.bright:C.dim}}>{c.label}</div>
+                <div style={{...mono,fontSize:7,color:`${C.dim}66`,marginTop:3,letterSpacing:1}}>
+                  // {c.count} ENTR{c.count===1?'Y':'IES'}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{borderTop:`1px solid ${C.border}33`,padding:'8px 14px'}}>
+            <div style={{...mono,fontSize:7,color:`${C.dimmer}66`,letterSpacing:1,lineHeight:1.7}}>
+              // NAVIGATE [ ↑↓ ]<br/>// SELECT [ E ]
+            </div>
+          </div>
+        </div>
+
+        {/* Col 2: Entry list */}
+        <div style={{borderRight:`1px solid ${C.border}`,background:C.card,
+          display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          {/* List header */}
+          <div style={{height:36,borderBottom:`1px solid ${C.border}`,background:C.chrome,
+            display:'flex',alignItems:'center',padding:'0 12px',flexShrink:0}}>
+            <span style={{...mono,fontSize:8,color:C.dim,letterSpacing:3}}>
+              {CATS.find(c=>c.id===activeCat)?.label||''}
+            </span>
+          </div>
+          {/* Entries */}
+          <div style={{flex:1,overflowY:'auto',padding:'4px 0'}}>
+            {entries.length>0
+              ? entries.map(e=><EntryCard key={e.id} entry={e} selected={selected?.id===e.id} onSelect={setSelected}/>)
+              : <div style={{padding:20,textAlign:'center'}}>
+                  <div style={{...mono,fontSize:9,color:C.dimmer,letterSpacing:3}}>NO ENTRIES</div>
+                  <div style={{...mono,fontSize:8,color:`${C.dimmer}66`,marginTop:8,lineHeight:1.6}}>
+                    listen. observe.<br/>remember.
+                  </div>
+                </div>
+            }
+          </div>
+        </div>
+
+        {/* Col 3: Carrd-style detail */}
+        <div style={{overflow:'hidden',display:'flex',flexDirection:'column'}}>
+          <DetailView entry={selected}/>
+        </div>
+      </div>
+
+      {/* ── BOTTOM BAR ── */}
+      <div style={{height:30,background:'#0c0a07',borderTop:`1px solid ${C.border}`,
+        display:'flex',alignItems:'center',padding:'0 16px',gap:20,flexShrink:0}}>
+        {[['↑↓','NAVIGATE'],['E','SELECT'],['TAB','CLOSE']].map(([k,v])=>(
+          <div key={k} style={{display:'flex',gap:6,alignItems:'center'}}>
+            <span style={{...mono,fontSize:7,color:C.dimmer,letterSpacing:2}}>{v}</span>
+            <span style={{...mono,fontSize:7,color:C.text,border:`1px solid ${C.border}`,padding:'0 5px',background:C.chrome}}>{k}</span>
+          </div>
+        ))}
+        <div style={{flex:1}}/>
+        <span style={{...mono,fontSize:7,color:`${C.dimmer}55`,letterSpacing:2}}>INVESTIGATION SYSTEM v0.1</span>
+      </div>
+
+      {/* Background noise texture */}
+      <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:0,
+        backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 3px,#00000008 3px,#00000008 4px)'}}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ThreadsApp/>);
+</script>
+<script>
+(function(){
+  function scale(){
+    const s=Math.min(window.innerWidth/1280,window.innerHeight/720);
+    const w=document.getElementById('scale-wrap');
+    w.style.transform=`scale(${s})`;
+    w.style.marginLeft=((window.innerWidth-1280*s)/2)+'px';
+    w.style.marginTop=((window.innerHeight-720*s)/2)+'px';
+  }
+  scale(); window.addEventListener('resize',scale);
+})();
+</script>
+</body>
+</html>

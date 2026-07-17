@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BEAUREGARDE — Construction Kit</title>
+  <title>Construction Kit</title>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     @font-face {
       font-family: 'TheMurk';
-      src: url('../graphics/assets/fonts/TheMurk-GrungeMatrix.otf') format('opentype');
+      src: url('graphics/assets/fonts/TheMurk-GrungeMatrix.otf') format('opentype');
       font-weight: normal;
     }
     :root {
@@ -600,8 +600,27 @@ const SEED_QUESTS=[
   {id:'q3',name:"Collette's Trail", major:true,  category:'mystery',status:'active',progress:'Intelligence gathering',info:'Follow every thread. Who built this network. Who is Collette.',                       subCanvas:mkC()},
 ];
 
+/* ── PROJECTS REGISTRY ───────────────────────────────────────────── */
+/* Multiple game projects share one kit. Each project owns its own
+   localStorage key, data filename, and (namespaced downstream) IndexedDB
+   stores, so switching projects never mixes their data. */
+const PROJECTS_LS='kit_projects_v1';
+const ACTIVE_PROJECT_LS='kit_active_project_v1';
+const DEFAULT_PROJECTS=[
+  {id:'beauregarde',name:'Beauregarde',lsKey:'beauregarde_kit_v4',dataFilename:'beauregarde_data.json'},
+  {id:'hatchling',name:'Hatchling',lsKey:'hatchling_kit_v4',dataFilename:'hatchling_data.json'},
+];
+const loadProjects=()=>{try{const p=JSON.parse(localStorage.getItem(PROJECTS_LS)||'null');if(Array.isArray(p)&&p.length)return p;}catch(e){}return DEFAULT_PROJECTS;};
+const saveProjects=p=>{try{localStorage.setItem(PROJECTS_LS,JSON.stringify(p));}catch(e){}};
+const loadActiveProjectId=projects=>{try{const id=localStorage.getItem(ACTIVE_PROJECT_LS);if(id&&projects.some(p=>p.id===id))return id;}catch(e){}return projects[0].id;};
+const slugifyProjectName=name=>{const s=(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');return s||'project';};
+
 /* ── STORAGE ─────────────────────────────────────────────────────── */
-const LS='beauregarde_kit_v4';
+/* LS and ACTIVE_PROJECT are mutated by <Root> (below) whenever the active
+   project changes, *before* <App> is (re)mounted with a fresh key= — every
+   plain function/module-scope read below always sees the current project. */
+let LS='hatchling_kit_v4';
+let ACTIVE_PROJECT=DEFAULT_PROJECTS[1];
 const migrateTree=t=>({playCount:'always',playLimit:1,conditions:[],...t});
 const loadState=()=>{try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s&&s.chars)return{chars:s.chars,dtrees:(s.dtrees||[]).map(migrateTree),quests:s.quests,mt:s.mt,amid:s.amid,outfits:s.outfits||OUTFITS_DEFAULT,audio:s.audio||AUDIO_DEFAULT,items:s.items||[],vars:s.vars||[],cutPresets:s.cutPresets||[]};}catch(e){}return null;};
 const saveState=s=>{try{localStorage.setItem(LS,JSON.stringify(s));}catch(e){}};
@@ -2469,7 +2488,7 @@ function AudioTrackRow({track,onUpdate,onDelete}){
 
 /* ── AI REFERENCE LIBRARY + HISTORY (IndexedDB) ─────────────────── */
 const openRefDB=()=>new Promise((res,rej)=>{
-  const req=indexedDB.open('beau_ai_refs',2);
+  const req=indexedDB.open('beau_ai_refs__'+ACTIVE_PROJECT.id,2);
   req.onupgradeneeded=e=>{
     const db=e.target.result;
     if(!db.objectStoreNames.contains('refs'))db.createObjectStore('refs',{keyPath:'id'});
@@ -2488,21 +2507,19 @@ const deleteConv=async id=>{const db=await openRefDB();return new Promise((res,r
 const AI_MODEL='claude-sonnet-4-6';
 const QUICK_PROMPTS=[
   {label:'Character dialogue',prompt:'Write 4–6 dialogue lines for one of my characters that feels authentic to The Veil. Ground it in the cyberpunk setting, the underground network, and the character\'s role.'},
-  {label:'Character backstory',prompt:'Develop a backstory for one of my characters that connects their past to the themes in my reference material and the Beauregarde world.'},
+  {label:'Character backstory',prompt:'Develop a backstory for one of my characters that connects their past to the themes in my reference material and the game world.'},
   {label:'World detail',prompt:'Give me a small, specific world-building detail about The Veil neighborhood — something that would make the setting feel lived-in and real.'},
   {label:'Quest idea',prompt:'Suggest a quest narrative that fits my existing characters and draws on themes in my reference material.'},
   {label:'NPC bark lines',prompt:'Write 6–8 short ambient NPC bark lines that might be heard on The Veil streets. Keep them brief, atmospheric, grounded in survival and community.'},
   {label:'Dialogue tree',prompt:'Write a branching dialogue tree for an NPC encounter. Include the NPC\'s opening line, 2–3 player response options, and a follow-up for each branch.'},
 ];
 
-const WELCOME_MSG={role:'assistant',content:'Hello! I\'m your Beauregarde writing assistant. Upload reference material in the REFERENCES tab, then ask me anything — character dialogue, world-building, backstories, quest ideas. What are you working on?'};
-
 function AIAssistant({chars,dtrees,quests,onClose}){
   const [tab,setTab]=useState('chat');
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem('beau_ai_key')||'');
   const [keyDraft,setKeyDraft]=useState(()=>localStorage.getItem('beau_ai_key')||'');
   const [refs,setRefs]=useState([]);
-  const [msgs,setMsgs]=useState([WELCOME_MSG]);
+  const [msgs,setMsgs]=useState(()=>[{role:'assistant',content:`Hello! I'm your ${ACTIVE_PROJECT.name} writing assistant. Upload reference material in the REFERENCES tab, then ask me anything — character dialogue, world-building, backstories, quest ideas. What are you working on?`}]);
   const [input,setInput]=useState('');
   const [loading,setLoading]=useState(false);
   const [uploadStatus,setUploadStatus]=useState('');
@@ -2541,7 +2558,7 @@ function AIAssistant({chars,dtrees,quests,onClose}){
     const textRefs=refs.filter(r=>!r.type||r.type==='text');
     const refBlock=textRefs.length?'\n\nREFERENCE MATERIAL (use these for tone, themes, world detail):\n'+
       textRefs.map(r=>`=== ${r.name} ===\n${r.content.slice(0,6000)}${r.content.length>6000?'\n[truncated — '+Math.round(r.content.length/1000)+'KB total]':''}`).join('\n\n'):'';
-    return `You are a creative writing assistant for BEAUREGARDE — a cyberpunk RPG set in The Veil, a dystopian urban neighborhood where body modification is common and an underground network operates in the shadows. The protagonist is Octavia: a modified survivor waking up after 7 missing days.
+    return `You are a creative writing assistant for ${ACTIVE_PROJECT.name.toUpperCase()} — a cyberpunk RPG set in The Veil, a dystopian urban neighborhood where body modification is common and an underground network operates in the shadows. The protagonist is Octavia: a modified survivor waking up after 7 missing days.
 
 GAME WORLD:
 - Tone: neo-noir, grounded, community-focused. Not neon-glamour cyberpunk — survival cyberpunk.
@@ -3134,7 +3151,7 @@ const SIDEBAR_TIPS={
   tools:'SCENE defines a location and its spawns. SPAWN_POINT sets a character\'s worldX position. LEVEL maps an entire area with background, scale, and exits. Drag any of these to the canvas.',
   items:'The item registry tracks every key item in the game. Create items here then reference them in quest gates, dialogue conditions, and reward lists. Drag an ITEM node to the master canvas to map an item\'s full acquisition and use chain.',
   vars:'Variables are the world\'s memory — flags (did X happen?), numbers (suspicion level), enums (faction standing), and keywords (Shadowrun topics you collect). Define them here, then gate any dialogue or quest on them. One variable = no new game code, ever.',
-  cutscene:'Create a cutscene by adding a Dialogue Tree (sidebar) and cycling its badge to C. Open it with ↗. Place CUT_START first, then chain LINE / VIDEO / TITLE / CHOICE / WAIT / ACTION nodes. Each exports to the cutscenes key in beauregarde_data.json.',
+  cutscene:'Create a cutscene by adding a Dialogue Tree (sidebar) and cycling its badge to C. Open it with ↗. Place CUT_START first, then chain LINE / VIDEO / TITLE / CHOICE / WAIT / ACTION nodes. Each exports to the cutscenes key in the project data file.',
   library:'Every node placed across all graphs lives here. Drag from the library to re-use a node on any canvas.',
 };
 
@@ -3199,7 +3216,7 @@ function GuideModal({onClose}){
 
           {/* ── GET STARTED ── */}
           {page==='start'&&(<>
-            <div style={{...P,color:'var(--text2)',marginBottom:6}}>The Construction Kit is a node-based design tool for Beauregarde. Everything you build here writes to <strong style={{color:'var(--text)'}}>beauregarde_data.json</strong>, which the game reads at runtime.</div>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>The Construction Kit is a node-based design tool for {ACTIVE_PROJECT.name}. Everything you build here writes to <strong style={{color:'var(--text)'}}>{ACTIVE_PROJECT.dataFilename}</strong>, which the game reads at runtime.</div>
             {SEP}
             <div style={{...H,color:'#40e090'}}>QUICK START</div>
             {steps([
@@ -3207,7 +3224,7 @@ function GuideModal({onClose}){
               'Build dialogue in DIALOGUE TREES. Each tree is one conversation — drop nodes, wire them.',
               'Create quests in QUESTS. Open a quest\'s sub-canvas (↗) to map its steps.',
               'Drop SCENE nodes on the master canvas. Wire characters, dialogue, and quests to them.',
-              'Hit EXPORT TO GAME to write beauregarde_data.json.',
+              `Hit EXPORT TO GAME to write ${ACTIVE_PROJECT.dataFilename}.`,
             ])}
             {SEP}
             <div style={{...H,color:'var(--accent)'}}>HOW THE CANVAS WORKS</div>
@@ -3359,7 +3376,7 @@ function GuideModal({onClose}){
 
           {/* ── EXPORT ── */}
           {page==='export'&&(<>
-            <div style={{...P,color:'var(--text2)',marginBottom:6}}>EXPORT TO GAME writes beauregarde_data.json to a file you choose. The game reads that file on load. Re-export any time you make changes.</div>
+            <div style={{...P,color:'var(--text2)',marginBottom:6}}>EXPORT TO GAME writes {ACTIVE_PROJECT.dataFilename} to a file you choose. The game reads that file on load. Re-export any time you make changes.</div>
             {SEP}
             <div style={{...H,color:'#3ab0c0'}}>TARGETING THE OUTPUT FILE</div>
             {steps([
@@ -4085,9 +4102,11 @@ function buildOpeningTemplates(){
 }
 
 /* ── APP ─────────────────────────────────────────────────────────── */
-function App(){
+function App({project,projects,onSwitchProject,onAddProject}){
   const [pal,setPal]=useState('void');
   const [textSize,setTextSize]=useState('sm');
+  const [showProjectMenu,setShowProjectMenu]=useState(false);
+  const [newProjectName,setNewProjectName]=useState('');
   const [showAI,setShowAI]=useState(false);
   useEffect(()=>{
     const cls=[];
@@ -4095,6 +4114,7 @@ function App(){
     if(textSize!=='sm')cls.push(`fs-${textSize}`);
     document.body.className=cls.join(' ');
   },[pal,textSize]);
+  useEffect(()=>{document.title=`${project.name.toUpperCase()} — Construction Kit`;},[project]);
 
   /* entity state */
   const init=useMemo(()=>{
@@ -4265,10 +4285,37 @@ function App(){
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
-    a.download=`beauregarde_kit_backup_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+    a.download=`${project.id}_kit_backup_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
     a.click();
     showToast('BACKUP DOWNLOADED');
-  },[chars,dtrees,quests,mt,amid,outfits,audio,items,vars,cutPresets,showToast]);
+  },[chars,dtrees,quests,mt,amid,outfits,audio,items,vars,cutPresets,showToast,project]);
+  const restoreFileRef=useRef(null);
+  const restoreKitState=useCallback(file=>{
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const s=JSON.parse(reader.result);
+        if(!s||!s.chars)throw new Error('not a kit backup file');
+        if(!window.confirm(`Restore this backup into ${project.name}? This overwrites everything currently in the kit for this project.`))return;
+        setChars(s.chars||[]);
+        setDtrees((s.dtrees||[]).map(migrateTree));
+        setQuests(s.quests||[]);
+        setMt(s.mt||[]);
+        setAmid(s.amid||null);
+        setOutfits(s.outfits||OUTFITS_DEFAULT);
+        setAudio(s.audio||AUDIO_DEFAULT);
+        setItems(s.items||[]);
+        setVars(s.vars||[]);
+        setCutPresets(s.cutPresets||[]);
+        showToast('BACKUP RESTORED');
+      }catch(e){
+        showToast('RESTORE FAILED — not a valid backup file');
+        console.error('[Kit] restore error',e);
+      }
+    };
+    reader.readAsText(file);
+  },[project,showToast]);
 
   /* place node on canvas */
   const placeNode=useCallback((type,label,extra,atPos)=>{
@@ -4468,7 +4515,7 @@ function App(){
   const _fhHandle=useRef(null);
   const getDB=useCallback(()=>new Promise((res,rej)=>{
     if(_fhDB.current)return res(_fhDB.current);
-    const req=indexedDB.open('beau_kit_fs',2);
+    const req=indexedDB.open('beau_kit_fs__'+ACTIVE_PROJECT.id,2);
     req.onupgradeneeded=e=>{
       const db=e.target.result;
       if(!db.objectStoreNames.contains('h'))db.createObjectStore('h');
@@ -4548,7 +4595,7 @@ function App(){
       const perm=await h.queryPermission({mode:'readwrite'});
       if(perm!=='granted'){const r=await h.requestPermission({mode:'readwrite'});if(r!=='granted')throw new Error('denied');}
       const w=await h.createWritable();await w.write(json);await w.close();
-      return h.name||'beauregarde_data.json';
+      return h.name||project.dataFilename;
     };
     // try in-memory handle first (same session)
     if(_fhHandle.current){
@@ -4563,16 +4610,16 @@ function App(){
     // first time: show picker
     if(!window.showSaveFilePicker)throw new Error('no-api');
     const h=await window.showSaveFilePicker({
-      suggestedName:'beauregarde_data.json',
+      suggestedName:project.dataFilename,
       types:[{description:'JSON',accept:{'application/json':['.json']}}],
     });
     await tryHandle(h);
     _fhHandle.current=h;
     try{await dbPut('exportHandle',h);}catch(idbErr){} // best-effort; real handles are cloneable, mocks may not be
     return h.name;
-  },[dbGet,dbPut]);
+  },[dbGet,dbPut,project]);
 
-  /* export — outputs game-compatible beauregarde_data.json */
+  /* export — outputs game-compatible data file for the active project */
   const exportGame=async()=>{
     // 1. PEOPLE (mapped to game's PEOPLE_DB format)
     const people=chars.filter(c=>c.id!=='c1').map(c=>({
@@ -4705,7 +4752,7 @@ function App(){
       if(e.message==='no-api'){
         // browser doesn't support File System Access API — fall back to download
         const blob=new Blob([json],{type:'application/json'});
-        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='beauregarde_data.json';a.click();
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=project.dataFilename;a.click();
         showToast('EXPORTED (download)');
       } else {
         showToast('EXPORT FAILED — check console');
@@ -5410,7 +5457,33 @@ function App(){
       {/* NAV */}
       <div className="nav">
         {vStack.length>1&&<button className="nav-btn back-btn" onClick={popView}>&#8592; BACK</button>}
-        <span className="nav-title">&#10216; BEAUREGARDE CONSTRUCTION KIT</span>
+        <div style={{position:'relative',display:'flex',alignItems:'center'}}>
+          <span className="nav-title" style={{cursor:'pointer',userSelect:'none'}} onClick={()=>setShowProjectMenu(p=>!p)}
+            title="Switch project or add a new one">
+            &#10216; {project.name.toUpperCase()} CONSTRUCTION KIT <span style={{fontSize:10}}>&#9662;</span>
+          </span>
+          {showProjectMenu&&(<>
+            <div style={{position:'fixed',inset:0,zIndex:40}} onMouseDown={()=>setShowProjectMenu(false)}/>
+            <div style={{position:'absolute',top:'100%',left:0,zIndex:41,background:'var(--surface)',border:'3px solid var(--brutal)',boxShadow:'6px 6px 0 var(--brutal)',minWidth:230,marginTop:6}}>
+              <div style={{padding:'6px 10px',fontSize:'var(--fxt)',letterSpacing:'1px',color:'var(--muted)',borderBottom:'2px solid var(--brutal)'}}>SWITCH PROJECT</div>
+              {projects.map(p=>(
+                <div key={p.id} onClick={()=>{onSwitchProject(p.id);setShowProjectMenu(false);}}
+                  style={{padding:'8px 12px',cursor:'pointer',fontSize:'var(--fxs)',letterSpacing:'1px',
+                    background:p.id===project.id?'var(--raised)':'transparent',
+                    color:p.id===project.id?'var(--accent)':'var(--text)'}}>
+                  {p.id===project.id?'● ':'○ '}{p.name}
+                </div>
+              ))}
+              <div style={{borderTop:'2px solid var(--brutal)',padding:8}}>
+                <input value={newProjectName} onChange={e=>setNewProjectName(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'&&newProjectName.trim()){onAddProject(newProjectName.trim());setNewProjectName('');setShowProjectMenu(false);}}}
+                  placeholder="New project name..." className="nav-search-input" style={{width:'100%',marginBottom:6,boxSizing:'border-box'}}/>
+                <button className="nav-btn" style={{width:'100%'}}
+                  onClick={()=>{if(newProjectName.trim()){onAddProject(newProjectName.trim());setNewProjectName('');setShowProjectMenu(false);}}}>+ NEW PROJECT</button>
+              </div>
+            </div>
+          </>)}
+        </div>
         <div className="nav-spacer"/>
         <div className="nav-search">
           <span style={{color:'var(--muted)',fontSize:'9px'}}>&#128269;</span>
@@ -5436,6 +5509,9 @@ function App(){
         <button className="nav-btn" style={{borderColor:'var(--accent)',color:'var(--accent)',boxShadow:'3px 3px 0 var(--accent)'}} onClick={()=>setShowAI(p=>!p)}>✦ AI</button>
         <button className="nav-btn save-btn" onClick={()=>{saveState({chars,dtrees,quests,mt,amid,outfits,audio,items,vars,cutPresets});showToast('SAVED');}}>SAVE</button>
         <button className="nav-btn" title="Download a full JSON backup of everything in this kit (characters, trees, quests, master canvas, items, vars) — separate from EXPORT TO GAME" onClick={backupKitState}>BACKUP</button>
+        <button className="nav-btn" title="Load a kit backup JSON file into this project (overwrites current kit data)" onClick={()=>restoreFileRef.current?.click()}>RESTORE</button>
+        <input ref={restoreFileRef} type="file" accept="application/json" style={{display:'none'}}
+          onChange={e=>{const f=e.target.files&&e.target.files[0];restoreKitState(f);e.target.value='';}}/>
         <button className="nav-btn export-btn" onClick={exportGame}>EXPORT TO GAME</button>
         <button className="nav-btn back-btn" style={{fontSize:'var(--fxt)',padding:'4px 8px'}}
           title="Change the target file for next export"
@@ -5652,7 +5728,41 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+/* ── ROOT (project switching) ────────────────────────────────────── */
+/* Owns the project registry + active project. App fully remounts (key=
+   project.id) on switch, so every internal useState re-initializes from
+   the newly-active project's own localStorage — no manual state resets. */
+function Root(){
+  const [projects,setProjects]=useState(()=>loadProjects());
+  const [activeId,setActiveId]=useState(()=>loadActiveProjectId(loadProjects()));
+  const project=projects.find(p=>p.id===activeId)||projects[0];
+  LS=project.lsKey;
+  ACTIVE_PROJECT=project;
+  useEffect(()=>{saveProjects(projects);},[projects]);
+  useEffect(()=>{try{localStorage.setItem(ACTIVE_PROJECT_LS,activeId);}catch(e){}},[activeId]);
+  const onSwitchProject=useCallback(id=>{
+    setProjects(curr=>{
+      const p=curr.find(x=>x.id===id);
+      if(p){LS=p.lsKey;ACTIVE_PROJECT=p;}
+      return curr;
+    });
+    setActiveId(id);
+  },[]);
+  const onAddProject=useCallback(name=>{
+    setProjects(curr=>{
+      const slug=slugifyProjectName(name);
+      let id=slug,n=1;
+      while(curr.some(p=>p.id===id)){n++;id=`${slug}_${n}`;}
+      const np={id,name:(name||'').trim()||id,lsKey:`${id}_kit_v4`,dataFilename:`${id}_data.json`};
+      LS=np.lsKey;ACTIVE_PROJECT=np;
+      setActiveId(id);
+      return[...curr,np];
+    });
+  },[]);
+  return<App key={project.id} project={project} projects={projects} onSwitchProject={onSwitchProject} onAddProject={onAddProject}/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
 </script>
 </body>
 </html>
